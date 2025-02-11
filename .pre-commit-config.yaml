@@ -27,6 +27,10 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
+        exclude: |
+          (?x)^(
+            .*\.svg
+          )
         additional_dependencies: [tomli]
 
   - repo: local

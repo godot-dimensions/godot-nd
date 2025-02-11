@@ -1,0 +1,28 @@
+[configuration]
+
+entry_symbol = "godot_nd_library_init"
+compatibility_minimum = 4.3
+reloadable = true
+
+[libraries]
+
+macos.debug = "bin/libgodot_nd.macos.debug.framework"
+macos.release = "bin/libgodot_nd.macos.release.framework"
+windows.debug.x86_64 = "bin/libgodot_nd.windows.debug.x86_64.dll"
+windows.release.x86_64 = "bin/libgodot_nd.windows.release.x86_64.dll"
+linux.debug.x86_64 = "bin/libgodot_nd.linux.debug.x86_64.so"
+linux.release.x86_64 = "bin/libgodot_nd.linux.release.x86_64.so"
+linux.debug.arm64 = "bin/libgodot_nd.linux.debug.arm64.so"
+linux.release.arm64 = "bin/libgodot_nd.linux.release.arm64.so"
+linux.debug.rv64 = "bin/libgodot_nd.linux.debug.rv64.so"
+linux.release.rv64 = "bin/libgodot_nd.linux.release.rv64.so"
+web.debug.wasm32 = "bin/libgodot_nd.web.debug.wasm32.wasm"
+web.release.wasm32 = "bin/libgodot_nd.web.release.wasm32.wasm"
+android.debug.arm64 = "bin/libgodot_nd.android.debug.arm64.so"
+android.release.arm64 = "bin/libgodot_nd.android.release.arm64.so"
+ios.debug = "bin/libgodot_nd.ios.debug.universal.dylib"
+ios.release = "bin/libgodot_nd.ios.release.universal.dylib"
+
+[icons]
+
+NodeND = "icons/NodeND.png"
