@@ -1,0 +1,21 @@
+name: 📊 Static Checks
+on: [push, pull_request]
+
+jobs:
+  static-checks:
+    name: Code style and file formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: General setup
+        run: |
+          git config diff.wsErrorHighlight all
+
+      - name: Style checks via pre-commit
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --all-files
