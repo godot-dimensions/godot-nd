@@ -30,3 +30,5 @@ using namespace godot;
 #ifndef _NO_DISCARD_
 #define _NO_DISCARD_ [[nodiscard]]
 #endif // _NO_DISCARD_
+
+#define VectorN PackedFloat64Array

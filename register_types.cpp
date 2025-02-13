@@ -6,6 +6,7 @@
 #include "core/config/engine.h"
 #endif
 
+#include "math/vector_nd.h"
 #include "nodes/node_nd.h"
 
 inline void add_godot_singleton(const StringName &p_singleton_name, Object *p_object) {
@@ -25,16 +26,18 @@ inline void remove_godot_singleton(const StringName &p_singleton_name) {
 }
 
 void initialize_nd_module(ModuleInitializationLevel p_level) {
-	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
-		// Register node classes here.
-		// You can add singletons using add_godot_singleton().
+	// Note: Classes MUST be registered in inheritance order.
+	// When the inheritance doesn't matter, alphabetical order is used.
+	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE) {
+		GDREGISTER_CLASS(VectorND);
+	} else if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
 		GDREGISTER_CLASS(NodeND);
+		add_godot_singleton("VectorND", memnew(VectorND));
 	}
 }
 
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
-		// Perform cleanup here.
-		// You can remove singletons using remove_godot_singleton().
+		remove_godot_singleton("VectorND");
 	}
 }

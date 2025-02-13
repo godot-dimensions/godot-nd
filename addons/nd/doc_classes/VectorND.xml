@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="VectorND" inherits="Object" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Stateless helper class for operating on VectorN (PackedFloat64Array).
+	</brief_description>
+	<description>
+		VectorND defines many helper functions for N-dimensional vector operations. The "VectorN" data is stored as a [PackedFloat64Array], utilizing an existing type inside of Godot's Variant system for efficiency with Godot's bindings. The [PackedFloat64Array] data is also used internally since a dynamic array of floats is required for N-dimensional math regardless of binding constraints.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="abs" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) of the absolute values of the input vector.
+			</description>
+		</method>
+		<method name="add" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="a" type="PackedFloat64Array" />
+			<param index="1" name="b" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the sum of the two input vectors. This is the same as [code]a + b[/code] for [Vector2], [Vector3], and [Vector4]. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="angle_to" qualifiers="static">
+			<return type="float" />
+			<param index="0" name="from" type="PackedFloat64Array" />
+			<param index="1" name="to" type="PackedFloat64Array" />
+			<description>
+				Returns the angle in radians between two N-dimensional vectors. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="bounce" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="normal" type="PackedFloat64Array" />
+			<description>
+				Returns [param vector] "bounced off" from a hyperplane defined by the [param normal] vector. The normal vector should be normalized. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="bounce_ratio" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="normal" type="PackedFloat64Array" />
+			<param index="2" name="bounce_ratio" type="float" />
+			<description>
+				Returns [param vector] "bounced off" from a hyperplane defined by the [param normal] vector with the given [param bounce_ratio] defining the bounciness. For physical bouncing, realistic values are on a range of [code]0.0[/code] to [code]1.0[/code]. A ratio of [code]0.0[/code] is equivalent to [method slide], while a ratio of [code]1.0[/code] is equivalent to [method bounce]. The normal vector should be normalized. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="ceil" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) of the ceiling of the values of the input vector.
+			</description>
+		</method>
+		<method name="clamp" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="min" type="PackedFloat64Array" />
+			<param index="2" name="max" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector clamped to the range of [param min] and [param max]. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="clampf" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="min" type="float" />
+			<param index="2" name="max" type="float" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector clamped to the range of [param min] and [param max] for each component.
+			</description>
+		</method>
+		<method name="cross" qualifiers="static">
+			<return type="float" />
+			<param index="0" name="a" type="PackedFloat64Array" />
+			<param index="1" name="b" type="PackedFloat64Array" />
+			<description>
+				Returns the N-dimensional analog of the cross product for [param a] and [param b]. This is the unsigned area of the parallelogram formed by the two vectors.
+				[b]Note:[/b] The 3D cross product has 2 properties, the result is perpendicular to the inputs, and the result has a magnitude equal to the area of the parallelogram formed by the inputs. This method provides the second property, but not the first, like [method Vector2.cross].
+			</description>
+		</method>
+		<method name="direction_to" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="from" type="PackedFloat64Array" />
+			<param index="1" name="to" type="PackedFloat64Array" />
+			<description>
+				Returns the normalized direction from one N-dimensional vector to another. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="distance_squared_to" qualifiers="static">
+			<return type="float" />
+			<param index="0" name="from" type="PackedFloat64Array" />
+			<param index="1" name="to" type="PackedFloat64Array" />
+			<description>
+				Returns the squared distance between two N-dimensional vectors. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="distance_to" qualifiers="static">
+			<return type="float" />
+			<param index="0" name="from" type="PackedFloat64Array" />
+			<param index="1" name="to" type="PackedFloat64Array" />
+			<description>
+				Returns the distance between two N-dimensional vectors. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="divide_scalar" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="scalar" type="float" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector divided by a scalar, by dividing each component of the input vector by the scalar.
+			</description>
+		</method>
+		<method name="divide_vector" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="a" type="PackedFloat64Array" />
+			<param index="1" name="b" type="PackedFloat64Array" />
+			<param index="2" name="expand" type="bool" default="false" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that has each input's components divided. If [param expand] is [code]true[/code], the result will have the dimension of the largest input vector. Otherwise, the result will have the dimension of the smallest input vector. For example, [code]divide_vector([1, 2, 3], [4, 5])[/code] will return [code][0.25, 0.4][/code] if [param expand] is [code]false[/code] and [code][0.25, 0.4, INF][/code] if [param expand] is [code]true[/code], while [code]divide_vector([1, 2], [4, 5, 6])[/code] will return [code][0.25, 0.4][/code] if [param expand] is [code]false[/code] and [code][0.25, 0.4, 0.0][/code] if [param expand] is [code]true[/code].
+			</description>
+		</method>
+		<method name="dot" qualifiers="static">
+			<return type="float" />
+			<param index="0" name="a" type="PackedFloat64Array" />
+			<param index="1" name="b" type="PackedFloat64Array" />
+			<description>
+				Returns the dot product of two N-dimensional vectors. The dimension of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="duplicate" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is a copy of the input vector.
+			</description>
+		</method>
+		<method name="floor" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) of the floor of the values of the input vector.
+			</description>
+		</method>
+		<method name="from_2d" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="Vector2" />
+			<description>
+				Constructs a VectorN ([PackedFloat64Array]) from a Vector2. It will have 2 numbers.
+			</description>
+		</method>
+		<method name="from_3d" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="Vector3" />
+			<description>
+				Constructs a VectorN ([PackedFloat64Array]) from a Vector3. It will have 3 numbers.
+			</description>
+		</method>
+		<method name="from_4d" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="Vector4" />
+			<description>
+				Constructs a VectorN ([PackedFloat64Array]) from a Vector4. It will have 4 numbers.
+			</description>
+		</method>
+		<method name="inverse" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the inverse of the input vector, by taking the reciprocal of each component of the input vector: [code]1.0 / component[/code].
+			</description>
+		</method>
+		<method name="is_equal_approx" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="a" type="PackedFloat64Array" />
+			<param index="1" name="b" type="PackedFloat64Array" />
+			<description>
+				Returns [code]true[/code] if [param a] and [param b] are approximately equal, by running [method @GlobalScope.is_equal_approx] on each component.
+				[b]Note:[/b] This check is only concerned with mathematical equality, not the dimension of the vectors. [code][1, 2, 3][/code] is considered equal to [code][1, 2, 3, 0][/code] and [code][1, 2, 3, 0, 0, 0][/code] but not [code][1, 2][/code] or [code][1, 2, 3, 4][/code].
+			</description>
+		</method>
+		<method name="is_equal_exact" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="a" type="PackedFloat64Array" />
+			<param index="1" name="b" type="PackedFloat64Array" />
+			<description>
+				Returns [code]true[/code] if [param a] and [param b] are exactly equal, by comparing each component.
+				[b]Note:[/b] This check is only concerned with mathematical equality, not the dimension of the vectors. [code][1, 2, 3][/code] is considered equal to [code][1, 2, 3, 0][/code] and [code][1, 2, 3, 0, 0, 0][/code] but not [code][1, 2][/code] or [code][1, 2, 3, 4][/code].
+			</description>
+		</method>
+		<method name="is_finite" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns [code]true[/code] if all components of the input vector are finite numbers. Returns [code]false[/code] if any component is [constant @GDScript.NAN] or +/- [constant @GDScript.INF].
+			</description>
+		</method>
+		<method name="is_zero_approx" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns [code]true[/code] if all components of the input vector are approximately 0.
+			</description>
+		</method>
+		<method name="length" qualifiers="static">
+			<return type="float" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns the length of an N-dimensional vector.
+			</description>
+		</method>
+		<method name="length_squared" qualifiers="static">
+			<return type="float" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns the squared length of an N-dimensional vector.
+				This function runs faster than [method length] as it skips the square root operation, so prefer it if you need to compare vectors or need the squared length for some formula.
+			</description>
+		</method>
+		<method name="lerp" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="from" type="PackedFloat64Array" />
+			<param index="1" name="to" type="PackedFloat64Array" />
+			<param index="2" name="weight" type="float" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the linear interpolation between [param from] and [param to] by [param weight]. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="limit_length" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="length" type="float" default="1.0" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector scaled to a length of [param length]. If the input vector is shorter than [param length], it will be returned unchanged.
+			</description>
+		</method>
+		<method name="multiply_scalar" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="scalar" type="float" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector multiplied by a scalar, by multiplying each component of the input vector by the scalar.
+			</description>
+		</method>
+		<method name="multiply_vector" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="a" type="PackedFloat64Array" />
+			<param index="1" name="b" type="PackedFloat64Array" />
+			<param index="2" name="expand" type="bool" default="false" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that has each input's components multiplied together. If [param expand] is [code]true[/code], the result will have the dimension of the largest input vector. Otherwise, the result will have the dimension of the smallest input vector. For example, [code]multiply_vector([1, 2, 3], [4, 5])[/code] will return [code][4, 10][/code] if [param expand] is [code]false[/code] and [code][4, 10, 0][/code] if [param expand] is [code]true[/code], with all components above the smallest input vector's dimension set to [code]0.0[/code].
+			</description>
+		</method>
+		<method name="normalized" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the normalized version of the input vector. The returned vector will have a length of [code]1.0[/code], or [code]0.0[/code] if the input vector is a zero vector.
+			</description>
+		</method>
+		<method name="posmod" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="mod" type="float" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the result of the modulo operation on each component of the input vector by [param mod]. See [method @GlobalScope.fposmod] for more information.
+			</description>
+		</method>
+		<method name="posmodv" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="modv" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the result of the modulo operation on each component of the input vector by the corresponding component of [param modv]. See [method @GlobalScope.fposmod] for more information. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="project" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="on_normal" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is [param vector] projected onto the vector [param on_normal].
+			</description>
+		</method>
+		<method name="reflect" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="normal" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is [param vector] reflected from a hyperplane defined by the [param normal] vector.
+			</description>
+		</method>
+		<method name="round" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) of the rounded values of the input vector.
+			</description>
+		</method>
+		<method name="sign" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) of the sign of the values of the input vector. The sign of a number is [code]1.0[/code] if the number is positive, [code]-1.0[/code] if the number is negative, and [code]0.0[/code] if the number is zero.
+			</description>
+		</method>
+		<method name="slide" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="normal" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the component of [param vector] along a hyperplane defined by the [param normal] vector.
+			</description>
+		</method>
+		<method name="snapped" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="by" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector snapped to the nearest multiple of the corresponding components of [param by]. See [method @GlobalScope.snapped] for more information. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="snappedf" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="by" type="float" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector snapped to the nearest multiple of [param by] for each component.
+			</description>
+		</method>
+		<method name="subtract" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="a" type="PackedFloat64Array" />
+			<param index="1" name="b" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the difference of the two input vectors. This is the same as [code]a - b[/code] for [Vector2], [Vector3], and [Vector4]. The dimensions of the vectors do not need to match.
+			</description>
+		</method>
+		<method name="to_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Converts a VectorN ([PackedFloat64Array]) to a Vector2. It will use the first 2 numbers in the array, while the rest are discarded. If the array has fewer than 2 numbers, the missing numbers are assumed to be 0.
+			</description>
+		</method>
+		<method name="to_3d" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Converts a VectorN ([PackedFloat64Array]) to a Vector3. It will use the first 3 numbers in the array, while the rest are discarded. If the array has fewer than 3 numbers, the missing numbers are assumed to be 0.
+			</description>
+		</method>
+		<method name="to_4d" qualifiers="static">
+			<return type="Vector4" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Converts a VectorN ([PackedFloat64Array]) to a Vector4. It will use the first 4 numbers in the array, while the rest are discarded. If the array has fewer than 4 numbers, the missing numbers are assumed to be 0.
+			</description>
+		</method>
+	</methods>
+</class>

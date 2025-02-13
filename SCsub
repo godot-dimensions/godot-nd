@@ -10,6 +10,7 @@ env_modules.Append(CPPDEFINES=["GODOT_MODULE"])
 env_nd = env_modules.Clone()
 
 env_nd.add_source_files(env.modules_sources, "*.cpp")
+env_nd.add_source_files(env.modules_sources, "math/*.cpp")
 env_nd.add_source_files(env.modules_sources, "nodes/*.cpp")
 
 if env.editor_build:
