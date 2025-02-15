@@ -255,6 +255,13 @@
 				Returns a new VectorN ([PackedFloat64Array]) that has each input's components multiplied together. If [param expand] is [code]true[/code], the result will have the dimension of the largest input vector. Otherwise, the result will have the dimension of the smallest input vector. For example, [code]multiply_vector([1, 2, 3], [4, 5])[/code] will return [code][4, 10][/code] if [param expand] is [code]false[/code] and [code][4, 10, 0][/code] if [param expand] is [code]true[/code], with all components above the smallest input vector's dimension set to [code]0.0[/code].
 			</description>
 		</method>
+		<method name="negate" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the negated version of the input vector.
+			</description>
+		</method>
 		<method name="normalized" qualifiers="static">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="vector" type="PackedFloat64Array" />

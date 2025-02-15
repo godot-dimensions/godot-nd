@@ -24,6 +24,17 @@ VectorN VectorND::add(const VectorN &p_a, const VectorN &p_b) {
 	return sum;
 }
 
+void VectorND::add_in_place(const VectorN &p_a, VectorN &r_result) {
+	const int dimension = p_a.size();
+	if (r_result.size() < dimension) {
+		r_result.resize(dimension);
+	}
+	for (int i = 0; i < dimension; i++) {
+		const double a = likely(i < dimension) ? p_a[i] : 0.0;
+		r_result.set(i, r_result[i] + a);
+	}
+}
+
 double VectorND::angle_to(const VectorN &p_from, const VectorN &p_to) {
 	return Math::acos(VectorND::dot(p_from, p_to) / (VectorND::length(p_from) * VectorND::length(p_to)));
 }
@@ -280,6 +291,26 @@ VectorN VectorND::multiply_scalar(const VectorN &p_vector, const double p_scalar
 	return product;
 }
 
+void VectorND::multiply_scalar_and_add_in_place(const VectorN &p_vector, const double p_scalar, VectorN &r_result) {
+	const int dimension = p_vector.size();
+	if (unlikely(r_result.size() < dimension)) {
+		r_result.resize(dimension);
+	}
+	for (int i = 0; i < dimension; i++) {
+		r_result.set(i, r_result[i] + p_vector[i] * p_scalar);
+	}
+}
+
+VectorN VectorND::negate(const VectorN &p_vector) {
+	const int dimension = p_vector.size();
+	VectorN negated;
+	negated.resize(dimension);
+	for (int i = 0; i < dimension; i++) {
+		negated.set(i, -p_vector[i]);
+	}
+	return negated;
+}
+
 VectorN VectorND::normalized(const VectorN &p_vector) {
 	const int dimension = p_vector.size();
 	const double vector_length = VectorND::length(p_vector);
@@ -466,6 +497,18 @@ Vector4 VectorND::to_4d(const VectorN &p_vector) {
 	return Vector4();
 }
 
+String VectorND::to_string(const VectorN &p_vector) {
+	String str = "(";
+	for (int i = 0; i < p_vector.size(); i++) {
+		str += String::num(p_vector[i]);
+		if (i < p_vector.size() - 1) {
+			str += ", ";
+		}
+	}
+	str += ")";
+	return str;
+}
+
 VectorND *VectorND::singleton = nullptr;
 
 void VectorND::_bind_methods() {
@@ -497,6 +540,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("limit_length", "vector", "length"), &VectorND::limit_length, DEFVAL(1.0));
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_vector", "a", "b", "expand"), &VectorND::multiply_vector, DEFVAL(false));
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_scalar", "vector", "scalar"), &VectorND::multiply_scalar);
+	ClassDB::bind_static_method("VectorND", D_METHOD("negate", "vector"), &VectorND::negate);
 	ClassDB::bind_static_method("VectorND", D_METHOD("normalized", "vector"), &VectorND::normalized);
 	ClassDB::bind_static_method("VectorND", D_METHOD("posmod", "vector", "mod"), &VectorND::posmod);
 	ClassDB::bind_static_method("VectorND", D_METHOD("posmodv", "vector", "modv"), &VectorND::posmodv);

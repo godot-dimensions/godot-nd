@@ -6,6 +6,7 @@
 #include "core/config/engine.h"
 #endif
 
+#include "math/transform_nd.h"
 #include "math/vector_nd.h"
 #include "nodes/node_nd.h"
 
@@ -32,6 +33,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(VectorND);
 	} else if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
 		GDREGISTER_CLASS(NodeND);
+		GDREGISTER_CLASS(TransformND);
 		add_godot_singleton("VectorND", memnew(VectorND));
 	}
 }

@@ -13,6 +13,7 @@ protected:
 public:
 	static VectorN abs(const VectorN &p_vector);
 	static VectorN add(const VectorN &p_a, const VectorN &p_b);
+	static void add_in_place(const VectorN &p_a, VectorN &r_result);
 	static double angle_to(const VectorN &p_from, const VectorN &p_to);
 	static VectorN bounce(const VectorN &p_vector, const VectorN &p_normal);
 	static VectorN bounce_ratio(const VectorN &p_vector, const VectorN &p_normal, const double p_bounce_ratio);
@@ -39,6 +40,8 @@ public:
 	static VectorN limit_length(const VectorN &p_vector, const double p_len = 1.0);
 	static VectorN multiply_vector(const VectorN &p_a, const VectorN &p_b, const bool p_expand = false);
 	static VectorN multiply_scalar(const VectorN &p_vector, const double p_scalar);
+	static void multiply_scalar_and_add_in_place(const VectorN &p_vector, const double p_scalar, VectorN &r_result);
+	static VectorN negate(const VectorN &p_vector);
 	static VectorN normalized(const VectorN &p_vector);
 	static VectorN posmod(const VectorN &p_vector, const double p_mod);
 	static VectorN posmodv(const VectorN &p_vector, const VectorN &p_modv);
@@ -58,6 +61,7 @@ public:
 	static Vector2 to_2d(const VectorN &p_vector);
 	static Vector3 to_3d(const VectorN &p_vector);
 	static Vector4 to_4d(const VectorN &p_vector);
+	static String to_string(const VectorN &p_vector);
 
 	static VectorND *get_singleton() { return singleton; }
 	VectorND() { singleton = this; }

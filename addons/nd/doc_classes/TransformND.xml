@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TransformND" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Class for working with N-dimensional transformations.
+	</brief_description>
+	<description>
+		Transform4D represents N-dimensional transformations with an MxN matrix for rotation/scale/skew/shear/flip, and an origin vector for position. The basis matrix may be non-square, but it is often square. This class can be used for transformations in 1D, 2D, 3D, 4D, 5D, 6D, and so on when square, or transformations between dimensions such as 3D to 2D or 2D to 3D when not square. Use [method with_dimension] to force the dimension of the transform to a specific value.
+		The basis matrix is stored in column-major order. It may be a jagged array, where each column has a different dimension. This allows for saving memory, only allocating the values that are needed. This means that for example if you have a 1000-dimensional game and only want to rotate between dimension indices 2 and 4, you just need to have 5 columns, where most are empty, but column indices 2 and 4 each have 5 values: column 2 would have [code][0, 0, cos, 0, -sin][/code] and column 4 would have [code][0, 0, sin, 0, cos][/code]. Use [method from_rotation] if you want to construct such a rotation matrix. The dimension of this transform would be 5, but it can be used together with other transforms of different dimensions.
+		For more information, read the "Matrices and transforms" documentation article.
+	</description>
+	<tutorials>
+		<link title="Math documentation index">$DOCS_URL/tutorials/math/index.html</link>
+		<link title="Matrices and transforms">$DOCS_URL/tutorials/math/matrices_and_transforms.html</link>
+		<link title="Matrix Transform Demo">https://godotengine.org/asset-library/asset/584</link>
+	</tutorials>
+	<methods>
+		<method name="compose" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="child_transform" type="TransformND" />
+			<description>
+				Composes (multiplies/combines) this transform with another transform. This transforms [param child_transform] by this transform (the parent) in the order of [code]parent * child[/code].
+			</description>
+		</method>
+		<method name="conformalized" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns a copy of the transform with the basis matrix conformalized, meaning that the basis vectors are orthogonal and have a uniform scale. This is useful for ensuring that the transform preserves angles, shapes, and distance ratios.
+			</description>
+		</method>
+		<method name="determinant" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the determinant of the basis matrix. This number represents how space is scaled by the transformation. This is non-zero for any invertible square matrix within the same dimension, and always zero for non-invertible matrices and non-square matrices, such as matrices that convert 3D to 2D (the 3D space is flattened to a plane, so it has no volume, and so it scales the space to zero) or convert 2D to 3D (the span is at most a 2D plane embedded in 3D space, which has a volume of zero).
+			</description>
+		</method>
+		<method name="from_2d" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="transform" type="Transform2D" />
+			<description>
+				Creates a 2-dimensional [TransformND] from a [Transform2D]. The basis matrix will be a 2x2 matrix, and the origin will be a 2-dimensional vector.
+			</description>
+		</method>
+		<method name="from_3d" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="transform" type="Transform3D" />
+			<description>
+				Creates a 3-dimensional [TransformND] from a [Transform3D]. The basis matrix will be a 3x3 matrix, and the origin will be a 3-dimensional vector.
+			</description>
+		</method>
+		<method name="from_4d" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="basis" type="Projection" />
+			<param index="1" name="origin" type="Vector4" />
+			<description>
+				Creates a 4-dimensional [TransformND] from a [Projection] basis matrix and a [Vector4] origin vector. The basis matrix will be a 4x4 matrix, and the origin will be a 4-dimensional vector.
+			</description>
+		</method>
+		<method name="from_position" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="position" type="PackedFloat64Array" />
+			<description>
+				Creates a translation matrix from the specified position vector.
+			</description>
+		</method>
+		<method name="from_position_rotation" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="position" type="PackedFloat64Array" />
+			<param index="1" name="rot_from" type="int" />
+			<param index="2" name="rot_to" type="int" />
+			<param index="3" name="rot_angle" type="float" />
+			<description>
+				Creates a transform with both a position and a rotation. The rotation is around the axis from dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the basis matrix is the maximum of [param rot_from] and [param rot_to] plus one.
+			</description>
+		</method>
+		<method name="from_position_rotation_scale" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="position" type="PackedFloat64Array" />
+			<param index="1" name="rot_from" type="int" />
+			<param index="2" name="rot_to" type="int" />
+			<param index="3" name="rot_angle" type="float" />
+			<param index="4" name="scale" type="PackedFloat64Array" />
+			<description>
+				Creates a transform with a position, rotation, and scale. The rotation is around the axis from dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the basis matrix is the maximum of [param rot_from] plus one, [param rot_to] plus one, and the length of the scale vector.
+			</description>
+		</method>
+		<method name="from_position_scale" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="position" type="PackedFloat64Array" />
+			<param index="1" name="scale" type="PackedFloat64Array" />
+			<description>
+				Creates a transform with both a position and a scale. The dimension of the basis matrix is the length of the scale vector.
+			</description>
+		</method>
+		<method name="from_rotation" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="rot_from" type="int" />
+			<param index="1" name="rot_to" type="int" />
+			<param index="2" name="rot_angle" type="float" />
+			<description>
+				Creates a rotation matrix that rotates around the axis from dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the returned transform is the maximum of [param rot_from] and [param rot_to] plus one.
+				For parity with how 3D rotations work, you should swap the indices if they have an even separation. For example, use [code]from_rotation(0, 1, angle)[/code], [code]from_rotation(1, 2, angle)[/code], but use [code]from_rotation(2, 0, angle)[/code] instead of [code]from_rotation(0, 2, angle)[/code]. This function will not perform swapping for you, it will conform to the convention of the indices you provide.
+			</description>
+		</method>
+		<method name="from_scale" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="scale" type="PackedFloat64Array" />
+			<description>
+				Creates a scale matrix from the specified scale vector. The dimension of the basis matrix is the length of the scale vector.
+			</description>
+		</method>
+		<method name="get_all_basis_columns" qualifiers="const">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Returns all the basis columns as an array of VectorN ([PackedFloat64Array]) objects.
+			</description>
+		</method>
+		<method name="get_basis_column" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the basis column at the specified index as a VectorN (PackedFloat64Array) object. This method fills the missing numbers with the identity values, allowing you to use a full MxN matrix without allocating every value in memory.
+			</description>
+		</method>
+		<method name="get_basis_column_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the amount of basis columns.
+			</description>
+		</method>
+		<method name="get_basis_column_raw" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the basis column at the specified index as a VectorN (PackedFloat64Array) object. This method returns the raw data of the column, without filling the missing numbers with the identity values.
+			</description>
+		</method>
+		<method name="get_basis_dimension" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the dimension of the basis, the maximum of [method get_basis_column_count] and [method get_basis_row_count].
+			</description>
+		</method>
+		<method name="get_basis_element" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="column" type="int" />
+			<param index="1" name="row" type="int" />
+			<description>
+				Returns the element at the specified column and row. If the element is missing, it returns the identity value for that position ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest).
+			</description>
+		</method>
+		<method name="get_basis_row" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the basis row at the specified index as a VectorN (PackedFloat64Array) object.
+			</description>
+		</method>
+		<method name="get_basis_row_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the amount of basis rows.
+			</description>
+		</method>
+		<method name="get_dimension" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the dimension of the whole transformation, the maximum of [method get_basis_dimension] and [method get_origin_dimension].
+			</description>
+		</method>
+		<method name="get_origin" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Returns the origin vector which represents the position or translation relative to the parent space.
+			</description>
+		</method>
+		<method name="get_origin_dimension" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the dimension of the origin vector.
+			</description>
+		</method>
+		<method name="get_origin_element" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the element at the specified index of the origin vector. If the element is missing, it returns [code]0.0[/code].
+			</description>
+		</method>
+		<method name="get_scale_abs" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Returns the absolute scale, which is the length of each basis column. This does not return negative values in the case of a flip/reflection.
+			</description>
+		</method>
+		<method name="get_uniform_scale" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the uniform scale, which is the average of the scale. This returns negative values in the case of a flip/reflection. Only square matrices may have a negative scale. Non-square matrices cannot have a negative scale defined for the same reason that they cannot have a determinant.
+			</description>
+		</method>
+		<method name="get_uniform_scale_abs" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the absolute uniform scale, which the average of the absolute scale. This does not return negative values in the case of a flip/reflection.
+			</description>
+		</method>
+		<method name="inverse" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns the inverse of the transform, including the origin. This can handle any invertible square matrix, including rotation and scale matrices.
+			</description>
+		</method>
+		<method name="inverse_basis" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns the inverse of the basis matrix, but not the origin. This can handle any invertible square matrix, including rotation and scale matrices.
+			</description>
+		</method>
+		<method name="inverse_basis_transposed" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns the transpose of the inverse of the basis matrix, but not the origin. This is much cheaper to compute than [method inverse_basis], but this only functions as the inverse for rotation matrices without scale.
+			</description>
+		</method>
+		<method name="inverse_transposed" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns the transpose of the transform, including the origin. If the basis matrix is orthonormal, this is equivalent to the inverse. This is much cheaper to compute than [method inverse], but this only functions as the inverse for rotation matrices without scale.
+			</description>
+		</method>
+		<method name="is_conformal" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the basis matrix is conformal, meaning that the basis vectors are orthogonal and have a uniform scale. This is useful for ensuring that the transform preserves angles, shapes, and distance ratios.
+			</description>
+		</method>
+		<method name="is_diagonal" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the basis matrix is diagonal, meaning that the basis only has scale or flip/reflection, no rotation/shear/skew.
+			</description>
+		</method>
+		<method name="is_equal_approx" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="TransformND" />
+			<description>
+				Returns [code]true[/code] if this [TransformND] and [param other] are approximately equal, by running [method @GlobalScope.is_equal_approx] on each component.
+				[b]Note:[/b] This function is only concerned with mathematical equality, regardless of dimensions. For example, a 2D identity transform will be considered equal to a 3D identity transform. If you need to ensure dimensions are equal as well, check their dimensions before calling this function.
+			</description>
+		</method>
+		<method name="is_normalized" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the basis matrix is normalized, meaning that the basis vectors have a length of [code]1.0[/code]. This means that the transform has no scale.
+			</description>
+		</method>
+		<method name="is_orthogonal" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the basis matrix is orthogonal, meaning that the basis vectors are perpendicular to each other. This means that the transform has no shear/skew.
+			</description>
+		</method>
+		<method name="is_orthonormal" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the basis matrix is orthonormal, meaning both orthogonal and normalized. This means that the transform has no scale, shear, or skew.
+			</description>
+		</method>
+		<method name="is_rotation" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the basis matrix is a rotation matrix, meaning that the basis is orthonormal and has a determinant of [code]1.0[/code]. This is like [method is_orthonormal], but also requires that there is no flip/reflection.
+			</description>
+		</method>
+		<method name="is_uniform_scale" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the basis matrix has a uniform scale, meaning that the scale is the same in all directions.
+			</description>
+		</method>
+		<method name="lerp" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="to" type="TransformND" />
+			<param index="1" name="weight" type="float" />
+			<description>
+				Linearly interpolates this transform towards another by a given [param weight] amount on the range of [code]0.0[/code] to [code]1.0[/code].
+			</description>
+		</method>
+		<method name="normalized" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns a copy of the transform with the basis matrix normalized, meaning that the basis vectors have a length of [code]1.0[/code]. This means that the transform has no scale, aside from possibly a flip/reflection.
+			</description>
+		</method>
+		<method name="orthogonalized" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns a copy of the transform with the basis matrix orthogonalized, meaning that the basis vectors are perpendicular to each other. This means that the transform has no shear/skew.
+			</description>
+		</method>
+		<method name="orthonormalized" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns a copy of the transform with the basis matrix orthonormalized, meaning both orthogonal and normalized. This means that the transform has no scale, shear, or skew, but may have rotation or flip/reflection.
+			</description>
+		</method>
+		<method name="scaled_global" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="scale" type="PackedFloat64Array" />
+			<description>
+				Returns a copy of the transform scaled by the specified scale vector in global space. This is equivalent to multiplying each row of the basis matrix by the corresponding dimension in the scale vector, and multiplying the origin by the scale vector.
+			</description>
+		</method>
+		<method name="scaled_local" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="scale" type="PackedFloat64Array" />
+			<description>
+				Returns a copy of the transform scaled by the specified scale vector in local space. This is equivalent to multiplying each column of the basis matrix by the corresponding dimension in the scale vector.
+			</description>
+		</method>
+		<method name="scaled_uniform" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="scale" type="float" />
+			<description>
+				Returns a copy of the transform scaled uniformly by the specified scale in local space. This is equivalent to multiplying every element of the basis matrix by the scale.
+			</description>
+		</method>
+		<method name="set_all_basis_columns">
+			<return type="void" />
+			<param index="0" name="columns" type="PackedFloat64Array[]" />
+			<description>
+				Sets all the basis columns from an array of VectorN ([PackedFloat64Array]) objects.
+			</description>
+		</method>
+		<method name="set_basis_column">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<param index="1" name="column" type="PackedFloat64Array" />
+			<description>
+				Sets the basis column at the specified index from a VectorN (PackedFloat64Array) object.
+			</description>
+		</method>
+		<method name="set_basis_element">
+			<return type="void" />
+			<param index="0" name="column" type="int" />
+			<param index="1" name="row" type="int" />
+			<param index="2" name="value" type="float" />
+			<description>
+				Sets the element at the specified column and row to the specified value. If the element is missing, it will expand the matrix to fit the element.
+			</description>
+		</method>
+		<method name="set_basis_row">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<param index="1" name="row" type="PackedFloat64Array" />
+			<description>
+				Sets the basis row at the specified index from a VectorN (PackedFloat64Array) object.
+			</description>
+		</method>
+		<method name="set_origin">
+			<return type="void" />
+			<param index="0" name="origin" type="PackedFloat64Array" />
+			<description>
+				Sets the origin vector which represents the position or translation relative to the parent space.
+			</description>
+		</method>
+		<method name="set_origin_element">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<param index="1" name="value" type="float" />
+			<description>
+				Sets the element at the specified index of the origin vector to the specified value. If the element is missing, it will expand the vector to fit the element.
+			</description>
+		</method>
+		<method name="to_2d">
+			<return type="Transform2D" />
+			<description>
+				Converts the transform to a 2-dimensional [Transform2D]. Any elements outside of 2D space are ignored, and if any elements are missing, identity values are used.
+			</description>
+		</method>
+		<method name="to_3d">
+			<return type="Transform3D" />
+			<description>
+				Converts the transform to a 3-dimensional [Transform3D]. Any elements outside of 3D space are ignored, and if any elements are missing, identity values are used.
+			</description>
+		</method>
+		<method name="to_4d">
+			<return type="Projection" />
+			<description>
+				Converts the transform to a 4-dimensional [Projection] basis. Any elements outside of 4D space are ignored, and if any elements are missing, identity values are used. If you need the origin, use [method VectorND.to_4d] on the origin vector.
+			</description>
+		</method>
+		<method name="transform_to" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="to" type="TransformND" />
+			<description>
+				Returns a transform that transforms from this transform to the specified [param to] transform.
+			</description>
+		</method>
+		<method name="with_dimension" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="dimension" type="int" />
+			<param index="1" name="square" type="bool" default="true" />
+			<description>
+				Returns a copy of the transform with the amount of columns and the origin dimension set to the specified [param dimension]. If [param square] is [code]true[/code] (default), the basis will be set to a square matrix, ensuring the amount of rows is also [param dimension]. If a jagged basis is desired and the amount of rows does not need to be [param dimension], pass [code]false[/code] for [param square], otherwise leave it as [code]true[/code].
+			</description>
+		</method>
+		<method name="xform" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Transforms the specified vector by this transform, including the origin. This is equivalent to multiplying the vector by the basis matrix, then adding the origin.
+			</description>
+		</method>
+		<method name="xform_basis" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Transforms the specified vector by the basis matrix of this transform. This is equivalent to multiplying the vector by the basis matrix.
+			</description>
+		</method>
+		<method name="xform_basis_axis" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="axis" type="PackedFloat64Array" />
+			<param index="1" name="axis_index" type="int" />
+			<description>
+				Transforms the specified axis vector by the basis matrix of this transform, interpreting [param axis] as a basis vector of a child matrix. This is like [method xform_basis], but it ensures that if [param axis] does not go all the way to [param axis_index], it will be treated as if [code]1.0[/code] is at [code]axis[axis_index][/code]. This is useful for transforming axes of jagged child matrices, where the child matrix only allocates the values that are needed.
+			</description>
+		</method>
+	</methods>
+</class>
