@@ -4,7 +4,7 @@
 		Class for working with N-dimensional transformations.
 	</brief_description>
 	<description>
-		Transform4D represents N-dimensional transformations with an MxN matrix for rotation/scale/skew/shear/flip, and an origin vector for position. The basis matrix may be non-square, but it is often square. This class can be used for transformations in 1D, 2D, 3D, 4D, 5D, 6D, and so on when square, or transformations between dimensions such as 3D to 2D or 2D to 3D when not square. Use [method with_dimension] to force the dimension of the transform to a specific value.
+		Transform4D represents N-dimensional transformations with an MxN matrix for rotation/scale/skew/shear/flip, and an origin vector for position. The basis matrix may be non-square, but it is often square. This class can be used for transformations in 1D, 2D, 3D, 4D, 5D, 6D, and so on when square, or transformations between dimensions such as 3D to 2D or 2D to 3D when not square. Use [method set_dimension] or [method with_dimension] to force the dimension of the transform to a specific value.
 		The basis matrix is stored in column-major order. It may be a jagged array, where each column has a different dimension. This allows for saving memory, only allocating the values that are needed. This means that for example if you have a 1000-dimensional game and only want to rotate between dimension indices 2 and 4, you just need to have 5 columns, where most are empty, but column indices 2 and 4 each have 5 values: column 2 would have [code][0, 0, cos, 0, -sin][/code] and column 4 would have [code][0, 0, sin, 0, cos][/code]. Use [method from_rotation] if you want to construct such a rotation matrix. The dimension of this transform would be 5, but it can be used together with other transforms of different dimensions.
 		For more information, read the "Matrices and transforms" documentation article.
 	</description>
@@ -31,6 +31,12 @@
 			<return type="float" />
 			<description>
 				Returns the determinant of the basis matrix. This number represents how space is scaled by the transformation. This is non-zero for any invertible square matrix within the same dimension, and always zero for non-invertible matrices and non-square matrices, such as matrices that convert 3D to 2D (the 3D space is flattened to a plane, so it has no volume, and so it scales the space to zero) or convert 2D to 3D (the span is at most a 2D plane embedded in 3D space, which has a volume of zero).
+			</description>
+		</method>
+		<method name="duplicate" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns a copy or clone of the transform. The underlying data uses Godot's Vector type, which is copy-on-write, so this is a cheap operation if the transform is not modified.
 			</description>
 		</method>
 		<method name="from_2d" qualifiers="static">
@@ -167,12 +173,6 @@
 				Returns the dimension of the whole transformation, the maximum of [method get_basis_dimension] and [method get_origin_dimension].
 			</description>
 		</method>
-		<method name="get_origin" qualifiers="const">
-			<return type="PackedFloat64Array" />
-			<description>
-				Returns the origin vector which represents the position or translation relative to the parent space.
-			</description>
-		</method>
 		<method name="get_origin_dimension" qualifiers="const">
 			<return type="int" />
 			<description>
@@ -184,12 +184,6 @@
 			<param index="0" name="index" type="int" />
 			<description>
 				Returns the element at the specified index of the origin vector. If the element is missing, it returns [code]0.0[/code].
-			</description>
-		</method>
-		<method name="get_scale_abs" qualifiers="const">
-			<return type="PackedFloat64Array" />
-			<description>
-				Returns the absolute scale, which is the length of each basis column. This does not return negative values in the case of a flip/reflection.
 			</description>
 		</method>
 		<method name="get_uniform_scale" qualifiers="const">
@@ -340,6 +334,20 @@
 				Sets the basis column at the specified index from a VectorN (PackedFloat64Array) object.
 			</description>
 		</method>
+		<method name="set_basis_column_count">
+			<return type="void" />
+			<param index="0" name="count" type="int" />
+			<description>
+				Sets the amount of basis columns. If the amount is less than the current amount, the extra columns are removed. If the amount is more than the current amount, the extra columns are added as empty vectors.
+			</description>
+		</method>
+		<method name="set_basis_dimension">
+			<return type="void" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Sets the amount of basis columns and rows, making the basis a square matrix in the specified dimension. If the amount is less than the current amount, the extra columns and rows are removed. If the amount is more than the current amount, the new values are set to identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest).
+			</description>
+		</method>
 		<method name="set_basis_element">
 			<return type="void" />
 			<param index="0" name="column" type="int" />
@@ -357,11 +365,25 @@
 				Sets the basis row at the specified index from a VectorN (PackedFloat64Array) object.
 			</description>
 		</method>
-		<method name="set_origin">
+		<method name="set_basis_row_count">
 			<return type="void" />
-			<param index="0" name="origin" type="PackedFloat64Array" />
+			<param index="0" name="count" type="int" />
 			<description>
-				Sets the origin vector which represents the position or translation relative to the parent space.
+				Sets the amount of basis rows. This sets the length of all column vectors to the specified amount. If the amount is less than the current amount, the extra rows are removed. If the amount is more than the current amount, the new values are set to identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest).
+			</description>
+		</method>
+		<method name="set_dimension">
+			<return type="void" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Sets the dimension of the whole transformation. The basis will be resized to a square matrix with the specified dimension, and the origin will be resized to the specified dimension. If the dimension is less than the current dimension, the extra elements are removed. If the dimension is more than the current dimension, the extra elements are added as identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest).
+			</description>
+		</method>
+		<method name="set_origin_dimension">
+			<return type="void" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Sets the dimension of the origin vector. If the dimension is less than the current dimension, the extra elements are removed. If the dimension is more than the current dimension, the extra elements are added as zeros.
 			</description>
 		</method>
 		<method name="set_origin_element">
@@ -400,9 +422,8 @@
 		<method name="with_dimension" qualifiers="const">
 			<return type="TransformND" />
 			<param index="0" name="dimension" type="int" />
-			<param index="1" name="square" type="bool" default="true" />
 			<description>
-				Returns a copy of the transform with the amount of columns and the origin dimension set to the specified [param dimension]. If [param square] is [code]true[/code] (default), the basis will be set to a square matrix, ensuring the amount of rows is also [param dimension]. If a jagged basis is desired and the amount of rows does not need to be [param dimension], pass [code]false[/code] for [param square], otherwise leave it as [code]true[/code].
+				Returns a copy of the transform with the dimension set to [param dimension]. The basis will be resized to a square matrix with the specified dimension, and the origin will be resized to the specified dimension. If the dimension is less than the current dimension, the extra elements are removed. If the dimension is more than the current dimension, the extra elements are added as identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest).
 			</description>
 		</method>
 		<method name="xform" qualifiers="const">
@@ -428,4 +449,12 @@
 			</description>
 		</method>
 	</methods>
+	<members>
+		<member name="origin" type="PackedFloat64Array" setter="set_origin" getter="get_origin" default="PackedFloat64Array()">
+			The origin vector of the transform. This represents the position or translation relative to the parent space.
+		</member>
+		<member name="scale_abs" type="PackedFloat64Array" setter="set_scale_abs" getter="get_scale_abs" default="PackedFloat64Array()">
+			The absolute scale, which is the length of each basis column. This does not account for flips/reflections, and is intended to be used with positive values only. Setting this with negative values will flip the basis vectors, but the scale will be positive again when reading this property back.
+		</member>
+	</members>
 </class>

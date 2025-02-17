@@ -53,6 +53,7 @@ public:
 	static VectorN snapped(const VectorN &p_vector, const VectorN &p_by);
 	static VectorN snappedf(const VectorN &p_vector, const double p_by);
 	static VectorN subtract(const VectorN &p_a, const VectorN &p_b);
+	static VectorN with_length(const VectorN &p_vector, const double p_length = 1.0);
 
 	// Conversion.
 	static VectorN from_2d(const Vector2 &p_vector);

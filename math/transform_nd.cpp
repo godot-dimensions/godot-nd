@@ -8,20 +8,18 @@
 #include "core/variant/typed_array.h"
 #endif
 
-Vector<VectorN> make_basis_square(const Vector<VectorN> &p_jagged_matrix) {
-	const int column_count = p_jagged_matrix.size();
-	Vector<VectorN> square = p_jagged_matrix;
+void make_basis_square_in_place(Vector<VectorN> &p_basis) {
+	const int column_count = p_basis.size();
 	for (int i = 0; i < column_count; i++) {
 		// Force each column to have the same amount of rows as there are columns (square matrix).
-		if (p_jagged_matrix[i].size() < i + 1) {
-			square.write[i].resize(column_count);
+		if (p_basis[i].size() < i + 1) {
+			p_basis.write[i].resize(column_count);
 			// Fill missing values with the identity matrix (1.0 on the diagonal).
-			square.write[i].set(i, 1.0);
+			p_basis.write[i].set(i, 1.0);
 		} else {
-			square.write[i].resize(column_count);
+			p_basis.write[i].resize(column_count);
 		}
 	}
-	return square;
 }
 
 // Trivial getters and setters.
@@ -158,6 +156,10 @@ int TransformND::get_basis_column_count() const {
 	return _columns.size();
 }
 
+void TransformND::set_basis_column_count(const int p_column_count) {
+	_columns.resize(p_column_count);
+}
+
 int TransformND::get_basis_dimension() const {
 	const int column_count = _columns.size();
 	int dimension = column_count;
@@ -168,6 +170,11 @@ int TransformND::get_basis_dimension() const {
 		}
 	}
 	return dimension;
+}
+
+void TransformND::set_basis_dimension(const int p_basis_dimension) {
+	_columns.resize(p_basis_dimension);
+	make_basis_square_in_place(_columns);
 }
 
 int TransformND::get_basis_row_count() const {
@@ -182,28 +189,40 @@ int TransformND::get_basis_row_count() const {
 	return row_count;
 }
 
+void TransformND::set_basis_row_count(const int p_row_count) {
+	const int column_count = _columns.size();
+	for (int i = 0; i < column_count; i++) {
+		VectorN column = _columns[i];
+		if (column.size() < i + 1) {
+			column.resize(p_row_count);
+			column.set(i, 1.0);
+		} else {
+			column.resize(p_row_count);
+		}
+		_columns.set(i, column);
+	}
+}
+
 int TransformND::get_dimension() const {
 	return MAX(get_basis_dimension(), get_origin_dimension());
+}
+
+void TransformND::set_dimension(const int p_dimension) {
+	set_basis_dimension(p_dimension);
+	set_origin_dimension(p_dimension);
 }
 
 int TransformND::get_origin_dimension() const {
 	return _origin.size();
 }
 
-Ref<TransformND> TransformND::with_dimension(const int p_dimension, const bool p_square) const {
-	Ref<TransformND> ret;
-	ret.instantiate();
-	Vector<VectorN> new_columns = _columns;
-	new_columns.resize(p_dimension);
-	if (p_square) {
-		new_columns = make_basis_square(new_columns);
-	}
-	ret->set_all_basis_columns(new_columns);
-	VectorN new_origin = _origin;
-	if (new_origin.size() < p_dimension) {
-		new_origin.resize(p_dimension);
-	}
-	ret->set_origin(new_origin);
+void TransformND::set_origin_dimension(const int p_origin_dimension) {
+	_origin.resize(p_origin_dimension);
+}
+
+Ref<TransformND> TransformND::with_dimension(const int p_dimension) const {
+	Ref<TransformND> ret = duplicate();
+	ret->set_dimension(p_dimension);
 	return ret;
 }
 
@@ -283,6 +302,14 @@ double TransformND::determinant() const {
 		det = -det;
 	}
 	return det;
+}
+
+Ref<TransformND> TransformND::duplicate() const {
+	Ref<TransformND> ret;
+	ret.instantiate();
+	ret->set_all_basis_columns(_columns);
+	ret->set_origin(_origin);
+	return ret;
 }
 
 bool TransformND::is_equal_approx(const Ref<TransformND> &p_other) const {
@@ -461,7 +488,8 @@ Ref<TransformND> TransformND::inverse_basis() const {
 	const int dimension = _columns.size();
 	ERR_FAIL_COND_V_MSG(dimension <= 0, inv, "Basis dimension must be positive.");
 	// Operate on a square copy of the columns (Vector<> is copy-on-write).
-	Vector<VectorN> decomposed = make_basis_square(_columns);
+	Vector<VectorN> decomposed = _columns;
+	make_basis_square_in_place(decomposed);
 	// LUP decompose.
 	PackedInt32Array permutations;
 	const bool success = lup_decompose(decomposed, permutations, dimension);
@@ -507,6 +535,14 @@ VectorN TransformND::get_scale_abs() const {
 		scale.set(i, VectorND::length(_columns[i]));
 	}
 	return scale;
+}
+
+void TransformND::set_scale_abs(const VectorN &p_scale) {
+	const int column_count = _columns.size();
+	for (int i = 0; i < column_count; i++) {
+		const double scale = p_scale[i];
+		_columns.set(i, VectorND::with_length(_columns[i], scale));
+	}
 }
 
 double TransformND::get_uniform_scale() const {
@@ -884,13 +920,19 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_origin_element", "index", "value"), &TransformND::set_origin_element);
 	// Dimension methods.
 	ClassDB::bind_method(D_METHOD("get_basis_column_count"), &TransformND::get_basis_column_count);
+	ClassDB::bind_method(D_METHOD("set_basis_column_count", "count"), &TransformND::set_basis_column_count);
 	ClassDB::bind_method(D_METHOD("get_basis_dimension"), &TransformND::get_basis_dimension);
+	ClassDB::bind_method(D_METHOD("set_basis_dimension", "dimension"), &TransformND::set_basis_dimension);
 	ClassDB::bind_method(D_METHOD("get_basis_row_count"), &TransformND::get_basis_row_count);
+	ClassDB::bind_method(D_METHOD("set_basis_row_count", "count"), &TransformND::set_basis_row_count);
 	ClassDB::bind_method(D_METHOD("get_dimension"), &TransformND::get_dimension);
+	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &TransformND::set_dimension);
 	ClassDB::bind_method(D_METHOD("get_origin_dimension"), &TransformND::get_origin_dimension);
-	ClassDB::bind_method(D_METHOD("with_dimension", "dimension", "square"), &TransformND::with_dimension, DEFVAL(true));
+	ClassDB::bind_method(D_METHOD("set_origin_dimension", "dimension"), &TransformND::set_origin_dimension);
+	ClassDB::bind_method(D_METHOD("with_dimension", "dimension"), &TransformND::with_dimension);
 	// Misc methods.
 	ClassDB::bind_method(D_METHOD("determinant"), &TransformND::determinant);
+	ClassDB::bind_method(D_METHOD("duplicate"), &TransformND::duplicate);
 	ClassDB::bind_method(D_METHOD("is_equal_approx", "other"), &TransformND::is_equal_approx);
 	ClassDB::bind_method(D_METHOD("lerp", "to", "weight"), &TransformND::lerp);
 	// Transformation methods.
@@ -906,6 +948,7 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("inverse_transposed"), &TransformND::inverse_transposed);
 	// Scale methods.
 	ClassDB::bind_method(D_METHOD("get_scale_abs"), &TransformND::get_scale_abs);
+	ClassDB::bind_method(D_METHOD("set_scale_abs", "scale"), &TransformND::set_scale_abs);
 	ClassDB::bind_method(D_METHOD("get_uniform_scale"), &TransformND::get_uniform_scale);
 	ClassDB::bind_method(D_METHOD("get_uniform_scale_abs"), &TransformND::get_uniform_scale_abs);
 	ClassDB::bind_method(D_METHOD("scaled_global", "scale"), &TransformND::scaled_global);
@@ -937,4 +980,7 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_static_method("TransformND", D_METHOD("from_position_scale", "position", "scale"), &TransformND::from_position_scale);
 	ClassDB::bind_static_method("TransformND", D_METHOD("from_rotation", "rot_from", "rot_to", "rot_angle"), &TransformND::from_rotation);
 	ClassDB::bind_static_method("TransformND", D_METHOD("from_scale", "scale"), &TransformND::from_scale);
+	// Properties.
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "origin", PROPERTY_HINT_NONE, "suffix:m"), "set_origin", "get_origin");
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");
 }

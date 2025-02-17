@@ -1,9 +1,70 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="NodeND" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
+		An N-dimensional game object, inherited by all ND nodes.
 	</brief_description>
 	<description>
+		NodeND has an N-dimensional [TransformND] for making N-dimensional games. All ND nodes inherit from this class.
 	</description>
 	<tutorials>
 	</tutorials>
+	<methods>
+		<method name="is_visible_in_tree" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the [NodeND] is visible in the scene tree (this node and all parent [NodeND]s are visible).
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="basis" type="PackedFloat64Array[]" setter="set_all_basis_columns" getter="get_all_basis_columns" default="[]">
+			The local basis of the transform, as an array of column vectors. The amount of columns is the same as [member input_dimension] and the amount of rows is the same as [member output_dimension] (unless the basis is a jagged array).
+			[b]Note:[/b] This returns a copy of the basis. Code like [code]node.basis[1][2] = 3[/code] will not work. You need to copy this to a local variable, modify it, and then set it back. For example:
+			[codeblock]
+			var basis = node.basis
+			basis[1][2] = 3
+			node.basis = basis
+			[/codeblock]
+		</member>
+		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
+			The dimension of the node's transform. Setting this will set [member input_dimension] and [member output_dimension] to the same value.
+		</member>
+		<member name="dimension_mode" type="int" setter="set_dimension_mode" getter="get_dimension_mode" enum="NodeND.DimensionMode" default="0">
+			Controls whether this node's transform exists within a single dimension or converts between dimensions. See [enum NodeND.DimensionMode] for more information.
+		</member>
+		<member name="global_position" type="PackedFloat64Array" setter="set_global_position" getter="get_global_position">
+			The global position of the node. The size of this array depends on the output dimension after multiplying all ancestor transforms.
+		</member>
+		<member name="global_transform" type="TransformND" setter="set_global_transform" getter="get_global_transform">
+			The global transformation matrix of the node as a [TransformND]. This is the result of multiplying all ancestor transforms together.
+		</member>
+		<member name="input_dimension" type="int" setter="set_input_dimension" getter="get_input_dimension">
+			The input dimension of the transform. This should be the same as the output dimension of all child nodes.
+			This is the same as the number of columns in [member basis], and the same as the number of elements in [member scale_abs]. When [member dimension_mode] is DIMENSION_MODE_SQUARE, this is the same as [member dimension] and [member output_dimension].
+		</member>
+		<member name="output_dimension" type="int" setter="set_output_dimension" getter="get_output_dimension">
+			The output dimension of the transform. This should be the same as the input dimension of the parent node.
+			This is the same as the number of rows in [member basis], and the same as the number of elements in [member position]. When [member dimension_mode] is DIMENSION_MODE_SQUARE, this is the same as [member dimension] and [member output_dimension].
+		</member>
+		<member name="position" type="PackedFloat64Array" setter="set_position" getter="get_position" default="PackedFloat64Array()">
+			The local position of the node. The size of this array is the same as [member output_dimension] which is the same as the number of rows in [member basis] (unless the basis is a jagged array).
+		</member>
+		<member name="scale_abs" type="PackedFloat64Array" setter="set_scale_abs" getter="get_scale_abs" default="PackedFloat64Array()">
+			The local absolute scale of the node. This is the length of each basis vector. The size of this array is the same as [member input_dimension] which is the same as the number of columns in [member basis].
+		</member>
+		<member name="transform" type="TransformND" setter="set_transform" getter="get_transform">
+			The local transformation matrix of the node as a [TransformND].
+		</member>
+		<member name="visible" type="bool" setter="set_visible" getter="is_visible" default="true">
+			If [code]true[/code], this [NodeND] is set as visible. Whether or not it is actually visible is determined by the [member visible] property of all of its parents (see [method is_visible_in_tree]).
+		</member>
+	</members>
+	<constants>
+		<constant name="DIMENSION_MODE_SQUARE" value="0" enum="DimensionMode">
+			The transform will have a dimension of [member dimension], with a square basis matrix. This is when you want a node to exist entirely in a single dimension (1D, 2D, 3D, 4D, 5D, etc).
+		</constant>
+		<constant name="DIMENSION_MODE_NON_SQUARE" value="1" enum="DimensionMode">
+			The transform will have an input dimension of [member input_dimension] and an output dimension of [member output_dimension]. This means the basis will have [member input_dimension] columns and [member output_dimension] rows, and the position will have [member output_dimension] elements. This is when you want a node to convert between dimensions (2D to 3D, 3D to 2D, etc).
+		</constant>
+	</constants>
 </class>

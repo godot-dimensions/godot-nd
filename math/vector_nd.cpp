@@ -393,6 +393,21 @@ VectorN VectorND::sign(const VectorN &p_vector) {
 	return sign_vector;
 }
 
+VectorN VectorND::with_length(const VectorN &p_vector, const double p_length) {
+	const int dimension = p_vector.size();
+	const double vector_length = VectorND::length(p_vector);
+	if (vector_length == 0) {
+		return VectorND::duplicate(p_vector);
+	}
+	const double scale = p_length / vector_length;
+	VectorN norm;
+	norm.resize(dimension);
+	for (int i = 0; i < dimension; i++) {
+		norm.set(i, p_vector[i] * scale);
+	}
+	return norm;
+}
+
 // Slide returns the component of the vector along the given plane, specified by its normal vector.
 VectorN VectorND::slide(const VectorN &p_vector, const VectorN &p_normal) {
 	const int dimension = MAX(p_vector.size(), p_normal.size());
@@ -552,6 +567,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("snapped", "vector", "by"), &VectorND::snapped);
 	ClassDB::bind_static_method("VectorND", D_METHOD("snappedf", "vector", "by"), &VectorND::snappedf);
 	ClassDB::bind_static_method("VectorND", D_METHOD("subtract", "a", "b"), &VectorND::subtract);
+	ClassDB::bind_static_method("VectorND", D_METHOD("with_length", "vector", "length"), &VectorND::with_length, DEFVAL(1.0));
 	// Conversion.
 	ClassDB::bind_static_method("VectorND", D_METHOD("from_2d", "vector"), &VectorND::from_2d);
 	ClassDB::bind_static_method("VectorND", D_METHOD("from_3d", "vector"), &VectorND::from_3d);

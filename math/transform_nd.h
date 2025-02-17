@@ -43,14 +43,20 @@ public:
 
 	// Dimension methods.
 	int get_basis_column_count() const;
+	void set_basis_column_count(const int p_column_count);
 	int get_basis_dimension() const;
+	void set_basis_dimension(const int p_basis_dimension);
 	int get_basis_row_count() const;
+	void set_basis_row_count(const int p_row_count);
 	int get_dimension() const;
+	void set_dimension(const int p_dimension);
 	int get_origin_dimension() const;
-	Ref<TransformND> with_dimension(const int p_dimension, const bool p_square = true) const;
+	void set_origin_dimension(const int p_origin_dimension);
+	Ref<TransformND> with_dimension(const int p_dimension) const;
 
 	// Misc methods.
 	double determinant() const;
+	Ref<TransformND> duplicate() const;
 	bool is_equal_approx(const Ref<TransformND> &p_other) const;
 	Ref<TransformND> lerp(const Ref<TransformND> &p_to, const double p_weight) const;
 
@@ -70,6 +76,7 @@ public:
 
 	// Scale methods.
 	VectorN get_scale_abs() const;
+	void set_scale_abs(const VectorN &p_scale);
 	double get_uniform_scale() const;
 	double get_uniform_scale_abs() const;
 	void scale_global(const VectorN &p_scale);

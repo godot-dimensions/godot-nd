@@ -368,5 +368,13 @@
 				Converts a VectorN ([PackedFloat64Array]) to a Vector4. It will use the first 4 numbers in the array, while the rest are discarded. If the array has fewer than 4 numbers, the missing numbers are assumed to be 0.
 			</description>
 		</method>
+		<method name="with_length" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="length" type="float" default="1.0" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector scaled to a length of [param length]. If the input vector is shorter than [param length], it will be scaled up to match the length. If the input vector is longer than [param length], it will be scaled down to match the length. This is the same as getting the normalized vector and multiplying it by [param length].
+			</description>
+		</method>
 	</methods>
 </class>
