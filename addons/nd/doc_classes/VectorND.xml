@@ -24,6 +24,14 @@
 				Returns a new VectorN ([PackedFloat64Array]) that is the sum of the two input vectors. This is the same as [code]a + b[/code] for [Vector2], [Vector3], and [Vector4]. The dimensions of the vectors do not need to match.
 			</description>
 		</method>
+		<method name="add_scalar" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="scalar" type="float" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the scalar added to each component of the input vector.
+			</description>
+		</method>
 		<method name="angle_to" qualifiers="static">
 			<return type="float" />
 			<param index="0" name="from" type="PackedFloat64Array" />

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="RectND" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		N-dimensional axis-aligned box rect.
+	</brief_description>
+	<description>
+		RectND is a class that represents an axis-aligned rectilinear box in N-dimensional space. It is the ND version of [Rect2], [AABB], Rect4, etc.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="abs" qualifiers="const">
+			<return type="RectND" />
+			<description>
+				Returns a new [RectND] with a positive size and the position adjusted accordingly.
+			</description>
+		</method>
+		<method name="duplicate" qualifiers="const">
+			<return type="RectND" />
+			<description>
+				Returns a copy or clone of the [RectND]. The underlying data uses Godot's Vector type, which is copy-on-write, so this is a cheap operation if the transform is not modified.
+			</description>
+		</method>
+		<method name="encloses_exclusive" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="RectND" />
+			<description>
+				Returns [code]true[/code] if the [RectND] encloses the other RectND, but not if they only share a border.
+			</description>
+		</method>
+		<method name="encloses_inclusive" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="RectND" />
+			<description>
+				Returns [code]true[/code] if the [RectND] encloses the other RectND, including if they share a border.
+			</description>
+		</method>
+		<method name="expand_self_to_point">
+			<return type="void" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Expands the [RectND] to include the given point.
+			</description>
+		</method>
+		<method name="expand_to_point" qualifiers="const">
+			<return type="RectND" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns a new [RectND] expanded to include the given point.
+			</description>
+		</method>
+		<method name="from_center_size" qualifiers="static">
+			<return type="RectND" />
+			<param index="0" name="center" type="PackedFloat64Array" />
+			<param index="1" name="size" type="PackedFloat64Array" />
+			<description>
+				Constructs a [RectND] from a center position and a size. The size is the "diameter" of the rect, not the "radius".
+			</description>
+		</method>
+		<method name="from_position_end" qualifiers="static">
+			<return type="RectND" />
+			<param index="0" name="position" type="PackedFloat64Array" />
+			<param index="1" name="end" type="PackedFloat64Array" />
+			<description>
+				Constructs a [RectND] from a start position and an end position.
+			</description>
+		</method>
+		<method name="from_position_size" qualifiers="static">
+			<return type="RectND" />
+			<param index="0" name="position" type="PackedFloat64Array" />
+			<param index="1" name="size" type="PackedFloat64Array" />
+			<description>
+				Constructs a [RectND] from a start position and a size.
+			</description>
+		</method>
+		<method name="get_nearest_point" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="point" type="PackedFloat64Array" />
+			<description>
+				Returns the point in the [RectND] closest to the given point.
+			</description>
+		</method>
+		<method name="get_space" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the space of the [RectND] (area, volume, hypervolume, etc) by multiplying the size of each dimension.
+			</description>
+		</method>
+		<method name="get_support_point" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="direction" type="PackedFloat64Array" />
+			<description>
+				Returns the point in the [RectND] that is the farthest in the given direction.
+			</description>
+		</method>
+		<method name="get_surface" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the surface of the [RectND] on the boundary by multiplying all combinations of all-but-one dimension and adding them up.
+			</description>
+		</method>
+		<method name="grow" qualifiers="const">
+			<return type="RectND" />
+			<param index="0" name="by" type="float" />
+			<description>
+				Returns a new [RectND] grown by the given amount in all directions.
+			</description>
+		</method>
+		<method name="has_point" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="point" type="PackedFloat64Array" />
+			<description>
+				Returns [code]true[/code] if the [RectND] contains the given point.
+			</description>
+		</method>
+		<method name="intersection" qualifiers="const">
+			<return type="RectND" />
+			<param index="0" name="other" type="RectND" />
+			<description>
+				Returns a new [RectND] that is the intersection of this [RectND] and the other RectND.
+			</description>
+		</method>
+		<method name="intersects_exclusive" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="RectND" />
+			<description>
+				Returns [code]true[/code] if the [RectND] intersects the [param other] [RectND], but not if they only share a border.
+			</description>
+		</method>
+		<method name="intersects_inclusive" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="RectND" />
+			<description>
+				Returns [code]true[/code] if the [RectND] intersects the [param other] [RectND], including if they share a border.
+			</description>
+		</method>
+		<method name="is_equal_approx" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="RectND" />
+			<description>
+				Returns [code]true[/code] if this [RectND] and [param other] are approximately equal, by running [method @GlobalScope.is_equal_approx] on each component.
+			</description>
+		</method>
+		<method name="is_finite" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the [RectND] is finite, by running [method VectorND.is_finite] on the position and size vectors.
+			</description>
+		</method>
+		<method name="merge" qualifiers="const">
+			<return type="RectND" />
+			<param index="0" name="other" type="RectND" />
+			<description>
+				Returns a new [RectND] that encloses both this [RectND] and the [param other] [RectND].
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="center" type="PackedFloat64Array" setter="set_center" getter="get_center">
+			The "center" position of the rect. This value is calculated by adding [member position] and half of [member size], and is not stored internally. When setting this value, [member position] is adjusted accordingly, and the rect keeps the same [member size].
+		</member>
+		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension">
+			The dimension of the rect. This is the dimension of the position and size vectors. The position and size vectors must have the same dimension or the rect is invalid.
+		</member>
+		<member name="end" type="PackedFloat64Array" setter="set_end" getter="get_end">
+			The "end" position of the rect, in the positive direction. This value is calculated by adding [member position] and [member size], and is not stored internally. When setting this value, [member size] is adjusted accordingly, and the rect keeps the same [member position].
+		</member>
+		<member name="position" type="PackedFloat64Array" setter="set_position" getter="get_position" default="PackedFloat64Array()">
+			The "start" position of the rect, in the negative direction. This value is stored internally as a VectorN ([PackedFloat64Array]).
+		</member>
+		<member name="size" type="PackedFloat64Array" setter="set_size" getter="get_size" default="PackedFloat64Array()">
+			The size of the rect. Valid values are positive numbers. This value is stored internally as a VectorN ([PackedFloat64Array]).
+		</member>
+	</members>
+</class>

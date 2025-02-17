@@ -35,6 +35,16 @@ void VectorND::add_in_place(const VectorN &p_a, VectorN &r_result) {
 	}
 }
 
+VectorN VectorND::add_scalar(const VectorN &p_vector, const double p_scalar) {
+	const int dimension = p_vector.size();
+	VectorN sum;
+	sum.resize(dimension);
+	for (int i = 0; i < dimension; i++) {
+		sum.set(i, p_vector[i] + p_scalar);
+	}
+	return sum;
+}
+
 double VectorND::angle_to(const VectorN &p_from, const VectorN &p_to) {
 	return Math::acos(VectorND::dot(p_from, p_to) / (VectorND::length(p_from) * VectorND::length(p_to)));
 }
@@ -529,6 +539,7 @@ VectorND *VectorND::singleton = nullptr;
 void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("abs", "vector"), &VectorND::abs);
 	ClassDB::bind_static_method("VectorND", D_METHOD("add", "a", "b"), &VectorND::add);
+	ClassDB::bind_static_method("VectorND", D_METHOD("add_scalar", "vector", "scalar"), &VectorND::add_scalar);
 	ClassDB::bind_static_method("VectorND", D_METHOD("angle_to", "from", "to"), &VectorND::angle_to);
 	ClassDB::bind_static_method("VectorND", D_METHOD("bounce", "vector", "normal"), &VectorND::bounce);
 	ClassDB::bind_static_method("VectorND", D_METHOD("bounce_ratio", "vector", "normal", "bounce_ratio"), &VectorND::bounce_ratio);
