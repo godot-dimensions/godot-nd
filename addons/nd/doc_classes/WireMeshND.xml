@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="WireMeshND" inherits="MeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Base class for ND wireframe meshes.
+	</brief_description>
+	<description>
+		WireMeshND is the base class for all ND wireframe meshes. Wireframe meshes are defined using vertices and edges, where each edge is defined by two vertices. Wireframe meshes are used to represent outlines of ND objects using lines.
+		Most of the wireframe functionality is also available for other types of ND meshes, therefore the methods to get the vertices and edges are defined in the parent [MeshND] class. To make a WireMeshND, use one of the descendant classes, such as [ArrayWireMeshND] or [BoxWireMeshND].
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="wire_mesh_clear_cache">
+			<return type="void" />
+			<description>
+				WireMeshND caches the edge positions for performance reasons. This method clears the cache, forcing the edge positions to be recalculated the next time they are requested. You should run this method if you are making your own [WireMeshND]-derived class and you change the vertices or cells. You do not need to run this when using the built-in classes such as [ArrayWireMeshND] or [BoxWireMeshND], they will automatically clear the cache when needed.
+			</description>
+		</method>
+	</methods>
+</class>

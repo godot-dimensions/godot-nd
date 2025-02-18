@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="MaterialND" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Base class for ND materials.
+	</brief_description>
+	<description>
+		MaterialND is the base class for all ND materials. It provides a way to color ND meshes with help from its derived classes such as [WireMaterialND].
+		MaterialND can be set on a [MeshND] resource to define how the mesh should be colored, and/or overridden on a specific [MeshInstanceND] node.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="append_albedo_color">
+			<return type="void" />
+			<param index="0" name="albedo_color" type="Color" />
+			<description>
+				Appends the given albedo color to the albedo color array of the material. This may be used to color various parts of the mesh.
+			</description>
+		</method>
+		<method name="get_albedo_color" qualifiers="const">
+			<return type="Color" />
+			<description>
+				Gets the single albedo color of the material.
+			</description>
+		</method>
+		<method name="get_albedo_color_array" qualifiers="const">
+			<return type="PackedColorArray" />
+			<description>
+				Gets the albedo color array of the material. This may be used to color various parts of the mesh.
+			</description>
+		</method>
+		<method name="set_albedo_color">
+			<return type="void" />
+			<param index="0" name="albedo_color" type="Color" />
+			<description>
+				Sets the single albedo color of the material.
+			</description>
+		</method>
+		<method name="set_albedo_color_array">
+			<return type="void" />
+			<param index="0" name="albedo_color_array" type="PackedColorArray" />
+			<description>
+				Sets the color array of the material. This may be used to color various parts of the mesh.
+			</description>
+		</method>
+	</methods>
+</class>

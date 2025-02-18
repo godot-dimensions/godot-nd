@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="MeshND" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Base class for ND meshes.
+	</brief_description>
+	<description>
+		MeshND is the base class for all ND meshes. Meshes are used to represent the visuals of objects in ND space. All ND meshes have vertices, and either have edges or can have edges computed. For a wireframe-only mesh, use [WireMeshND] or one of its descendants.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_get_edge_indices" qualifiers="virtual">
+			<return type="PackedInt32Array" />
+			<description>
+				Callback method that should return the edge indices of a mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_edge_indices] for details of the returned data.
+			</description>
+		</method>
+		<method name="_get_vertices" qualifiers="virtual">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Callback method that should return the vertices of a mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_vertices] for details of the returned data.
+			</description>
+		</method>
+		<method name="_validate_mesh_data" qualifiers="virtual">
+			<return type="bool" />
+			<description>
+				Callback method that should validate the mesh data. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. This method should return [code]true[/code] if the mesh data is valid, and [code]false[/code] if it is not. If the mesh data is invalid, the mesh will be skipped when rendering.
+			</description>
+		</method>
+		<method name="deduplicate_edge_indices" qualifiers="static">
+			<return type="PackedInt32Array" />
+			<param index="0" name="items" type="PackedInt32Array" />
+			<description>
+				Static helper method for deduplicating edge indices. This method ensures that each pair of two integers in the array is unique, and that the first index is less than the second index. This is useful for optimizing wireframe meshes by removing duplicate edges and ensuring a consistent order for each edge.
+				[b]Note[/b]: This only looks at edge indices. It does not remove duplicate vertices, nor does it have access to the vertices array.
+			</description>
+		</method>
+		<method name="get_edge_indices">
+			<return type="PackedInt32Array" />
+			<description>
+				Gets the edge indices of the mesh. Every 2 integers defines an edge. Each integer is an index to the vertices array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
+			</description>
+		</method>
+		<method name="get_edge_positions">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Gets the edge positions of the mesh. Each VectorN ([PackedFloat64Array]) in the array is a position in meters in ND space. Edges are defined by two vertices, and the positions in this array are the positions of the vertices that make up the edges. This value is calculated from a combination of the edge indices and the vertices arrays, see [method get_edge_indices] and [method get_vertices].
+			</description>
+		</method>
+		<method name="get_vertices">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Gets the vertices of the mesh. Each VectorN ([PackedFloat64Array]) in the array is a vertex defined as a position in meters in ND space. Vertices are referenced by many other arrays in the mesh, such as the edge indices or cell indices.
+			</description>
+		</method>
+		<method name="has_edge_indices">
+			<return type="bool" />
+			<param index="0" name="first" type="int" />
+			<param index="1" name="second" type="int" />
+			<description>
+				Returns [code]true[/code] if the mesh has an edge with the given indices. This method checks if there is an edge directly connecting the vertices with the given indices, by searching the array returned by [method get_edge_indices].
+				[b]Note:[/b] For efficiency, the input indices have their order normalized, so [code]has_edge_indices(2, 1)[/code] will be converted to [code]has_edge_indices(1, 2)[/code] before checking. You must ensure that your mesh has consistent edge ordering.
+			</description>
+		</method>
+		<method name="is_mesh_data_valid">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the mesh data is valid. This method checks if the data in a mesh is valid for rendering. If the mesh data is invalid, the mesh will be skipped when rendering. This method is called internally by the rendering server, but may also be called manually.
+				If a mesh has valid data, the result of the validation will be cached until the mesh data changes, so this method may be called multiple times without performance concerns. This also means this method should be called after generating a mesh. This especially useful when generating a mesh on a thread; calling this on the thread will avoid stalling the main thread with mesh validation during rendering.
+			</description>
+		</method>
+		<method name="reset_mesh_data_validation">
+			<return type="void" />
+			<description>
+				Resets the validation state of the mesh data. This method clears the cached validation state of the mesh data, so that the next call to [method is_mesh_data_valid] will revalidate the mesh data. This is useful when the mesh data has changed and you want to ensure that the mesh is revalidated before rendering. This will be called automatically on built-in types such as [ArrayTetraMeshND] and [ArrayWireMeshND] when the mesh data changes.
+			</description>
+		</method>
+		<method name="to_array_wire_mesh">
+			<return type="ArrayWireMeshND" />
+			<description>
+				Converts this MeshND to an [ArrayWireMeshND]. The array mesh will have the same vertices and edges as the tetrahedral mesh. Converting to an array mesh is useful for modifying the geometry of the mesh, such as adding or removing vertices or edges.
+				[b]Note:[/b] All of the mesh's edges are converted to the wireframe mesh. If the source is a tetrahedral mesh, this includes edges between tetrahedrons inside of each side, which may be undesired. If the source mesh is a subtype such as [BoxTetraMeshND], consider using [method to_wire_mesh] instead to only get the wireframe of the outer edges.
+			</description>
+		</method>
+		<method name="to_wire_mesh">
+			<return type="WireMeshND" />
+			<description>
+				Converts this MeshND to a [WireMeshND]. This method will use the best conversion available. For example, a [BoxTetraMeshND] will be converted to a [BoxWireMeshND]. If no specialized conversion is available, the method will return an [ArrayWireMeshND]. See [method to_array_wire_mesh] for more details.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="material" type="MaterialND" setter="set_material" getter="get_material">
+			The [MaterialND] used to render the mesh. This material defines the appearance of the mesh, including its color, texture, and lighting properties. The [TetraMaterialND] type is intended for tetrahedral meshes, and the [WireMaterialND] type is intended for wireframe meshes. If no material is set, the mesh should render with default settings. The material may be overridden on a [MeshInstanceND] node by setting the [member MeshInstanceND.material_override] property.
+		</member>
+	</members>
+</class>

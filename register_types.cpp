@@ -9,6 +9,19 @@
 #include "math/rect_nd.h"
 #include "math/transform_nd.h"
 #include "math/vector_nd.h"
+
+// Virtual classes.
+#include "mesh/material_nd.h"
+#include "mesh/mesh_nd.h"
+#include "mesh/wire/wire_mesh_nd.h"
+
+// Mesh.
+#include "mesh/mesh_instance_nd.h"
+#include "mesh/wire/array_wire_mesh_nd.h"
+#include "mesh/wire/box_wire_mesh_nd.h"
+#include "mesh/wire/orthoplex_wire_mesh_nd.h"
+#include "mesh/wire/wire_material_nd.h"
+
 #include "nodes/node_nd.h"
 
 inline void add_godot_singleton(const StringName &p_singleton_name, Object *p_object) {
@@ -33,10 +46,21 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE) {
 		GDREGISTER_CLASS(VectorND);
 	} else if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+		// General.
 		GDREGISTER_CLASS(NodeND);
 		GDREGISTER_CLASS(RectND);
 		GDREGISTER_CLASS(TransformND);
 		add_godot_singleton("VectorND", memnew(VectorND));
+		// Virtual classes.
+		GDREGISTER_CLASS(MaterialND);
+		GDREGISTER_CLASS(MeshND);
+		GDREGISTER_CLASS(WireMeshND);
+		// Mesh.
+		GDREGISTER_CLASS(ArrayWireMeshND);
+		GDREGISTER_CLASS(BoxWireMeshND);
+		GDREGISTER_CLASS(MeshInstanceND);
+		GDREGISTER_CLASS(OrthoplexWireMeshND);
+		GDREGISTER_CLASS(WireMaterialND);
 	}
 }
 

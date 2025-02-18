@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="MeshInstanceND" inherits="NodeND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Instance of a ND mesh in the scene.
+	</brief_description>
+	<description>
+		MeshInstanceND is a node that places a [MeshND] in the ND scene. Meshes are used to visibly represent objects in ND, just like how [MeshInstance3D] is used in 3D scenes.
+		The geometry of the mesh is defined by the [MeshND] assigned to the [member mesh] property. This may be set to any [MeshND] derived class. [WireMeshND] allows for wireframe meshes, which draw using lines.
+		Meshes may have their appearance modified by setting a [MaterialND]. The [WireMaterialND] class is meant to be used with [WireMeshND] meshes. Materials may be set on the [MeshND] itself, or overridden on a per-instance basis by setting the [member material_override] property on MeshInstanceND.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_active_material" qualifiers="const">
+			<return type="MaterialND" />
+			<description>
+				Returns the currently active [MaterialND] for this mesh instance. If [member material_override] is set, this will return that material. Otherwise, if [member mesh] is set to a valid [MeshND], this will return the material set on that mesh. If neither of these are set, this will return null.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="material_override" type="MaterialND" setter="set_material_override" getter="get_material_override">
+			The [MaterialND] used to render the mesh. This material defines the appearance of the mesh, including its color, texture, and lighting properties. The [WireMaterialND] type is intended for wireframe meshes. This property overrides the per-mesh material set on the [MeshND] resource in the [member MeshND.material] property.
+		</member>
+		<member name="mesh" type="MeshND" setter="set_mesh" getter="get_mesh">
+			The [MeshND] resource that defines the geometry of the mesh. This may be set to any [MeshND] derived class. [WireMeshND] allows for wireframe meshes, which draw using lines.
+		</member>
+	</members>
+</class>

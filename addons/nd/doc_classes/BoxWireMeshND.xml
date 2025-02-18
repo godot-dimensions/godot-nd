@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="BoxWireMeshND" inherits="WireMeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		An ND wireframe mesh representing a box.
+	</brief_description>
+	<description>
+		BoxWireMeshND is a ND wireframe mesh representing a box. The box is centered at the origin and is axis-aligned by default. The box is defined by the [member size] property, which is the "diameter" size of the box in meters in ND space.
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="half_extents" type="PackedFloat64Array" setter="set_half_extents" getter="get_half_extents">
+			The half-extents of the box mesh in meters, also known as just "extents". This is the "radius" of the box. This is a wrapper around [member size] for situations where you want to use the extents instead of size. Since the box is centered at the origin, one vertex is located at the half-extents, and the rest have some of the components negated.
+		</member>
+		<member name="size" type="PackedFloat64Array" setter="set_size" getter="get_size" default="PackedFloat64Array()">
+			The size of the box mesh in meters. This is the "diameter" size of the box in ND space, where each component is the size of the box in one of the N dimensions. This is the value that is stored internally.
+		</member>
+	</members>
+</class>

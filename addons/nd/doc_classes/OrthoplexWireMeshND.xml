@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="OrthoplexWireMeshND" inherits="WireMeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		An ND wireframe mesh representing an orthoplex.
+	</brief_description>
+	<description>
+		OrthoplexWireMeshND is a class for generating wireframe meshes representing orthoplexes, also known as cross-polytopes. Orthoplexes exist in all dimensions, and are the dual of boxes (square/cube/hypercube).
+		The 2D version of an orthoplex is a diamond (square rotated 45 degrees), which has 4 vertices (-X, +X, -Y, +Y) and 4 edges in each quadrant. The 3D version is the octahedron, which has 6 vertices (-X, +X, -Y, +Y, -Z, +Z) and 8 triangular faces in each octant. The 4D version is the 16-cell or hexadecachoron, which has 8 vertices (-X, +X, -Y, +Y, -Z, +Z, -W, +W) and 16 tetrahedral cells.
+	</description>
+	<tutorials>
+		<link title="Wikipedia Cross-polytope / ND Orthoplex">https://en.wikipedia.org/wiki/Cross-polytope</link>
+		<link title="Wikipedia Octahedron / 3D Orthoplex">https://en.wikipedia.org/wiki/Octahedron</link>
+		<link title="Wikipedia 16-cell / 4D Orthoplex">https://en.wikipedia.org/wiki/16-cell</link>
+	</tutorials>
+	<members>
+		<member name="half_extents" type="PackedFloat64Array" setter="set_half_extents" getter="get_half_extents">
+			The half-extents of the orthoplex in meters, also known as just "extents". This is the "radius" of the orthoplex, the distance between each vertex and the center. This is a wrapper around [member size] for situations where you want to use the extents instead of size.
+		</member>
+		<member name="size" type="PackedFloat64Array" setter="set_size" getter="get_size" default="PackedFloat64Array()">
+			The size of the orthoplex in meters. This is the axis-aligned "diameter" size of the box in ND space, where each component is the distance between opposite vertices. This is the value that is stored internally.
+		</member>
+	</members>
+</class>

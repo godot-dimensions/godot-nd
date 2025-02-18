@@ -131,6 +131,26 @@ void NodeND::set_visible(const bool p_visible) {
 	_is_visible = p_visible;
 }
 
+// Rect bounds.
+
+Ref<RectND> NodeND::get_rect_bounds(const Ref<TransformND> &p_inv_relative_to) const {
+	Ref<RectND> result;
+	GDVIRTUAL_CALL(_get_rect_bounds, p_inv_relative_to, result);
+	return result;
+}
+
+Ref<RectND> NodeND::get_rect_bounds_recursive(const Ref<TransformND> &p_inv_relative_to) const {
+	Ref<RectND> bounds = get_rect_bounds(p_inv_relative_to);
+	const int child_count = get_child_count();
+	for (int i = 0; i < child_count; i++) {
+		NodeND *child_nd = Object::cast_to<NodeND>(get_child(i));
+		if (child_nd != nullptr) {
+			bounds = bounds->merge(child_nd->get_rect_bounds_recursive(p_inv_relative_to));
+		}
+	}
+	return bounds;
+}
+
 void NodeND::_bind_methods() {
 	// Transform getters and setters.
 	ClassDB::bind_method(D_METHOD("get_transform"), &NodeND::get_transform);

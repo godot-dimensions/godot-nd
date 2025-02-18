@@ -1,9 +1,11 @@
 #pragma once
 
+#include "../math/rect_nd.h"
 #include "../math/transform_nd.h"
 
 #if GDEXTENSION
 #include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/core/gdvirtual.gen.inc>
 #elif GODOT_MODULE
 #include "scene/main/node.h"
 #endif
@@ -61,6 +63,11 @@ public:
 	bool is_visible() const;
 	bool is_visible_in_tree() const;
 	void set_visible(const bool p_visible);
+
+	// Rect bounds.
+	virtual Ref<RectND> get_rect_bounds(const Ref<TransformND> &p_inv_relative_to) const;
+	Ref<RectND> get_rect_bounds_recursive(const Ref<TransformND> &p_inv_relative_to) const;
+	GDVIRTUAL1RC(Ref<RectND>, _get_rect_bounds, const Ref<TransformND> &);
 
 	NodeND();
 };
