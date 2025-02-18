@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://5dkc4cqg1lje"
-path="res://.godot/imported/NodeND.png-2bb2d36188388359b1207bc38443d38b.ctex"
+uid="uid://gmfgk0myo7ks"
+path="res://.godot/imported/ND.svg-1be7583a86ccb8743e63a7ab144b5439.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/nd/icons/NodeND.png"
-dest_files=["res://.godot/imported/NodeND.png-2bb2d36188388359b1207bc38443d38b.ctex"]
+source_file="res://addons/nd/icons/ND.svg"
+dest_files=["res://.godot/imported/ND.svg-1be7583a86ccb8743e63a7ab144b5439.ctex"]
 
 [params]
 
@@ -32,3 +32,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=8.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

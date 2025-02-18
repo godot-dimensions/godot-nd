@@ -25,4 +25,16 @@ ios.release = "bin/libgodot_nd.ios.release.universal.dylib"
 
 [icons]
 
-NodeND = "icons/NodeND.png"
+ArrayWireMeshND = "icons/ArrayWireMeshND.svg"
+BoxWireMeshND = "icons/BoxWireMeshND.svg"
+CameraND = "icons/CameraND.svg"
+MaterialND = "icons/MaterialND.svg"
+MeshInstanceND = "icons/MeshInstanceND.svg"
+MeshND = "icons/MeshND.svg"
+NodeND = "icons/NodeND.svg"
+OrthoplexWireMeshND = "icons/OrthoplexWireMeshND.svg"
+RectND = "icons/RectND.svg"
+TransformND = "icons/TransformND.svg"
+VectorND = "icons/VectorND.svg"
+WireMaterialND = "icons/WireMaterialND.svg"
+WireMeshND = "icons/WireMeshND.svg"
