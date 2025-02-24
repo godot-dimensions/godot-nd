@@ -67,5 +67,6 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
 		remove_godot_singleton("VectorND");
+		memdelete(VectorND::get_singleton());
 	}
 }
