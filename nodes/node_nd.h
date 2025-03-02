@@ -46,6 +46,9 @@ public:
 	Ref<TransformND> get_global_transform() const;
 	void set_global_transform(const Ref<TransformND> &p_transform);
 
+	Ref<TransformND> get_global_transform_expand() const;
+	Ref<TransformND> get_global_transform_shrink() const;
+
 	VectorN get_global_position() const;
 	void set_global_position(const VectorN &p_global_position);
 

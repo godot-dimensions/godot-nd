@@ -35,7 +35,7 @@ Ref<RectND> MeshInstanceND::get_rect_bounds(const Ref<TransformND> &p_inv_relati
 	if (mesh.is_null()) {
 		return bounds;
 	}
-	const Ref<TransformND> to_target = p_inv_relative_to->compose(global_transform);
+	const Ref<TransformND> to_target = p_inv_relative_to->compose_square(global_transform);
 	const Vector<VectorN> vertices = mesh->get_vertices();
 	for (int vert_index = 0; vert_index < vertices.size(); vert_index++) {
 		bounds = bounds->expand_to_point(to_target->xform(vertices[vert_index]));

@@ -6,9 +6,12 @@
 #include "core/config/engine.h"
 #endif
 
+// General.
 #include "math/rect_nd.h"
 #include "math/transform_nd.h"
 #include "math/vector_nd.h"
+#include "nodes/camera_nd.h"
+#include "nodes/node_nd.h"
 
 // Virtual classes.
 #include "mesh/material_nd.h"
@@ -21,9 +24,6 @@
 #include "mesh/wire/box_wire_mesh_nd.h"
 #include "mesh/wire/orthoplex_wire_mesh_nd.h"
 #include "mesh/wire/wire_material_nd.h"
-
-#include "nodes/camera_nd.h"
-#include "nodes/node_nd.h"
 
 inline void add_godot_singleton(const StringName &p_singleton_name, Object *p_object) {
 #if GDEXTENSION

@@ -9,6 +9,18 @@
 	<tutorials>
 	</tutorials>
 	<methods>
+		<method name="get_global_transform_expand" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Gets the global transform of this node, expanding to the maximum dimension of this node and all ancestor nodes in terms of basis width, basis height, and position. For example, if a parent basis is a 2x3 matrix and a child basis is a 3x4 matrix, the output basis would be 4x4.
+			</description>
+		</method>
+		<method name="get_global_transform_shrink" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Gets the global transform of this node, allowing cross-dimension transforms to shrink the dimension of the transform. For example, if a parent basis is a 2x3 matrix and a child basis is a 3x4 matrix, the output basis would be 2x4.
+			</description>
+		</method>
 		<method name="is_visible_in_tree" qualifiers="const">
 			<return type="bool" />
 			<description>
@@ -36,7 +48,8 @@
 			The global position of the node. The size of this array depends on the output dimension after multiplying all ancestor transforms.
 		</member>
 		<member name="global_transform" type="TransformND" setter="set_global_transform" getter="get_global_transform">
-			The global transformation matrix of the node as a [TransformND]. This is the result of multiplying all ancestor transforms together.
+			The global transformation matrix of the node as a [TransformND]. This is the result of multiplying all ancestor transforms together, and expanded to the dimension of the basis column count.
+			Getting this is the most performant and works in cases with square matrices, but use [method get_global_transform_expand] if you want a more expensive calculation that ensures the dimension is always expanded, or use [method get_global_transform_shrink] if you want to allow cross-dimension transforms to shrink the dimension of the transform.
 		</member>
 		<member name="input_dimension" type="int" setter="set_input_dimension" getter="get_input_dimension">
 			The input dimension of the transform. This should be the same as the output dimension of all child nodes.

@@ -47,7 +47,7 @@ void NodeND::set_scale_abs(const VectorN &p_scale) {
 Ref<TransformND> NodeND::get_global_transform() const {
 	NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
 	if (node_nd_parent) {
-		return node_nd_parent->get_global_transform()->compose(_transform);
+		return node_nd_parent->get_global_transform()->compose_square(_transform);
 	} else {
 		return _transform;
 	}
@@ -56,9 +56,27 @@ Ref<TransformND> NodeND::get_global_transform() const {
 void NodeND::set_global_transform(const Ref<TransformND> &p_transform) {
 	NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
 	if (node_nd_parent) {
-		set_transform(node_nd_parent->get_global_transform()->inverse()->compose(p_transform));
+		set_transform(node_nd_parent->get_global_transform()->inverse()->compose_square(p_transform));
 	} else {
 		set_transform(p_transform);
+	}
+}
+
+Ref<TransformND> NodeND::get_global_transform_expand() const {
+	NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
+	if (node_nd_parent) {
+		return node_nd_parent->get_global_transform_expand()->compose_expand(_transform);
+	} else {
+		return _transform;
+	}
+}
+
+Ref<TransformND> NodeND::get_global_transform_shrink() const {
+	NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
+	if (node_nd_parent) {
+		return node_nd_parent->get_global_transform_shrink()->compose_shrink(_transform);
+	} else {
+		return _transform;
 	}
 }
 
@@ -164,6 +182,8 @@ void NodeND::_bind_methods() {
 	// Global transform getters and setters.
 	ClassDB::bind_method(D_METHOD("get_global_transform"), &NodeND::get_global_transform);
 	ClassDB::bind_method(D_METHOD("set_global_transform", "global_transform"), &NodeND::set_global_transform);
+	ClassDB::bind_method(D_METHOD("get_global_transform_expand"), &NodeND::get_global_transform_expand);
+	ClassDB::bind_method(D_METHOD("get_global_transform_shrink"), &NodeND::get_global_transform_shrink);
 	ClassDB::bind_method(D_METHOD("get_global_position"), &NodeND::get_global_position);
 	ClassDB::bind_method(D_METHOD("set_global_position", "global_position"), &NodeND::set_global_position);
 	// Dimension functions.

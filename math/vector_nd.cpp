@@ -173,6 +173,20 @@ double VectorND::dot(const VectorN &p_a, const VectorN &p_b) {
 	return sum;
 }
 
+VectorN VectorND::drop_first_dimensions(const VectorN &p_vector, const int p_dimensions) {
+	const int dimension = p_vector.size();
+	VectorN dropped_vector;
+	if (dimension <= p_dimensions) {
+		return dropped_vector;
+	}
+	const int new_dimension = dimension - p_dimensions;
+	dropped_vector.resize(new_dimension);
+	for (int i = 0; i < new_dimension; i++) {
+		dropped_vector.set(i, p_vector[i + p_dimensions]);
+	}
+	return dropped_vector;
+}
+
 VectorN VectorND::duplicate(const VectorN &p_vector) {
 	VectorN duplicate_vector = p_vector;
 	duplicate_vector = duplicate_vector.duplicate();
@@ -553,6 +567,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("divide_vector", "a", "b", "expand"), &VectorND::divide_vector, DEFVAL(false));
 	ClassDB::bind_static_method("VectorND", D_METHOD("divide_scalar", "vector", "scalar"), &VectorND::divide_scalar);
 	ClassDB::bind_static_method("VectorND", D_METHOD("dot", "a", "b"), &VectorND::dot);
+	ClassDB::bind_static_method("VectorND", D_METHOD("drop_first_dimensions", "vector", "dimensions"), &VectorND::drop_first_dimensions);
 	ClassDB::bind_static_method("VectorND", D_METHOD("duplicate", "vector"), &VectorND::duplicate);
 	ClassDB::bind_static_method("VectorND", D_METHOD("floor", "vector"), &VectorND::floor);
 	ClassDB::bind_static_method("VectorND", D_METHOD("inverse", "vector"), &VectorND::inverse);

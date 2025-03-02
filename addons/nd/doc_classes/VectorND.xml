@@ -140,6 +140,14 @@
 				Returns the dot product of two N-dimensional vectors. The dimension of the vectors do not need to match.
 			</description>
 		</method>
+		<method name="drop_first_dimensions" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="dimensions" type="int" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector with the first [param dimensions] components removed. If [param dimensions] is greater than or equal to the input vector's dimension, the result will be an empty vector.
+			</description>
+		</method>
 		<method name="duplicate" qualifiers="static">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="vector" type="PackedFloat64Array" />

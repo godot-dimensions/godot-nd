@@ -338,10 +338,43 @@ Ref<TransformND> TransformND::lerp(const Ref<TransformND> &p_to, const double p_
 
 // Transformation methods.
 
-Ref<TransformND> TransformND::compose(const Ref<TransformND> &p_child_transform) const {
+Ref<TransformND> TransformND::compose_square(const Ref<TransformND> &p_child_transform) const {
 	Ref<TransformND> ret;
 	ret.instantiate();
-	//const int row_count = get_basis_row_count();
+	const int dimension = MAX(MAX(get_basis_column_count(), get_origin_dimension()), MAX(p_child_transform->get_basis_column_count(), p_child_transform->get_origin_dimension()));
+	const Ref<TransformND> parent = with_dimension(dimension);
+	const Ref<TransformND> child = p_child_transform->with_dimension(dimension);
+	const Vector<VectorN> &child_columns = child->get_all_basis_columns();
+	Vector<VectorN> ret_columns;
+	ret_columns.resize(child_columns.size());
+	for (int i = 0; i < child_columns.size(); i++) {
+		ret_columns.set(i, parent->xform_basis_axis(child_columns[i], i));
+	}
+	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(parent->xform(p_child_transform->get_origin()));
+	return ret;
+}
+
+Ref<TransformND> TransformND::compose_expand(const Ref<TransformND> &p_child_transform) const {
+	Ref<TransformND> ret;
+	ret.instantiate();
+	const int dimension = MAX(get_dimension(), p_child_transform->get_dimension());
+	const Ref<TransformND> parent = with_dimension(dimension);
+	const Ref<TransformND> child = p_child_transform->with_dimension(dimension);
+	const Vector<VectorN> &child_columns = child->get_all_basis_columns();
+	Vector<VectorN> ret_columns;
+	ret_columns.resize(child_columns.size());
+	for (int i = 0; i < child_columns.size(); i++) {
+		ret_columns.set(i, xform_basis_axis(child_columns[i], i));
+	}
+	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(xform(p_child_transform->get_origin()));
+	return ret;
+}
+
+Ref<TransformND> TransformND::compose_shrink(const Ref<TransformND> &p_child_transform) const {
+	Ref<TransformND> ret;
+	ret.instantiate();
 	const Vector<VectorN> &child_columns = p_child_transform->get_all_basis_columns();
 	if (child_columns.is_empty()) {
 		// If the child has no columns, we treat it like an infinite identity matrix.
@@ -360,7 +393,7 @@ Ref<TransformND> TransformND::compose(const Ref<TransformND> &p_child_transform)
 }
 
 Ref<TransformND> TransformND::transform_to(const Ref<TransformND> &p_to) const {
-	return p_to->compose(inverse());
+	return p_to->compose_square(inverse());
 }
 
 VectorN TransformND::xform(const VectorN &p_vector) const {
@@ -368,6 +401,15 @@ VectorN TransformND::xform(const VectorN &p_vector) const {
 	VectorN ret = _origin;
 	for (int i = 0; i < dimension; i++) {
 		ret = VectorND::add(ret, VectorND::multiply_scalar(_columns[i], p_vector[i]));
+	}
+	return ret;
+}
+
+Vector<VectorN> TransformND::xform_many(const Vector<VectorN> &p_vectors) const {
+	Vector<VectorN> ret;
+	ret.resize(p_vectors.size());
+	for (int i = 0; i < p_vectors.size(); i++) {
+		ret.set(i, xform(p_vectors[i]));
 	}
 	return ret;
 }
@@ -949,7 +991,9 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_equal_approx", "other"), &TransformND::is_equal_approx);
 	ClassDB::bind_method(D_METHOD("lerp", "to", "weight"), &TransformND::lerp);
 	// Transformation methods.
-	ClassDB::bind_method(D_METHOD("compose", "child_transform"), &TransformND::compose);
+	ClassDB::bind_method(D_METHOD("compose_square", "child_transform"), &TransformND::compose_square);
+	ClassDB::bind_method(D_METHOD("compose_expand", "child_transform"), &TransformND::compose_expand);
+	ClassDB::bind_method(D_METHOD("compose_shrink", "child_transform"), &TransformND::compose_shrink);
 	ClassDB::bind_method(D_METHOD("transform_to", "to"), &TransformND::transform_to);
 	ClassDB::bind_method(D_METHOD("xform", "vector"), &TransformND::xform);
 	ClassDB::bind_method(D_METHOD("xform_basis", "vector"), &TransformND::xform_basis);

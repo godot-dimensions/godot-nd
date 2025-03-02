@@ -61,10 +61,13 @@ public:
 	Ref<TransformND> lerp(const Ref<TransformND> &p_to, const double p_weight) const;
 
 	// Transformation methods.
-	Ref<TransformND> compose(const Ref<TransformND> &p_child_transform) const;
+	Ref<TransformND> compose_square(const Ref<TransformND> &p_child_transform) const;
+	Ref<TransformND> compose_expand(const Ref<TransformND> &p_child_transform) const;
+	Ref<TransformND> compose_shrink(const Ref<TransformND> &p_child_transform) const;
 	Ref<TransformND> transform_to(const Ref<TransformND> &p_to) const;
 
 	VectorN xform(const VectorN &p_vector) const;
+	Vector<VectorN> xform_many(const Vector<VectorN> &p_vectors) const;
 	VectorN xform_basis(const VectorN &p_vector) const;
 	VectorN xform_basis_axis(const VectorN &p_axis, const int p_axis_index) const;
 	VectorN xform_transposed(const VectorN &p_vector) const;

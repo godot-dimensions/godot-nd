@@ -14,11 +14,26 @@
 		<link title="Matrix Transform Demo">https://godotengine.org/asset-library/asset/584</link>
 	</tutorials>
 	<methods>
-		<method name="compose" qualifiers="const">
+		<method name="compose_expand" qualifiers="const">
 			<return type="TransformND" />
 			<param index="0" name="child_transform" type="TransformND" />
 			<description>
-				Composes (multiplies/combines) this transform with another transform. This transforms [param child_transform] by this transform (the parent) in the order of [code]parent * child[/code].
+				Composes the transforms, and expands to the maximum dimension in terms of basis width, basis height, and position. For example, if a parent basis is a 2x3 matrix and a child basis is a 3x4 matrix, the output basis would be 4x4.
+			</description>
+		</method>
+		<method name="compose_shrink" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="child_transform" type="TransformND" />
+			<description>
+				Composes the transforms, allowing cross-dimension transforms to shrink the dimension of the transform. For example, if a parent basis is a 2x3 matrix and a child basis is a 3x4 matrix, the output basis would be 2x4.
+			</description>
+		</method>
+		<method name="compose_square" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="child_transform" type="TransformND" />
+			<description>
+				Composes (multiplies/combines) this transform with another transform. This transforms [param child_transform] by this transform (the parent) in the order of [code]parent * child[/code]. This uses the basis columns and origin to determine the dimension, which works for most cases with square matrices, and is fast to calculate.
+				Use [method compose_expand] if you want a more expensive calculation that ensures the dimension is always expanded, or use [method compose_shrink] if you want to allow cross-dimension transforms to shrink the dimension of the transform.
 			</description>
 		</method>
 		<method name="conformalized" qualifiers="const">

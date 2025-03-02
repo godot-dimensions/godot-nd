@@ -17,6 +17,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/string.hpp>
 #define GDEXTMOD_GUI_INPUT _gui_input
+#define GET_NODE_TYPE(m_parent, m_type, m_path) m_parent->get_node<m_type>(NodePath(m_path))
 #define MODULE_OVERRIDE
 // Including the namespace helps make GDExtension code more similar to module code.
 using namespace godot;
@@ -24,6 +25,7 @@ using namespace godot;
 #include "core/object/class_db.h"
 #include "core/string/ustring.h"
 #define GDEXTMOD_GUI_INPUT gui_input
+#define GET_NODE_TYPE(m_parent, m_type, m_path) Object::cast_to<m_type>(m_parent->get_node(NodePath(m_path)))
 #define MODULE_OVERRIDE override
 
 #define MOUSE_BUTTON_LEFT MouseButton::LEFT

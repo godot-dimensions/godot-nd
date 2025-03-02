@@ -57,27 +57,7 @@ TEST_CASE("[TransformND] Determinant") {
 	CHECK_MESSAGE(Math::is_equal_approx(from_rot->determinant(), 1.0), "TransformND determinant of XY rotation should be 1.0 except for floating-point error.");
 }
 
-TEST_CASE("[TransformND] Compose") {
-	// Test a general matrix multiplication. Set up two matrices.
-	Ref<TransformND> mn; // 2x3 matrix.
-	mn.instantiate();
-	Ref<TransformND> no; // 3x4 matrix.
-	no.instantiate();
-	Vector<VectorN> mn_columns = { VectorN{ 1, 2 }, VectorN{ 3, 4 }, VectorN{ 5, 6 } };
-	Vector<VectorN> no_columns = { VectorN{ 7, 8, 9 }, VectorN{ 10, 11, 12 }, VectorN{ 13, 14, 15 }, VectorN{ 16, 17, 18 } };
-	mn->set_all_basis_columns(mn_columns);
-	no->set_all_basis_columns(no_columns);
-	// Compose then: MxN * N*O = MxO
-	Ref<TransformND> composed_matrices = mn->compose(no);
-	CHECK_MESSAGE(composed_matrices->get_basis_row_count() == 2, "TransformND compose should have the same row count as the first matrix.");
-	CHECK_MESSAGE(composed_matrices->get_basis_column_count() == 4, "TransformND compose should have the same column count as the second matrix.");
-	// Check that the data is correct.
-	Ref<TransformND> mo;
-	mo.instantiate();
-	Vector<VectorN> mo_columns = { VectorN{ 76, 100 }, VectorN{ 103, 136 }, VectorN{ 130, 172 }, VectorN{ 157, 208 } };
-	mo->set_all_basis_columns(mo_columns);
-	CHECK_MESSAGE(composed_matrices->is_equal_approx(mo), "TransformND compose should match precomputed result.");
-
+TEST_CASE("[TransformND] Compose Square") {
 	// Test a transform multiplication.
 	const double angle = 0.5;
 	const VectorN scale = VectorN{ 2, 3 };
@@ -93,12 +73,34 @@ TEST_CASE("[TransformND] Compose") {
 			VectorND::multiply_scalar(precomputed_columns[0], origin[0]),
 			VectorND::multiply_scalar(precomputed_columns[1], origin[1]));
 	precomputed_transform->set_origin(precomputed_origin);
-	// Test that the compose function gives the expected result.
+	// Test that the compose_square function gives the expected result.
 	Ref<TransformND> rotated_transform = TransformND::from_rotation(0, 1, angle);
 	Ref<TransformND> scaled_transform = TransformND::from_scale(scale);
 	Ref<TransformND> position_transform = TransformND::from_position(origin);
-	Ref<TransformND> composed_transform = rotated_transform->compose(scaled_transform)->compose(position_transform);
-	CHECK_MESSAGE(composed_transform->is_equal_approx(precomputed_transform), "TransformND compose should match precomputed result.");
+	Ref<TransformND> composed_transform = rotated_transform->compose_square(scaled_transform)->compose_square(position_transform);
+	CHECK_MESSAGE(composed_transform->is_equal_approx(precomputed_transform), "TransformND compose_square should match precomputed result.");
+}
+
+TEST_CASE("[TransformND] Compose Shrink") {
+	// Test a general matrix multiplication. Set up two matrices.
+	Ref<TransformND> mn; // 2x3 matrix.
+	mn.instantiate();
+	Ref<TransformND> no; // 3x4 matrix.
+	no.instantiate();
+	Vector<VectorN> mn_columns = { VectorN{ 1, 2 }, VectorN{ 3, 4 }, VectorN{ 5, 6 } };
+	Vector<VectorN> no_columns = { VectorN{ 7, 8, 9 }, VectorN{ 10, 11, 12 }, VectorN{ 13, 14, 15 }, VectorN{ 16, 17, 18 } };
+	mn->set_all_basis_columns(mn_columns);
+	no->set_all_basis_columns(no_columns);
+	// Compose then: MxN * NxO = MxO
+	Ref<TransformND> composed_matrices = mn->compose_shrink(no);
+	CHECK_MESSAGE(composed_matrices->get_basis_row_count() == 2, "TransformND compose_shrink should have the same row count as the first matrix.");
+	CHECK_MESSAGE(composed_matrices->get_basis_column_count() == 4, "TransformND compose_shrink should have the same column count as the second matrix.");
+	// Check that the data is correct.
+	Ref<TransformND> mo;
+	mo.instantiate();
+	Vector<VectorN> mo_columns = { VectorN{ 76, 100 }, VectorN{ 103, 136 }, VectorN{ 130, 172 }, VectorN{ 157, 208 } };
+	mo->set_all_basis_columns(mo_columns);
+	CHECK_MESSAGE(composed_matrices->is_equal_approx(mo), "TransformND compose_shrink should match precomputed result.");
 }
 
 TEST_CASE("[TransformND] Inverse Basis") {
