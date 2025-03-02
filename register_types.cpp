@@ -25,6 +25,12 @@
 #include "mesh/wire/orthoplex_wire_mesh_nd.h"
 #include "mesh/wire/wire_material_nd.h"
 
+// Render.
+#include "render/rendering_engine_nd.h"
+#include "render/rendering_server_nd.h"
+#include "render/wireframe_canvas/wireframe_canvas_rendering_engine_nd.h"
+#include "render/wireframe_canvas/wireframe_render_canvas_nd.h"
+
 inline void add_godot_singleton(const StringName &p_singleton_name, Object *p_object) {
 #if GDEXTENSION
 	Engine::get_singleton()->register_singleton(p_singleton_name, p_object);
@@ -63,6 +69,14 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(MeshInstanceND);
 		GDREGISTER_CLASS(OrthoplexWireMeshND);
 		GDREGISTER_CLASS(WireMaterialND);
+		// Render.
+#if GDEXTENSION
+		GDREGISTER_CLASS(WireframeRenderCanvasND);
+		GDREGISTER_CLASS(WireframeCanvasRenderingEngineND);
+#endif // GDEXTENSION
+		RenderingServerND *rendering_server = memnew(RenderingServerND);
+		rendering_server->register_rendering_engine("Wireframe Canvas", memnew(WireframeCanvasRenderingEngineND));
+		add_godot_singleton("RenderingServerND", rendering_server);
 	}
 }
 

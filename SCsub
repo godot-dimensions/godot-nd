@@ -14,6 +14,7 @@ env_nd.add_source_files(env.modules_sources, "math/*.cpp")
 env_nd.add_source_files(env.modules_sources, "nodes/*.cpp")
 
 SConscript("mesh/SCsub")
+SConscript("render/SCsub")
 
 if env.editor_build:
     # If your module has editor-specific code, you can add it here.

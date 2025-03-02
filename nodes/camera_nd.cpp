@@ -1,6 +1,7 @@
 #include "camera_nd.h"
 
 #include "../math/vector_nd.h"
+#include "../render/rendering_server_nd.h"
 
 #if GDEXTENSION
 #include <godot_cpp/classes/viewport.hpp>
@@ -10,7 +11,7 @@
 
 void CameraND::_validate_property(PropertyInfo &p_property) const {
 	if (p_property.name == StringName("rendering_engine")) {
-		PackedStringArray rendering_engine_names; // = RenderingServerND::get_singleton()->get_rendering_engine_names();
+		PackedStringArray rendering_engine_names = RenderingServerND::get_singleton()->get_rendering_engine_names();
 		p_property.hint_string = String(",").join(rendering_engine_names);
 	} else if (p_property.name == StringName("view_angle_type")) {
 		if (_projection_type != PROJECTION_PERSPECTIVE) {
@@ -50,10 +51,10 @@ void CameraND::_validate_property(PropertyInfo &p_property) const {
 void CameraND::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
-			//RenderingServerND::get_singleton()->register_camera(this);
+			RenderingServerND::get_singleton()->register_camera(this);
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
-			//RenderingServerND::get_singleton()->unregister_camera(this);
+			RenderingServerND::get_singleton()->unregister_camera(this);
 		} break;
 	}
 }
@@ -66,9 +67,9 @@ void CameraND::set_current(bool p_enabled) {
 	_is_current = p_enabled;
 	if (is_inside_tree()) {
 		if (p_enabled) {
-			//RenderingServerND::get_singleton()->make_camera_current(this);
+			RenderingServerND::get_singleton()->make_camera_current(this);
 		} else {
-			//RenderingServerND::get_singleton()->clear_camera_current(this);
+			RenderingServerND::get_singleton()->clear_camera_current(this);
 		}
 	}
 }
@@ -76,14 +77,14 @@ void CameraND::set_current(bool p_enabled) {
 void CameraND::clear_current(bool p_enable_next) {
 	_is_current = false;
 	if (p_enable_next && is_inside_tree()) {
-		//RenderingServerND::get_singleton()->clear_camera_current(this);
+		RenderingServerND::get_singleton()->clear_camera_current(this);
 	}
 }
 
 void CameraND::make_current() {
 	_is_current = true;
 	if (is_inside_tree()) {
-		//RenderingServerND::get_singleton()->make_camera_current(this);
+		RenderingServerND::get_singleton()->make_camera_current(this);
 	}
 }
 

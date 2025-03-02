@@ -1,5 +1,18 @@
 #include "mesh_instance_nd.h"
 
+#include "../render/rendering_server_nd.h"
+
+void MeshInstanceND::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_ENTER_TREE: {
+			RenderingServerND::get_singleton()->register_mesh_instance(this);
+		} break;
+		case NOTIFICATION_EXIT_TREE: {
+			RenderingServerND::get_singleton()->unregister_mesh_instance(this);
+		} break;
+	}
+}
+
 Ref<MaterialND> MeshInstanceND::get_active_material() const {
 	if (_material_override.is_valid()) {
 		return _material_override;

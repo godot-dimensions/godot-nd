@@ -12,6 +12,8 @@ env.Append(
         "../../mesh",
         "../../mesh/wire",
         "../../nodes",
+        "../../render",
+        "../../render/wireframe_canvas",
     ]
 )
 
@@ -23,6 +25,8 @@ sources = (
     + Glob("../../mesh/*.cpp")
     + Glob("../../mesh/wire/*.cpp")
     + Glob("../../nodes/*.cpp")
+    + Glob("../../render/*.cpp")
+    + Glob("../../render/wireframe_canvas/*.cpp")
 )
 
 env.Append(CPPDEFINES=["GDEXTENSION"])

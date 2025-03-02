@@ -11,6 +11,7 @@ class MeshInstanceND : public NodeND {
 
 protected:
 	static void _bind_methods();
+	void _notification(int p_what);
 
 public:
 	Ref<MaterialND> get_active_material() const;
