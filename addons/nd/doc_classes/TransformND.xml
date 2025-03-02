@@ -448,6 +448,20 @@
 				Transforms the specified axis vector by the basis matrix of this transform, interpreting [param axis] as a basis vector of a child matrix. This is like [method xform_basis], but it ensures that if [param axis] does not go all the way to [param axis_index], it will be treated as if [code]1.0[/code] is at [code]axis[axis_index][/code]. This is useful for transforming axes of jagged child matrices, where the child matrix only allocates the values that are needed.
 			</description>
 		</method>
+		<method name="xform_transposed" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Transforms the specified vector by the transpose of this transform, including the origin. This is equivalent to subtracting the origin, then taking the dot product with each column of the basis matrix.
+			</description>
+		</method>
+		<method name="xform_transposed_basis" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Transforms the specified vector by the transpose of the basis matrix of this transform. This is equivalent to taking the dot product with each column of the basis matrix.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="origin" type="PackedFloat64Array" setter="set_origin" getter="get_origin" default="PackedFloat64Array()">

@@ -22,6 +22,7 @@
 #include "mesh/wire/orthoplex_wire_mesh_nd.h"
 #include "mesh/wire/wire_material_nd.h"
 
+#include "nodes/camera_nd.h"
 #include "nodes/node_nd.h"
 
 inline void add_godot_singleton(const StringName &p_singleton_name, Object *p_object) {
@@ -44,12 +45,13 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 	// Note: Classes MUST be registered in inheritance order.
 	// When the inheritance doesn't matter, alphabetical order is used.
 	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE) {
+		GDREGISTER_CLASS(RectND);
+		GDREGISTER_CLASS(TransformND);
 		GDREGISTER_CLASS(VectorND);
 	} else if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
 		// General.
 		GDREGISTER_CLASS(NodeND);
-		GDREGISTER_CLASS(RectND);
-		GDREGISTER_CLASS(TransformND);
+		GDREGISTER_CLASS(CameraND);
 		add_godot_singleton("VectorND", memnew(VectorND));
 		// Virtual classes.
 		GDREGISTER_CLASS(MaterialND);

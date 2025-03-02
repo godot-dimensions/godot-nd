@@ -67,6 +67,8 @@ public:
 	VectorN xform(const VectorN &p_vector) const;
 	VectorN xform_basis(const VectorN &p_vector) const;
 	VectorN xform_basis_axis(const VectorN &p_axis, const int p_axis_index) const;
+	VectorN xform_transposed(const VectorN &p_vector) const;
+	VectorN xform_transposed_basis(const VectorN &p_vector) const;
 
 	// Inversion methods.
 	Ref<TransformND> inverse() const;

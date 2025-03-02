@@ -11,6 +11,7 @@ def get_doc_classes():
 	return [
 		"ArrayWireMeshND",
 		"BoxWireMeshND",
+		"CameraND",
 		"MaterialND",
 		"MeshInstanceND",
 		"MeshND",

@@ -400,6 +400,19 @@ VectorN TransformND::xform_basis_axis(const VectorN &p_axis, const int p_axis_in
 	return ret;
 }
 
+VectorN TransformND::xform_transposed(const VectorN &p_vector) const {
+	return xform_transposed_basis(VectorND::subtract(p_vector, _origin));
+}
+
+VectorN TransformND::xform_transposed_basis(const VectorN &p_vector) const {
+	VectorN ret;
+	ret.resize(_columns.size());
+	for (int i = 0; i < _columns.size(); i++) {
+		ret.set(i, VectorND::dot(_columns[i], p_vector));
+	}
+	return ret;
+}
+
 // Inversion methods.
 
 static bool lup_decompose(Vector<VectorN> &p_to_decompose, PackedInt32Array &p_permutations, int p_dimension) {
@@ -941,6 +954,8 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("xform", "vector"), &TransformND::xform);
 	ClassDB::bind_method(D_METHOD("xform_basis", "vector"), &TransformND::xform_basis);
 	ClassDB::bind_method(D_METHOD("xform_basis_axis", "axis", "axis_index"), &TransformND::xform_basis_axis);
+	ClassDB::bind_method(D_METHOD("xform_transposed", "vector"), &TransformND::xform_transposed);
+	ClassDB::bind_method(D_METHOD("xform_transposed_basis", "vector"), &TransformND::xform_transposed_basis);
 	// Inversion methods.
 	ClassDB::bind_method(D_METHOD("inverse"), &TransformND::inverse);
 	ClassDB::bind_method(D_METHOD("inverse_basis"), &TransformND::inverse_basis);
