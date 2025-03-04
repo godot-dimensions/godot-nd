@@ -14,13 +14,16 @@ void MeshInstanceND::_notification(int p_what) {
 }
 
 Ref<MaterialND> MeshInstanceND::get_active_material() const {
+	Ref<MaterialND> material;
 	if (_material_override.is_valid()) {
-		return _material_override;
+		material = _material_override;
+	} else if (_mesh.is_valid()) {
+		material = _mesh->get_material();
 	}
-	if (_mesh.is_valid()) {
-		return _mesh->get_material();
+	if (material.is_valid()) {
+		_mesh->validate_material_for_mesh(material);
 	}
-	return Ref<MaterialND>();
+	return material;
 }
 
 Ref<MaterialND> MeshInstanceND::get_material_override() const {

@@ -29,6 +29,14 @@
 				Gets the albedo color array of the material. This may be used to color various parts of the mesh.
 			</description>
 		</method>
+		<method name="resize_albedo_color_array">
+			<return type="void" />
+			<param index="0" name="size" type="int" />
+			<param index="1" name="fill_color" type="Color" default="Color(1, 1, 1, 1)" />
+			<description>
+				Resize the albedo color array of the material, filling any new elements with the given color, or with white if no color is provided.
+			</description>
+		</method>
 		<method name="set_albedo_color">
 			<return type="void" />
 			<param index="0" name="albedo_color" type="Color" />

@@ -27,6 +27,7 @@ public:
 
 	bool is_mesh_data_valid();
 	void reset_mesh_data_validation();
+	virtual void validate_material_for_mesh(const Ref<MaterialND> &p_material);
 
 	Ref<ArrayWireMeshND> to_array_wire_mesh();
 	virtual Ref<WireMeshND> to_wire_mesh();
@@ -43,4 +44,5 @@ public:
 	GDVIRTUAL0R(PackedInt32Array, _get_edge_indices);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_vertices);
 	GDVIRTUAL0R(bool, _validate_mesh_data);
+	GDVIRTUAL1(_validate_material_for_mesh, const Ref<MaterialND> &);
 };

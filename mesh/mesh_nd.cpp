@@ -58,6 +58,16 @@ bool MeshND::validate_mesh_data() {
 	return ret;
 }
 
+void MeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
+	GDVIRTUAL_CALL(_validate_material_for_mesh, p_material);
+	const PackedInt32Array edge_indices = get_edge_indices();
+	PackedColorArray color_array = p_material->get_albedo_color_array();
+	const int edge_count = edge_indices.size() / 2;
+	if (color_array.size() < edge_count) {
+		p_material->resize_albedo_color_array(edge_count);
+	}
+}
+
 Ref<ArrayWireMeshND> MeshND::to_array_wire_mesh() {
 	Ref<ArrayWireMeshND> wire_mesh;
 	wire_mesh.instantiate();
@@ -132,6 +142,7 @@ void MeshND::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("is_mesh_data_valid"), &MeshND::is_mesh_data_valid);
 	ClassDB::bind_method(D_METHOD("reset_mesh_data_validation"), &MeshND::reset_mesh_data_validation);
+	ClassDB::bind_method(D_METHOD("validate_material_for_mesh", "material"), &MeshND::validate_material_for_mesh);
 
 	ClassDB::bind_method(D_METHOD("to_array_wire_mesh"), &MeshND::to_array_wire_mesh);
 	ClassDB::bind_method(D_METHOD("to_wire_mesh"), &MeshND::to_wire_mesh);
@@ -146,5 +157,6 @@ void MeshND::_bind_methods() {
 
 	GDVIRTUAL_BIND(_get_edge_indices);
 	GDVIRTUAL_BIND(_get_vertices);
+	GDVIRTUAL_BIND(_validate_material_for_mesh, "material");
 	GDVIRTUAL_BIND(_validate_mesh_data);
 }

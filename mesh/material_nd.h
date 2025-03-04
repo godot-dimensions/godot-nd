@@ -25,4 +25,5 @@ public:
 	PackedColorArray get_albedo_color_array() const;
 	void set_albedo_color_array(const PackedColorArray &p_albedo_color_array);
 	void append_albedo_color(const Color &p_albedo_color);
+	void resize_albedo_color_array(const int64_t p_size, const Color &p_fill_color = Color(1, 1, 1, 1));
 };
