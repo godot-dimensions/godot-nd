@@ -42,17 +42,13 @@
 				Append an array of vertices to the wireframe mesh, by calling [method append_vertex] for each vertex in the input array. The method will return an array of indices, where each index points to a vertex identical to the corresponding vertex in the input array.
 			</description>
 		</method>
-		<method name="set_vertices">
-			<return type="void" />
-			<param index="0" name="vertices" type="PackedFloat64Array[]" />
-			<description>
-				Sets the vertices of the wireframe mesh. Each vertex is a VectorN ([PackedFloat64Array]). The vertices array must be kept consistent with the edge indices array, such that each edge index points to a valid vertex index, or else the mesh is invalid.
-			</description>
-		</method>
 	</methods>
 	<members>
 		<member name="edge_indices" type="PackedInt32Array" setter="set_edge_indices" getter="get_edge_indices" default="PackedInt32Array()">
 			The indices of the edges. Every 2 integers defines an edge. Each integer is an index to the [member vertices] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
+		</member>
+		<member name="vertices" type="PackedFloat64Array[]" setter="set_vertices" getter="get_vertices" default="[]">
+			The vertices of the wireframe mesh. Each vertex is a VectorN ([PackedFloat64Array]). The vertices array must be kept consistent with the edge indices array, such that each edge index points to a valid vertex index, or else the mesh is invalid.
 		</member>
 	</members>
 </class>

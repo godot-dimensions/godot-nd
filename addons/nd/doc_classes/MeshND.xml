@@ -79,33 +79,32 @@
 		<method name="reset_mesh_data_validation">
 			<return type="void" />
 			<description>
-				Resets the validation state of the mesh data. This method clears the cached validation state of the mesh data, so that the next call to [method is_mesh_data_valid] will revalidate the mesh data. This is useful when the mesh data has changed and you want to ensure that the mesh is revalidated before rendering. This will be called automatically on built-in types such as [ArrayTetraMeshND] and [ArrayWireMeshND] when the mesh data changes.
+				Resets the validation state of the mesh data. This method clears the cached validation state of the mesh data, so that the next call to [method is_mesh_data_valid] will revalidate the mesh data. This is useful when the mesh data has changed and you want to ensure that the mesh is revalidated before rendering. This will be called automatically on built-in types such as [ArrayWireMeshND] when the mesh data changes.
 			</description>
 		</method>
 		<method name="to_array_wire_mesh">
 			<return type="ArrayWireMeshND" />
 			<description>
-				Converts this MeshND to an [ArrayWireMeshND]. The array mesh will have the same vertices and edges as the tetrahedral mesh. Converting to an array mesh is useful for modifying the geometry of the mesh, such as adding or removing vertices or edges.
-				[b]Note:[/b] All of the mesh's edges are converted to the wireframe mesh. If the source is a tetrahedral mesh, this includes edges between tetrahedrons inside of each side, which may be undesired. If the source mesh is a subtype such as [BoxTetraMeshND], consider using [method to_wire_mesh] instead to only get the wireframe of the outer edges.
+				Converts this MeshND to an [ArrayWireMeshND]. The array mesh will have the same vertices and edges. Converting to an array mesh is useful for modifying the geometry of the mesh, such as adding or removing vertices or edges.
 			</description>
 		</method>
 		<method name="to_wire_mesh">
 			<return type="WireMeshND" />
 			<description>
-				Converts this MeshND to a [WireMeshND]. This method will use the best conversion available. For example, a [BoxTetraMeshND] will be converted to a [BoxWireMeshND]. If no specialized conversion is available, the method will return an [ArrayWireMeshND]. See [method to_array_wire_mesh] for more details.
+				Converts this MeshND to a [WireMeshND]. This method will use the best conversion available. If no specialized conversion is available, the method will return an [ArrayWireMeshND]. See [method to_array_wire_mesh] for more details.
 			</description>
 		</method>
 		<method name="validate_material_for_mesh">
 			<return type="void" />
 			<param index="0" name="material" type="MaterialND" />
 			<description>
-				Validates that the given material can be used for this mesh. This method may alter the material data if needed to make it compatible with the mesh. For example, if the material has per-edge colors, it will ensure that the color array is at least as big as the amount of edges in the mesh. This method is called automatically when running [method get_active_material], but may also be called manually.
+				Validates that the given material can be used for this mesh. This method may alter the material data if needed to make it compatible with the mesh. For example, if the material has per-edge colors, it will ensure that the color array is at least as big as the amount of edges in the mesh. This method is called automatically when running [method MeshInstanceND.get_active_material], but may also be called manually.
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="material" type="MaterialND" setter="set_material" getter="get_material">
-			The [MaterialND] used to render the mesh. This material defines the appearance of the mesh, including its color, texture, and lighting properties. The [TetraMaterialND] type is intended for tetrahedral meshes, and the [WireMaterialND] type is intended for wireframe meshes. If no material is set, the mesh should render with default settings. The material may be overridden on a [MeshInstanceND] node by setting the [member MeshInstanceND.material_override] property.
+			The [MaterialND] used to render the mesh. This material defines the appearance of the mesh, including its color, texture, and lighting properties. The [WireMaterialND] type is intended for wireframe meshes. If no material is set, the mesh should render with default settings. The material may be overridden on a [MeshInstanceND] node by setting the [member MeshInstanceND.material_override] property.
 		</member>
 	</members>
 </class>

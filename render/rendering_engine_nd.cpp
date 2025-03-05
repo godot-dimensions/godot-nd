@@ -72,12 +72,6 @@ void RenderingEngineND::set_mesh_relative_transforms(TypedArray<TransformND> p_m
 	_mesh_relative_transforms = p_mesh_relative_transforms;
 }
 
-bool RenderingEngineND::prefers_wireframe_meshes() {
-	bool prefers_wireframe = false;
-	GDVIRTUAL_CALL(_prefers_wireframe_meshes, prefers_wireframe);
-	return prefers_wireframe;
-}
-
 void RenderingEngineND::setup_for_viewport_if_needed(Viewport *p_for_viewport) {
 	_viewport = p_for_viewport;
 	if (_setup_viewports.has(p_for_viewport)) {
@@ -112,7 +106,6 @@ void RenderingEngineND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_mesh_relative_transforms", "mesh_relative_transforms"), &RenderingEngineND::set_mesh_relative_transforms);
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "mesh_relative_transforms"), "set_mesh_relative_transforms", "get_mesh_relative_transforms");
 
-	GDVIRTUAL_BIND(_prefers_wireframe_meshes);
 	GDVIRTUAL_BIND(_setup_for_viewport);
 	GDVIRTUAL_BIND(_render_frame);
 }

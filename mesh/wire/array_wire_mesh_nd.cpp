@@ -128,4 +128,5 @@ void ArrayWireMeshND::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "edge_indices"), "set_edge_indices", "get_edge_indices");
 
 	ClassDB::bind_method(D_METHOD("set_vertices", "vertices"), &ArrayWireMeshND::set_vertices_bind);
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "vertices", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_vertices", "get_vertices");
 }

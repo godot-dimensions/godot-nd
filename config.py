@@ -9,17 +9,21 @@ def configure(env):
 
 def get_doc_classes():
 	return [
-		"ArrayWireMeshND",
-		"BoxWireMeshND",
+		# General.
 		"CameraND",
-		"MaterialND",
-		"MeshInstanceND",
-		"MeshND",
+		"RenderingEngineND",
+		"RenderingServerND",
 		"NodeND",
-		"OrthoplexWireMeshND",
 		"RectND",
 		"TransformND",
 		"VectorND",
+		# Mesh.
+		"ArrayWireMeshND",
+		"BoxWireMeshND",
+		"MaterialND",
+		"MeshInstanceND",
+		"MeshND",
+		"OrthoplexWireMeshND",
 		"WireMaterialND",
 		"WireMeshND",
 	]

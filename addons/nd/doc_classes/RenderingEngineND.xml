@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="RenderingEngineND" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Abstract base class for ND rendering engines.
+	</brief_description>
+	<description>
+		RenderingEngineND provides an interface for implementing ND renderers. It is an abstract base class, so it must be extended to be used. Rendering engines must be registered with [RenderingServerND] to be used.
+		In comparison to Godot's rendering architecture, this is the ND equivalent of RendererScene (not exposed). Godot's RendererScene is named "scene" to distinguish 3D scene rendering from 2D canvas rendering, but for ND we do not need to distinguish from canvas rendering, and so we call this "rendering engine" for naming parity with physics engines.
+		[b]Note:[/b] All of the properties in this class will be overwritten by [RenderingServerND] each frame. Modifying them will have no external effect.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_render_frame" qualifiers="virtual">
+			<return type="void" />
+			<description>
+				Callback method to render a frame. This method is called by [RenderingServerND] every frame. The current camera, all meshes, and their transforms are passed in.
+			</description>
+		</method>
+		<method name="_setup_for_viewport" qualifiers="virtual">
+			<return type="void" />
+			<description>
+				Callback method to set up the rendering engine for a viewport. This method is called by [RenderingServerND] once per viewport before calling [method _render_frame] for the first time for that viewport. In this function, only [member viewport] may be accessed. All other properties must not be accessed inside this function as they may contain stale data from other viewports or be null/empty.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="camera" type="CameraND" setter="set_camera" getter="get_camera">
+			The [CameraND] node currently being rendered by the rendering engine. This will be set by [RenderingServerND] before calling [method _render_frame].
+		</member>
+		<member name="mesh_instances" type="MeshInstanceND[]" setter="set_mesh_instances" getter="get_mesh_instances">
+			An array of visible [MeshInstanceND] nodes to be rendered by the rendering engine. This will be set by [RenderingServerND] before calling [method _render_frame]. The size of this array will match the size of the [member mesh_relative_transforms] array, and each index of each array will correspond to the mesh at that index.
+		</member>
+		<member name="mesh_relative_transforms" type="TransformND[]" setter="set_mesh_relative_transforms" getter="get_mesh_relative_transforms">
+			The mesh transform relative to the camera. This will be set by [RenderingServerND] before calling [method _render_frame]. The size of this array will match the size of the [member mesh_instances] array, and each index of each array will correspond to the mesh at that index.
+		</member>
+		<member name="viewport" type="Viewport" setter="set_viewport" getter="get_viewport">
+			The [Viewport] that the rendering engine is rendering to. This will be set by [RenderingServerND] before calling [method _setup_for_viewport].
+		</member>
+	</members>
+</class>

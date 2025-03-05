@@ -54,6 +54,9 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(RectND);
 		GDREGISTER_CLASS(TransformND);
 		GDREGISTER_CLASS(VectorND);
+		// Render.
+		GDREGISTER_VIRTUAL_CLASS(RenderingEngineND);
+		GDREGISTER_CLASS(RenderingServerND);
 	} else if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
 		// General.
 		GDREGISTER_CLASS(NodeND);
@@ -82,7 +85,9 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+		remove_godot_singleton("RenderingServerND");
 		remove_godot_singleton("VectorND");
+		memdelete(RenderingServerND::get_singleton());
 		memdelete(VectorND::get_singleton());
 	}
 }

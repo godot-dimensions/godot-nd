@@ -38,9 +38,13 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 	for (int mesh_index = 0; mesh_index < mesh_instances.size(); mesh_index++) {
 		MeshInstanceND *mesh_inst = Object::cast_to<MeshInstanceND>(mesh_instances[mesh_index]);
 		ERR_CONTINUE(mesh_inst == nullptr);
-		Ref<MaterialND> material = mesh_inst->get_active_material();
+		const Ref<MeshND> mesh = mesh_inst->get_mesh();
+		const Ref<MaterialND> material = mesh_inst->get_active_material();
 		const Ref<TransformND> mesh_relative_transform = mesh_relative_transforms[mesh_index];
-		const Vector<VectorN> camera_relative_vertices = mesh_relative_transform->xform_many(mesh_inst->get_mesh()->get_vertices());
+		const Vector<VectorN> camera_relative_vertices = mesh_relative_transform->xform_many(mesh->get_vertices());
+		if (camera_relative_vertices.is_empty()) {
+			continue;
+		}
 		const bool direct_project = camera_relative_vertices[0].size() < 3;
 		PackedVector2Array projected_vertices;
 		for (int vertex = 0; vertex < camera_relative_vertices.size(); vertex++) {
@@ -48,7 +52,7 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 		}
 		PackedColorArray edge_colors;
 		PackedVector2Array edge_vertices;
-		const PackedInt32Array edge_indices = mesh_inst->get_mesh()->get_edge_indices();
+		const PackedInt32Array edge_indices = mesh->get_edge_indices();
 		for (int edge_index = 0; edge_index < edge_indices.size() / 2; edge_index++) {
 			const int a_index = edge_indices[edge_index * 2];
 			const int b_index = edge_indices[edge_index * 2 + 1];
@@ -150,7 +154,7 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 			continue;
 		}
 		edge_colors_to_draw.push_back(edge_colors);
-		Ref<WireMaterialND> wire_material = material;
+		const Ref<WireMaterialND> wire_material = material;
 		if (wire_material.is_valid()) {
 			edge_thicknesses_to_draw.push_back(wire_material->get_line_thickness() > 0.0 ? wire_material->get_line_thickness() : -1.0);
 		} else {
