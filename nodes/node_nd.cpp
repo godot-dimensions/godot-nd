@@ -85,9 +85,9 @@ VectorN NodeND::get_global_position() const {
 }
 
 void NodeND::set_global_position(const VectorN &p_global_position) {
-	Ref<TransformND> global_transform = get_global_transform();
-	global_transform->set_origin(p_global_position);
-	set_global_transform(global_transform);
+	Ref<TransformND> global_xform = get_global_transform();
+	global_xform->set_origin(p_global_position);
+	set_global_transform(global_xform);
 }
 
 // Dimension functions.

@@ -105,19 +105,19 @@ double CameraND::get_depth_fade_start() const {
 }
 
 bool CameraND::is_position_behind(const VectorN &p_global_position) const {
-	const Ref<TransformND> global_transform = get_global_transform();
-	const VectorN depth_vector = global_transform->get_basis_column_raw(2);
+	const Ref<TransformND> global_xform = get_global_transform();
+	const VectorN depth_vector = global_xform->get_basis_column_raw(2);
 	if (depth_vector.is_empty()) {
 		return false;
 	}
-	const VectorN global_offset = VectorND::subtract(p_global_position, global_transform->get_origin());
+	const VectorN global_offset = VectorND::subtract(p_global_position, global_xform->get_origin());
 	return VectorND::dot(depth_vector, global_offset) > -_near;
 }
 
 VectorN CameraND::viewport_to_world_ray_origin(const Vector2 &p_viewport_position) const {
 	ERR_FAIL_COND_V_MSG(!is_inside_tree(), VectorN(), "CameraND is not inside the scene tree.");
-	const Ref<TransformND> global_transform = get_global_transform();
-	const VectorN global_pos = global_transform->get_origin();
+	const Ref<TransformND> global_xform = get_global_transform();
+	const VectorN global_pos = global_xform->get_origin();
 	// Perspective cameras always have their ray origin at the camera's position.
 	if (_projection_type == PROJECTION_PERSPECTIVE) {
 		return global_pos;
@@ -126,20 +126,20 @@ VectorN CameraND::viewport_to_world_ray_origin(const Vector2 &p_viewport_positio
 	const Vector2 viewport_size = get_viewport()->call(StringName("get_size"));
 	const double pixel_size = _keep_aspect == KEEP_WIDTH ? viewport_size.x : viewport_size.y;
 	const Vector2 scaled_position = (p_viewport_position * 2.0f - viewport_size) * (_orthographic_size / pixel_size);
-	const VectorN x = VectorND::multiply_scalar(global_transform->get_basis_column(0), scaled_position.x);
-	const VectorN y = VectorND::multiply_scalar(global_transform->get_basis_column(1), -scaled_position.y);
+	const VectorN x = VectorND::multiply_scalar(global_xform->get_basis_column(0), scaled_position.x);
+	const VectorN y = VectorND::multiply_scalar(global_xform->get_basis_column(1), -scaled_position.y);
 	return VectorND::add(global_pos, VectorND::add(x, y));
 }
 
 VectorN CameraND::viewport_to_world_ray_direction(const Vector2 &p_viewport_position) const {
 	ERR_FAIL_COND_V_MSG(!is_inside_tree(), VectorN(), "CameraND is not inside the scene tree.");
-	const Ref<TransformND> global_transform = get_global_transform();
+	const Ref<TransformND> global_xform = get_global_transform();
 	// 0D, 1D, or 2D camera transforms can just directly map viewport positions to world positions.
 	// As such, the camera does not really have a ray direction, so return an empty vector.
-	if (global_transform->get_basis_column_count() < 3) {
+	if (global_xform->get_basis_column_count() < 3) {
 		return VectorN();
 	}
-	const VectorN depth_vector = global_transform->get_basis_column(2);
+	const VectorN depth_vector = global_xform->get_basis_column(2);
 	// Orthographic cameras always have their ray direction pointing straight down the negative Z-axis.
 	if (_projection_type == PROJECTION_ORTHOGRAPHIC) {
 		return VectorND::negate(depth_vector);
@@ -148,8 +148,8 @@ VectorN CameraND::viewport_to_world_ray_direction(const Vector2 &p_viewport_posi
 	const Vector2 viewport_size = get_viewport()->call(StringName("get_size"));
 	const double pixel_size = _keep_aspect == KEEP_WIDTH ? viewport_size.x : viewport_size.y;
 	const Vector2 scaled_position = (p_viewport_position * 2.0f - viewport_size) / pixel_size;
-	const VectorN x = VectorND::multiply_scalar(global_transform->get_basis_column(0), scaled_position.x);
-	const VectorN y = VectorND::multiply_scalar(global_transform->get_basis_column(1), -scaled_position.y);
+	const VectorN x = VectorND::multiply_scalar(global_xform->get_basis_column(0), scaled_position.x);
+	const VectorN y = VectorND::multiply_scalar(global_xform->get_basis_column(1), -scaled_position.y);
 	const VectorN z = VectorND::multiply_scalar(depth_vector, -_focal_length);
 	const VectorN ray_direction = VectorND::add(VectorND::add(x, y), z);
 	return VectorND::normalized(ray_direction);
@@ -167,11 +167,11 @@ Vector2 CameraND::world_to_viewport_local_normal(const VectorN &p_local_position
 }
 
 Vector2 CameraND::world_to_viewport(const VectorN &p_global_position) const {
-	const Ref<TransformND> global_transform = get_global_transform();
-	const VectorN local_position = global_transform->xform_transposed(p_global_position);
+	const Ref<TransformND> global_xform = get_global_transform();
+	const VectorN local_position = global_xform->xform_transposed(p_global_position);
 	const Vector2 viewport_size = get_viewport()->call(StringName("get_size"));
 	const double pixel_size = _keep_aspect == KEEP_WIDTH ? viewport_size.x : viewport_size.y;
-	const bool force_orthographic = global_transform->get_basis_column_count() < 3;
+	const bool force_orthographic = global_xform->get_basis_column_count() < 3;
 	const Vector2 projected = world_to_viewport_local_normal(local_position, force_orthographic);
 	return (projected * pixel_size + viewport_size) * 0.5f;
 }
