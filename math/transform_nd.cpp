@@ -9,14 +9,18 @@
 #endif
 
 void make_basis_square_in_place(Vector<VectorN> &p_basis) {
-	const int column_count = p_basis.size();
-	for (int i = 0; i < column_count; i++) {
+	const int64_t column_count = p_basis.size();
+	for (int64_t i = 0; i < column_count; i++) {
+		const int64_t current_size = p_basis[i].size();
 		// Force each column to have the same amount of rows as there are columns (square matrix).
-		if (p_basis[i].size() < i + 1) {
+		if (current_size < column_count) {
+			// Grow the column and fill missing values with the identity matrix (1.0 on the diagonal).
 			p_basis.write[i].resize(column_count);
-			// Fill missing values with the identity matrix (1.0 on the diagonal).
-			p_basis.write[i].set(i, 1.0);
+			for (int j = current_size; j < column_count; j++) {
+				p_basis.write[i].set(j, i == j ? 1.0 : 0.0);
+			}
 		} else {
+			// Shrink the column, just resize, no need to write new values.
 			p_basis.write[i].resize(column_count);
 		}
 	}
@@ -86,6 +90,8 @@ VectorN TransformND::get_basis_row(const int p_index) const {
 			row.set(i, column[p_index]);
 		} else if (i == p_index) {
 			row.set(i, 1.0);
+		} else {
+			row.set(i, 0.0);
 		}
 	}
 	return row;
@@ -217,7 +223,11 @@ int TransformND::get_origin_dimension() const {
 }
 
 void TransformND::set_origin_dimension(const int p_origin_dimension) {
+	const int current_size = _origin.size();
 	_origin.resize(p_origin_dimension);
+	for (int i = current_size; i < p_origin_dimension; i++) {
+		_origin.set(i, 0.0);
+	}
 }
 
 Ref<TransformND> TransformND::with_dimension(const int p_dimension) const {
@@ -928,6 +938,10 @@ Ref<TransformND> TransformND::from_rotation(const int p_rot_from, const int p_ro
 	from_column.resize(array_size);
 	VectorN to_column;
 	to_column.resize(array_size);
+	for (int i = 0; i < array_size - 1; i++) {
+		from_column.set(i, 0.0);
+		to_column.set(i, 0.0);
+	}
 	// Set the rotation values.
 	const double cos_angle = Math::cos(p_rot_angle);
 	const double sin_angle = Math::sin(p_rot_angle);
@@ -951,6 +965,9 @@ Ref<TransformND> TransformND::from_scale(const VectorN &p_scale) {
 	for (int i = 0; i < dimension; i++) {
 		VectorN column;
 		column.resize(i + 1);
+		for (int j = 0; j < i; j++) {
+			column.set(j, 0.0);
+		}
 		column.set(i, p_scale[i]);
 		ret_columns.set(i, column);
 	}

@@ -28,7 +28,7 @@ public:
 	static VectorN divide_vector(const VectorN &p_a, const VectorN &p_b, const bool p_expand = false);
 	static VectorN divide_scalar(const VectorN &p_vector, const double p_scalar);
 	static double dot(const VectorN &p_a, const VectorN &p_b);
-	static VectorN drop_first_dimensions(const VectorN &p_vector, const int p_dimensions);
+	static VectorN drop_first_dimensions(const VectorN &p_vector, const int64_t p_dimensions);
 	static VectorN duplicate(const VectorN &p_vector);
 	static VectorN floor(const VectorN &p_vector);
 	static VectorN inverse(const VectorN &p_vector);
