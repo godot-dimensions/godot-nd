@@ -28,13 +28,13 @@ void BoxWireMeshND::set_size(const VectorN &p_size) {
 
 PackedInt32Array BoxWireMeshND::get_edge_indices() {
 	if (_edge_indices_cache.is_empty()) {
-		const int dimension = _size.size();
+		const uint64_t dimension = _size.size();
 		ERR_FAIL_COND_V_MSG(dimension > 30, _edge_indices_cache, "BoxWireMeshND: Too many dimensions for box edges.");
-		const int64_t vertex_count = 1 << dimension;
-		for (int i = 0; i < vertex_count; i++) {
-			for (int j = 0; j < dimension; j++) {
-				if ((i & (1 << j)) == 0) {
-					const int other_vertex_index = i + (1 << j);
+		const uint64_t vertex_count = uint64_t(1) << dimension;
+		for (uint64_t i = 0; i < vertex_count; i++) {
+			for (uint64_t j = 0; j < dimension; j++) {
+				if ((i & (uint64_t(1) << j)) == 0) {
+					const uint64_t other_vertex_index = i + (uint64_t(1) << j);
 					_edge_indices_cache.append(i);
 					_edge_indices_cache.append(other_vertex_index);
 				}
@@ -46,15 +46,16 @@ PackedInt32Array BoxWireMeshND::get_edge_indices() {
 
 Vector<VectorN> BoxWireMeshND::get_vertices() {
 	if (_vertices_cache.is_empty()) {
+		const uint64_t dimension = _size.size();
+		ERR_FAIL_COND_V_MSG(dimension > 30, _vertices_cache, "BoxWireMeshND: Too many dimensions for box vertices.");
+		const uint64_t vertex_count = uint64_t(1) << dimension;
 		const VectorN he = get_half_extents();
-		ERR_FAIL_COND_V_MSG(he.size() > 30, _vertices_cache, "BoxWireMeshND: Too many dimensions for box vertices.");
-		const int64_t vertex_count = 1 << he.size();
 		_vertices_cache.resize(vertex_count);
-		for (int64_t i = 0; i < vertex_count; i++) {
+		for (uint64_t i = 0; i < vertex_count; i++) {
 			VectorN vertex;
 			vertex.resize(he.size());
-			for (int64_t j = 0; j < he.size(); j++) {
-				vertex.set(j, (i & (1 << j)) ? he[j] : -he[j]);
+			for (uint64_t j = 0; j < dimension; j++) {
+				vertex.set(j, (i & (uint64_t(1) << j)) ? he[j] : -he[j]);
 			}
 			_vertices_cache.set(i, vertex);
 		}
