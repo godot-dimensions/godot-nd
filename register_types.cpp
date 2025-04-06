@@ -4,6 +4,10 @@
 #include <godot_cpp/classes/engine.hpp>
 #elif GODOT_MODULE
 #include "core/config/engine.h"
+#ifdef TOOLS_ENABLED
+#include "editor/plugins/editor_plugin.h"
+#include "editor/themes/editor_color_map.h"
+#endif // TOOLS_ENABLED
 #endif
 
 // General.
@@ -38,7 +42,20 @@
 // We don't need to register these in principle, and we don't need it for a module, just for GDExtension.
 #include "render/wireframe_canvas/wireframe_canvas_rendering_engine_nd.h"
 #include "render/wireframe_canvas/wireframe_render_canvas_nd.h"
+#ifdef TOOLS_ENABLED
+#include "editor/godot_nd_editor_plugin.h"
+#include "editor/viewport/editor_camera_nd.h"
+#include "editor/viewport/editor_input_surface_nd.h"
+#include "editor/viewport/editor_main_screen_nd.h"
+#include "editor/viewport/editor_main_viewport_nd.h"
+#include "editor/viewport/editor_transform_gizmo_nd.h"
+#include "editor/viewport/editor_viewport_rotation_nd.h"
+#endif // TOOLS_ENABLED
 #endif // GDEXTENSION
+
+#ifdef TOOLS_ENABLED
+#include "editor/godot_nd_editor_plugin.h"
+#endif // TOOLS_ENABLED
 
 inline void add_godot_singleton(const StringName &p_singleton_name, Object *p_object) {
 #if GDEXTENSION
@@ -92,6 +109,29 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		RenderingServerND *rendering_server = memnew(RenderingServerND);
 		rendering_server->register_rendering_engine("Wireframe Canvas", memnew(WireframeCanvasRenderingEngineND));
 		add_godot_singleton("RenderingServerND", rendering_server);
+#ifdef TOOLS_ENABLED
+	} else if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+#ifdef GDEXTENSION
+		GDREGISTER_CLASS(EditorCameraND);
+		GDREGISTER_CLASS(EditorCreateNDSceneButton);
+		GDREGISTER_CLASS(EditorInputSurfaceND);
+		GDREGISTER_CLASS(EditorMainScreenND);
+		GDREGISTER_CLASS(EditorMainViewportND);
+		GDREGISTER_CLASS(EditorTransformGizmoND);
+		GDREGISTER_CLASS(EditorViewportRotationND);
+		GDREGISTER_CLASS(GodotNDEditorPlugin);
+#elif GODOT_MODULE
+		EditorColorMap::add_conversion_color_pair("fff6a2", "ccc055");
+		EditorColorMap::add_conversion_color_pair("fe5", "ba0");
+		EditorColorMap::add_conversion_color_pair("fe7", "ba2");
+		EditorColorMap::add_conversion_color_pair("fe9", "ba4");
+		EditorColorMap::add_conversion_color_pair("fd0", "a90");
+		EditorColorMap::add_conversion_color_pair("fd3", "a93");
+		EditorColorMap::add_conversion_color_pair("dc3", "870");
+		EditorColorMap::add_conversion_color_pair("ba3", "665d11");
+#endif // GDEXTENSION or GODOT_MODULE
+		EditorPlugins::add_by_type<GodotNDEditorPlugin>();
+#endif // TOOLS_ENABLED
 	}
 }
 

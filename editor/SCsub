@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+Import("env")
+Import("env_modules")
+
+env_nd = env_modules.Clone()
+
+env_nd.add_source_files(env.modules_sources, "*.cpp")
+env_nd.add_source_files(env.modules_sources, "icons/*.cpp")
+env_nd.add_source_files(env.modules_sources, "viewport/*.cpp")
+
+# The rest of this file handles generating the ND icons header file.
+import icons.editor_nd_icon_generator
+
+env["BUILDERS"]["MakeEditorNDIconsBuilder"] = Builder(
+    action=env.Run(icons.editor_nd_icon_generator.make_editor_nd_icons_action),
+    suffix=".h",
+    src_suffix=".svg",
+)
+
+target_file_path = "icons/editor_nd_icons.gen.h"
+icon_sources = Glob("../addons/nd/icons/ND.svg") + Glob("../addons/nd/icons/NodeND.svg")
+env.Alias("editor_nd_icons", [env.MakeEditorNDIconsBuilder(target_file_path, icon_sources)])

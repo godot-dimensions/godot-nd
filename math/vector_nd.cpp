@@ -93,6 +93,9 @@ int _get_axis_unicode_number_nd(int64_t p_axis) {
 }
 
 String VectorND::axis_letter(int64_t p_axis) {
+	if (p_axis < 0) {
+		return String("*");
+	}
 	return String::chr(_get_axis_unicode_number_nd(p_axis));
 }
 
@@ -536,10 +539,11 @@ VectorN VectorND::project(const VectorN &p_vector, const VectorN &p_on_normal) {
 	const int64_t dimension = p_on_normal.size();
 	const double dot_product = VectorND::dot(p_vector, p_on_normal);
 	const double normal_length_squared = VectorND::length_squared(p_on_normal);
+	const double scale = dot_product / normal_length_squared;
 	VectorN projected;
 	projected.resize(dimension);
 	for (int64_t i = 0; i < dimension; i++) {
-		projected.set(i, p_on_normal[i] * dot_product / normal_length_squared);
+		projected.set(i, p_on_normal[i] * scale);
 	}
 	return projected;
 }

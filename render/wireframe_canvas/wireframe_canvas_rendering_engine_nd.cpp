@@ -134,15 +134,15 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 				const double depth = abs((VectorND::length(a_vert_nd) + VectorND::length(b_vert_nd)) * 0.5);
 				double alpha = 1.0;
 
-				const double far = camera->get_far();
+				const double depth_far = camera->get_far();
 				const double start = camera->get_depth_fade_start();
 
-				if (depth > far) {
+				if (depth > depth_far) {
 					alpha = 0.0;
 				} else if (depth < start) {
 					alpha = 1.0;
 				} else {
-					const double unit_distance = (depth - start) / (far - start); // Inverse lerp
+					const double unit_distance = (depth - start) / (depth_far - start); // Inverse lerp
 					alpha = 1.0 - unit_distance;
 				}
 
