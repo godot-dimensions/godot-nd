@@ -66,6 +66,9 @@ public:
 	Ref<TransformND> compose_shrink(const Ref<TransformND> &p_child_transform) const;
 	Ref<TransformND> transform_to(const Ref<TransformND> &p_to) const;
 
+	void translate_global(const VectorN &p_translation);
+	void translate_local(const VectorN &p_translation);
+
 	VectorN xform(const VectorN &p_vector) const;
 	Vector<VectorN> xform_many(const Vector<VectorN> &p_vectors) const;
 	VectorN xform_basis(const VectorN &p_vector) const;
@@ -104,6 +107,10 @@ public:
 	bool is_rotation() const;
 	bool is_uniform_scale() const;
 
+	// Trivial math. Not useful by itself, but can be a part of a larger expression.
+	Ref<TransformND> add(const Ref<TransformND> &p_other) const;
+	Ref<TransformND> divide_scalar(const double p_scalar) const;
+
 	// Conversion.
 	Transform2D to_2d();
 	Transform3D to_3d();
@@ -121,5 +128,7 @@ public:
 	static Ref<TransformND> from_rotation(const int p_rot_from, const int p_rot_to, const double p_rot_angle);
 	static Ref<TransformND> from_rotation_scale(const int p_rot_from, const int p_rot_to, const double p_rot_angle, const VectorN &p_scale);
 	static Ref<TransformND> from_scale(const VectorN &p_scale);
+	static Ref<TransformND> from_swap_rotation(const int p_rot_from, const int p_rot_to);
+	static Ref<TransformND> identity_basis(const int p_dimension);
 	TransformND() {}
 };

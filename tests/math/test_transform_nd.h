@@ -127,6 +127,11 @@ TEST_CASE("[TransformND] Inverse Basis") {
 	precomputed_inverse->set_all_basis_columns(precomputed_inv_scaled);
 	CHECK_MESSAGE(test->inverse_basis()->is_equal_approx(precomputed_inverse), "TransformND inverse_basis of scaled matrix should match precomputed inverse.");
 
+	Vector<VectorN> rot_xz = { VectorN{ 0, 0, 1 }, VectorN{ 0, 1, 0 }, VectorN{ -1, 0, 0 } };
+	Vector<VectorN> rot_zx = { VectorN{ 0, 0, -1 }, VectorN{ 0, 1, 0 }, VectorN{ 1, 0, 0 } };
+	test->set_all_basis_columns(rot_xz);
+	CHECK_MESSAGE(test->inverse_basis()->get_all_basis_columns() == rot_zx, "TransformND inverse_basis of 90 degree rotation should be the inverse rotation.");
+
 	const double angle = 0.5;
 	test = TransformND::from_rotation(0, 1, angle);
 	const double cos_neg_angle = Math::cos(-angle);

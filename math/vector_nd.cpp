@@ -2,6 +2,102 @@
 
 #include <algorithm>
 
+// Cosmetic functions.
+
+float _get_axis_color_hue_nd(int64_t p_index) {
+	// Main hue.
+	int group = (p_index / 3) % 4;
+	int parity = p_index % 3;
+	float hue_base = 0.0;
+	if (group == 0) {
+		hue_base = 0.0;
+		// Though our iteration direction is generally negative,
+		// we want to keep Y as green and Z as blue.
+		if (parity == 1) {
+			parity = 2;
+		} else if (parity == 2) {
+			parity = 1;
+		}
+	} else if (group == 1) {
+		hue_base = 1.0 / 6.0;
+	} else if (group == 2) {
+		hue_base = 1.0 / 12.0;
+	} else { // if (group == 3)
+		hue_base = 3.0 / 12.0;
+	}
+	float hue = hue_base - (parity * 0.33333333f + 0.04f);
+	// Further refinement.
+	if (((p_index / 48) % 2) == 1) {
+		hue += 1.0 / 24.0;
+	}
+	if (((p_index / 96) % 2) == 1) {
+		hue += 1.0 / 48.0;
+	}
+	if (hue < 0.0) {
+		hue += 1.0;
+	}
+	return hue;
+}
+
+Color VectorND::axis_color(int64_t p_axis) {
+	float hue = _get_axis_color_hue_nd(p_axis);
+	float value = ((p_axis / 12) % 2) == 0 ? 1.0f : 0.5f;
+	float sat = ((p_axis / 24) % 2) == 0 ? 0.8f : 0.4f;
+	return Color::from_hsv(hue, sat, value);
+}
+
+int _get_axis_unicode_number_nd(int64_t p_axis) {
+	if (p_axis < 3) {
+		return p_axis + 88;
+	} else if (p_axis < 26) {
+		return 90 - p_axis;
+	} else if (p_axis < 32) {
+		return p_axis + 919;
+	} else if (p_axis < 34) {
+		return p_axis + 920;
+	} else if (p_axis < 36) {
+		return p_axis + 921;
+	} else if (p_axis == 36) {
+		return p_axis + 922;
+	} else if (p_axis < 38) {
+		return p_axis + 923;
+	} else if (p_axis < 41) {
+		return p_axis + 924;
+	} else if (p_axis == 41) {
+		return p_axis + 925;
+	} else if (p_axis < 44) {
+		return p_axis + 926;
+	} else if (p_axis < 71) {
+		return p_axis + 4260;
+	} else if (p_axis < 73) {
+		return p_axis + 4261;
+	} else if (p_axis < 85) {
+		return p_axis + 4262;
+	} else if (p_axis < 110) {
+		return p_axis * 2 + 12184;
+	} else if (p_axis < 118) {
+		return p_axis * 2 + 12194;
+	} else if (p_axis < 124) {
+		return p_axis + 12313;
+	} else if (p_axis < 149) {
+		return p_axis * 2 + 12202;
+	} else if (p_axis < 163) {
+		return p_axis * 2 + 12210;
+	} else if (p_axis < 197) {
+		return p_axis + 12386;
+	} else if (p_axis < 21092) {
+		return p_axis + 19777;
+	} else {
+		return 63; // ?
+	}
+}
+
+String VectorND::axis_letter(int64_t p_axis) {
+	return String::chr(_get_axis_unicode_number_nd(p_axis));
+}
+
+// VectorN operations.
+
 VectorN VectorND::abs(const VectorN &p_vector) {
 	const int64_t dimension = p_vector.size();
 	VectorN abs_vector;
@@ -429,21 +525,6 @@ VectorN VectorND::sign(const VectorN &p_vector) {
 	return sign_vector;
 }
 
-VectorN VectorND::with_length(const VectorN &p_vector, const double p_length) {
-	const int64_t dimension = p_vector.size();
-	const double vector_length = VectorND::length(p_vector);
-	if (vector_length == 0) {
-		return VectorND::duplicate(p_vector);
-	}
-	const double scale = p_length / vector_length;
-	VectorN norm;
-	norm.resize(dimension);
-	for (int64_t i = 0; i < dimension; i++) {
-		norm.set(i, p_vector[i] * scale);
-	}
-	return norm;
-}
-
 // Slide returns the component of the vector along the given plane, specified by its normal vector.
 VectorN VectorND::slide(const VectorN &p_vector, const VectorN &p_normal) {
 	const int64_t dimension = MAX(p_vector.size(), p_normal.size());
@@ -490,6 +571,45 @@ VectorN VectorND::subtract(const VectorN &p_a, const VectorN &p_b) {
 		difference.set(i, a - b);
 	}
 	return difference;
+}
+
+VectorN VectorND::value_on_axis(const double p_value, const int64_t p_axis) {
+	VectorN vector;
+	vector.resize(p_axis + 1);
+	for (int64_t i = 0; i < p_axis; i++) {
+		vector.set(i, 0.0);
+	}
+	vector.set(p_axis, p_value);
+	return vector;
+}
+
+VectorN VectorND::with_dimension(const VectorN &p_vector, const int64_t p_dimension) {
+	const int64_t old_dimension = p_vector.size();
+	VectorN new_vector;
+	new_vector.resize(p_dimension);
+	for (int64_t i = 0; i < p_dimension; i++) {
+		if (i < old_dimension) {
+			new_vector.set(i, p_vector[i]);
+		} else {
+			new_vector.set(i, 0.0);
+		}
+	}
+	return new_vector;
+}
+
+VectorN VectorND::with_length(const VectorN &p_vector, const double p_length) {
+	const int64_t dimension = p_vector.size();
+	const double vector_length = VectorND::length(p_vector);
+	if (vector_length == 0) {
+		return VectorND::duplicate(p_vector);
+	}
+	const double scale = p_length / vector_length;
+	VectorN norm;
+	norm.resize(dimension);
+	for (int64_t i = 0; i < dimension; i++) {
+		norm.set(i, p_vector[i] * scale);
+	}
+	return norm;
 }
 
 // Conversion.
@@ -563,6 +683,10 @@ String VectorND::to_string(const VectorN &p_vector) {
 VectorND *VectorND::singleton = nullptr;
 
 void VectorND::_bind_methods() {
+	// Cosmetic functions.
+	ClassDB::bind_static_method("VectorND", D_METHOD("axis_color", "axis"), &VectorND::axis_color);
+	ClassDB::bind_static_method("VectorND", D_METHOD("axis_letter", "axis"), &VectorND::axis_letter);
+	// VectorN operations.
 	ClassDB::bind_static_method("VectorND", D_METHOD("abs", "vector"), &VectorND::abs);
 	ClassDB::bind_static_method("VectorND", D_METHOD("add", "a", "b"), &VectorND::add);
 	ClassDB::bind_static_method("VectorND", D_METHOD("add_scalar", "vector", "scalar"), &VectorND::add_scalar);
@@ -605,6 +729,8 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("snapped", "vector", "by"), &VectorND::snapped);
 	ClassDB::bind_static_method("VectorND", D_METHOD("snappedf", "vector", "by"), &VectorND::snappedf);
 	ClassDB::bind_static_method("VectorND", D_METHOD("subtract", "a", "b"), &VectorND::subtract);
+	ClassDB::bind_static_method("VectorND", D_METHOD("value_on_axis", "value", "axis"), &VectorND::value_on_axis);
+	ClassDB::bind_static_method("VectorND", D_METHOD("with_dimension", "vector", "dimension"), &VectorND::with_dimension);
 	ClassDB::bind_static_method("VectorND", D_METHOD("with_length", "vector", "length"), &VectorND::with_length, DEFVAL(1.0));
 	// Conversion.
 	ClassDB::bind_static_method("VectorND", D_METHOD("from_2d", "vector"), &VectorND::from_2d);

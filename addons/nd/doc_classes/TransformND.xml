@@ -14,6 +14,13 @@
 		<link title="Matrix Transform Demo">https://godotengine.org/asset-library/asset/584</link>
 	</tutorials>
 	<methods>
+		<method name="add" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="other" type="TransformND" />
+			<description>
+				Adds this transform to another transform. This is equivalent to adding the basis matrices and the origin vectors together. This operation is not meaningful by itself, but it may be useful as part of a larger calculation.
+			</description>
+		</method>
 		<method name="compose_expand" qualifiers="const">
 			<return type="TransformND" />
 			<param index="0" name="child_transform" type="TransformND" />
@@ -46,6 +53,13 @@
 			<return type="float" />
 			<description>
 				Returns the determinant of the basis matrix. This number represents how space is scaled by the transformation. This is non-zero for any invertible square matrix within the same dimension, and always zero for non-invertible matrices and non-square matrices, such as matrices that convert 3D to 2D (the 3D space is flattened to a plane, so it has no volume, and so it scales the space to zero) or convert 2D to 3D (the span is at most a 2D plane embedded in 3D space, which has a volume of zero).
+			</description>
+		</method>
+		<method name="divide_scalar" qualifiers="const">
+			<return type="TransformND" />
+			<param index="0" name="scalar" type="float" />
+			<description>
+				Divides this transform by a scalar. This is equivalent to dividing the basis matrix and the origin vector by the scalar. This operation is not meaningful by itself, but it may be useful as part of a larger calculation.
 			</description>
 		</method>
 		<method name="duplicate" qualifiers="const">
@@ -127,6 +141,14 @@
 			<param index="0" name="scale" type="PackedFloat64Array" />
 			<description>
 				Creates a scale matrix from the specified scale vector. The dimension of the basis matrix is the length of the scale vector.
+			</description>
+		</method>
+		<method name="from_swap_rotation" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="rot_from" type="int" />
+			<param index="1" name="rot_to" type="int" />
+			<description>
+				Creates a rotation matrix that rotates 90 degrees in the plane from [param rot_from] to [param rot_to], effectively swapping the two axes, but negating one to keep the determinant positive.
 			</description>
 		</method>
 		<method name="get_all_basis_columns" qualifiers="const">
@@ -211,6 +233,13 @@
 			<return type="float" />
 			<description>
 				Returns the absolute uniform scale, which the average of the absolute scale. This does not return negative values in the case of a flip/reflection.
+			</description>
+		</method>
+		<method name="identity_basis" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Constructs an identity basis matrix of the specified dimension. This is a square matrix with [code]1.0[/code] for the diagonal and [code]0.0[/code] for the rest. The origin will be empty.
 			</description>
 		</method>
 		<method name="inverse" qualifiers="const">
@@ -432,6 +461,20 @@
 			<param index="0" name="to" type="TransformND" />
 			<description>
 				Returns a transform that transforms from this transform to the specified [param to] transform.
+			</description>
+		</method>
+		<method name="translate_global">
+			<return type="void" />
+			<param index="0" name="translation" type="PackedFloat64Array" />
+			<description>
+				Translates (moves) the transform by the specified [param translation] vector in parent-relative space (global in the math). This is equivalent to adding the translation vector to the origin vector.
+			</description>
+		</method>
+		<method name="translate_local">
+			<return type="void" />
+			<param index="0" name="translation" type="PackedFloat64Array" />
+			<description>
+				Translates (moves) the transform by the specified [param translation] vector in object-local space (local in the math). This is equivalent to multiplying the translation vector by the basis matrix, then adding the result to the origin vector.
 			</description>
 		</method>
 		<method name="with_dimension" qualifiers="const">

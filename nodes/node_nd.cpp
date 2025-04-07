@@ -159,6 +159,9 @@ Ref<RectND> NodeND::get_rect_bounds(const Ref<TransformND> &p_inv_relative_to) c
 
 Ref<RectND> NodeND::get_rect_bounds_recursive(const Ref<TransformND> &p_inv_relative_to) const {
 	Ref<RectND> bounds = get_rect_bounds(p_inv_relative_to);
+	if (bounds.is_null()) {
+		bounds.instantiate();
+	}
 	const int child_count = get_child_count();
 	for (int i = 0; i < child_count; i++) {
 		NodeND *child_nd = Object::cast_to<NodeND>(get_child(i));
@@ -201,9 +204,9 @@ void NodeND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_visible", "visible"), &NodeND::set_visible);
 	// Properties.
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension_mode", PROPERTY_HINT_ENUM, "Square,Non-Square"), "set_dimension_mode", "get_dimension_mode");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_dimension", "get_dimension");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "input_dimension", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_input_dimension", "get_input_dimension");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "output_dimension", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_output_dimension", "get_output_dimension");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension", PROPERTY_HINT_RANGE, "0,100,1", PROPERTY_USAGE_EDITOR), "set_dimension", "get_dimension");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "input_dimension", PROPERTY_HINT_RANGE, "0,100,1", PROPERTY_USAGE_EDITOR), "set_input_dimension", "get_input_dimension");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "output_dimension", PROPERTY_HINT_RANGE, "0,100,1", PROPERTY_USAGE_EDITOR), "set_output_dimension", "get_output_dimension");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "transform", PROPERTY_HINT_RESOURCE_TYPE, "TransformND", PROPERTY_USAGE_NONE), "set_transform", "get_transform");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "position", PROPERTY_HINT_NONE, "suffix:m"), "set_position", "get_position");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");

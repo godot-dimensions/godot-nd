@@ -406,6 +406,14 @@ Ref<TransformND> TransformND::transform_to(const Ref<TransformND> &p_to) const {
 	return p_to->compose_square(inverse());
 }
 
+void TransformND::translate_global(const VectorN &p_translation) {
+	_origin = VectorND::add(_origin, p_translation);
+}
+
+void TransformND::translate_local(const VectorN &p_translation) {
+	_origin = VectorND::add(_origin, xform_basis(p_translation));
+}
+
 VectorN TransformND::xform(const VectorN &p_vector) const {
 	const int dimension = MIN(p_vector.size(), _columns.size());
 	VectorN ret = _origin;
@@ -467,41 +475,40 @@ VectorN TransformND::xform_transposed_basis(const VectorN &p_vector) const {
 
 // Inversion methods.
 
-static bool lup_decompose(Vector<VectorN> &p_to_decompose, PackedInt32Array &p_permutations, int p_dimension) {
+static bool lup_decompose(Vector<VectorN> &p_columns, PackedInt32Array &p_permutations, int p_dimension) {
 	p_permutations.resize(p_dimension);
 	for (int i = 0; i < p_dimension; i++) {
 		p_permutations.set(i, i);
 	}
-	for (int perm_index = 0; perm_index < p_dimension; perm_index++) {
-		double pivot_val = 0.0;
-		int pivot_row = -1;
-		// Find pivot.
-		for (int row_index = perm_index; row_index < p_dimension; row_index++) {
-			const int perm_row = p_permutations[row_index];
-			const double val = Math::abs(p_to_decompose[perm_index][perm_row]);
-			if (val > pivot_val) {
-				pivot_val = val;
-				pivot_row = row_index;
+	for (int pivot_index = 0; pivot_index < p_dimension; pivot_index++) {
+		double largest_pivot_value = 0.0;
+		int best_row_index = -1;
+		// Find the pivot row.
+		for (int row = pivot_index; row < p_dimension; row++) {
+			const double value = Math::abs(p_columns[pivot_index][p_permutations[row]]);
+			if (value > largest_pivot_value) {
+				largest_pivot_value = value;
+				best_row_index = row;
 			}
 		}
-		if (Math::is_zero_approx(pivot_val)) {
-			return false; // singular
+		if (Math::is_zero_approx(largest_pivot_value)) {
+			return false; // Singular matrix.
 		}
-		const int this_perm = p_permutations[perm_index];
-		// Swap pivot if needed.
-		if (pivot_row != perm_index) {
-			p_permutations.set(perm_index, p_permutations[pivot_row]);
-			p_permutations.set(pivot_row, this_perm);
-			// If needed, flip perm_sign here: perm_sign = -perm_sign;
+		// Swap permutation indices.
+		const int current_perm = p_permutations[pivot_index];
+		if (best_row_index != pivot_index) {
+			p_permutations.set(pivot_index, p_permutations[best_row_index]);
+			p_permutations.set(best_row_index, current_perm);
 		}
-		// Eliminate.
-		for (int i = perm_index + 1; i < p_dimension; i++) {
-			const int perm_i = p_permutations[i];
-			const double alpha = p_to_decompose[perm_index][perm_i] / p_to_decompose[perm_index][this_perm];
-			p_to_decompose.write[perm_index].set(perm_i, alpha);
-			for (int j = perm_index + 1; j < p_dimension; j++) {
-				const double val = p_to_decompose[j][perm_i] - alpha * p_to_decompose[j][this_perm];
-				p_to_decompose.write[j].set(perm_i, val);
+		// Perform elimination on rows below the pivot.
+		const int pivot_row = p_permutations[pivot_index];
+		for (int row = pivot_index + 1; row < p_dimension; row++) {
+			const int permuted_row = p_permutations[row];
+			const double alpha = p_columns[pivot_index][permuted_row] / p_columns[pivot_index][pivot_row];
+			p_columns.write[pivot_index].set(permuted_row, alpha);
+			for (int col = pivot_index + 1; col < p_dimension; col++) {
+				double new_value = p_columns[col][permuted_row] - alpha * p_columns[col][pivot_row];
+				p_columns.write[col].set(permuted_row, new_value);
 			}
 		}
 	}
@@ -543,15 +550,18 @@ static Vector<VectorN> lup_invert(const Vector<VectorN> &p_decomposed, const Pac
 
 Ref<TransformND> TransformND::inverse() const {
 	Ref<TransformND> inv = inverse_basis();
-	inv->set_origin(xform_basis(VectorND::negate(_origin)));
+	inv->set_origin(inv->xform_basis(VectorND::negate(_origin)));
 	return inv;
 }
 
 Ref<TransformND> TransformND::inverse_basis() const {
+	const int dimension = _columns.size();
+	if (dimension <= 0) {
+		// Nothing to invert.
+		return duplicate();
+	}
 	Ref<TransformND> inv;
 	inv.instantiate();
-	const int dimension = _columns.size();
-	ERR_FAIL_COND_V_MSG(dimension <= 0, inv, "Basis dimension must be positive.");
 	// Operate on a square copy of the columns (Vector<> is copy-on-write).
 	Vector<VectorN> decomposed = _columns;
 	make_basis_square_in_place(decomposed);
@@ -661,8 +671,9 @@ Ref<TransformND> TransformND::scaled_global(const VectorN &p_scale) const {
 }
 
 void TransformND::scale_local(const VectorN &p_scale) {
+	ERR_FAIL_COND_MSG(p_scale.is_empty(), "TransformND.scale_local: Cannot scale with nothing.");
 	for (int i = 0; i < _columns.size(); i++) {
-		const double scale = p_scale[i];
+		const double scale = i < p_scale.size() ? p_scale[i] : 1.0;
 		_columns.set(i, VectorND::multiply_scalar(_columns[i], scale));
 	}
 }
@@ -814,6 +825,37 @@ bool TransformND::is_uniform_scale() const {
 		}
 	}
 	return true;
+}
+
+// Trivial math. Not useful by itself, but can be a part of a larger expression.
+
+Ref<TransformND> TransformND::add(const Ref<TransformND> &p_other) const {
+	Ref<TransformND> ret;
+	ret.instantiate();
+	const int column_count = MAX(get_basis_column_count(), p_other->get_basis_column_count());
+	Vector<VectorN> ret_columns;
+	ret_columns.resize(column_count);
+	for (int i = 0; i < column_count; i++) {
+		const VectorN &a = get_basis_column_raw(i);
+		const VectorN &b = p_other->get_basis_column_raw(i);
+		ret_columns.set(i, VectorND::add(a, b));
+	}
+	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(VectorND::add(get_origin(), p_other->get_origin()));
+	return ret;
+}
+
+Ref<TransformND> TransformND::divide_scalar(const double p_scalar) const {
+	Ref<TransformND> ret;
+	ret.instantiate();
+	Vector<VectorN> ret_columns;
+	ret_columns.resize(_columns.size());
+	for (int i = 0; i < ret_columns.size(); i++) {
+		ret_columns.set(i, VectorND::divide_scalar(_columns[i], p_scalar));
+	}
+	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(VectorND::divide_scalar(_origin, p_scalar));
+	return ret;
 }
 
 // Conversion.
@@ -975,6 +1017,53 @@ Ref<TransformND> TransformND::from_scale(const VectorN &p_scale) {
 	return ret;
 }
 
+Ref<TransformND> TransformND::from_swap_rotation(const int p_rot_from, const int p_rot_to) {
+	Ref<TransformND> ret;
+	ret.instantiate();
+	ERR_FAIL_COND_V_MSG(p_rot_from < 0 || p_rot_to < 0 || p_rot_from == p_rot_to, ret, "Invalid rotation dimension indices.");
+	const int array_size = MAX(p_rot_from, p_rot_to) + 1;
+	// Allocate the columns.
+	Vector<VectorN> ret_columns;
+	ret_columns.resize(array_size);
+	VectorN from_column;
+	from_column.resize(array_size);
+	VectorN to_column;
+	to_column.resize(array_size);
+	for (int i = 0; i < array_size - 1; i++) {
+		from_column.set(i, 0.0);
+		to_column.set(i, 0.0);
+	}
+	// Set the rotation values as if the rotation was 90 degrees.
+	from_column.set(p_rot_to, 1.0);
+	to_column.set(p_rot_from, -1.0);
+	ret_columns.set(p_rot_from, from_column);
+	ret_columns.set(p_rot_to, to_column);
+	ret->set_all_basis_columns(ret_columns);
+	return ret;
+}
+
+Ref<TransformND> TransformND::identity_basis(const int p_dimension) {
+	Ref<TransformND> ret;
+	ret.instantiate();
+	// Allocate the columns.
+	Vector<VectorN> ret_columns;
+	ret_columns.resize(p_dimension);
+	for (int i = 0; i < p_dimension; i++) {
+		VectorN column;
+		column.resize(p_dimension);
+		for (int j = 0; j < p_dimension; j++) {
+			if (i == j) {
+				column.set(j, 1.0);
+			} else {
+				column.set(j, 0.0);
+			}
+		}
+		ret_columns.set(i, column);
+	}
+	ret->set_all_basis_columns(ret_columns);
+	return ret;
+}
+
 void TransformND::_bind_methods() {
 	// Trivial getters and setters.
 	ClassDB::bind_method(D_METHOD("get_all_basis_columns"), &TransformND::get_all_basis_columns_bind);
@@ -1012,6 +1101,8 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("compose_expand", "child_transform"), &TransformND::compose_expand);
 	ClassDB::bind_method(D_METHOD("compose_shrink", "child_transform"), &TransformND::compose_shrink);
 	ClassDB::bind_method(D_METHOD("transform_to", "to"), &TransformND::transform_to);
+	ClassDB::bind_method(D_METHOD("translate_global", "translation"), &TransformND::translate_global);
+	ClassDB::bind_method(D_METHOD("translate_local", "translation"), &TransformND::translate_local);
 	ClassDB::bind_method(D_METHOD("xform", "vector"), &TransformND::xform);
 	ClassDB::bind_method(D_METHOD("xform_basis", "vector"), &TransformND::xform_basis);
 	ClassDB::bind_method(D_METHOD("xform_basis_axis", "axis", "axis_index"), &TransformND::xform_basis_axis);
@@ -1042,6 +1133,9 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_orthonormal"), &TransformND::is_orthonormal);
 	ClassDB::bind_method(D_METHOD("is_rotation"), &TransformND::is_rotation);
 	ClassDB::bind_method(D_METHOD("is_uniform_scale"), &TransformND::is_uniform_scale);
+	// Trivial math. Not useful by itself, but can be a part of a larger expression.
+	ClassDB::bind_method(D_METHOD("add", "other"), &TransformND::add);
+	ClassDB::bind_method(D_METHOD("divide_scalar", "scalar"), &TransformND::divide_scalar);
 	// Conversion.
 	ClassDB::bind_method(D_METHOD("to_2d"), &TransformND::to_2d);
 	ClassDB::bind_method(D_METHOD("to_3d"), &TransformND::to_3d);
@@ -1056,6 +1150,8 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_static_method("TransformND", D_METHOD("from_position_scale", "position", "scale"), &TransformND::from_position_scale);
 	ClassDB::bind_static_method("TransformND", D_METHOD("from_rotation", "rot_from", "rot_to", "rot_angle"), &TransformND::from_rotation);
 	ClassDB::bind_static_method("TransformND", D_METHOD("from_scale", "scale"), &TransformND::from_scale);
+	ClassDB::bind_static_method("TransformND", D_METHOD("from_swap_rotation", "rot_from", "rot_to"), &TransformND::from_swap_rotation);
+	ClassDB::bind_static_method("TransformND", D_METHOD("identity_basis", "dimension"), &TransformND::identity_basis);
 	// Properties.
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "origin", PROPERTY_HINT_NONE, "suffix:m"), "set_origin", "get_origin");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");

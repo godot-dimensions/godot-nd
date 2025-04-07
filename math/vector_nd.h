@@ -11,6 +11,11 @@ protected:
 	static void _bind_methods();
 
 public:
+	// Cosmetic functions.
+	static Color axis_color(int64_t p_axis);
+	static String axis_letter(int64_t p_axis);
+
+	// VectorN operations.
 	static VectorN abs(const VectorN &p_vector);
 	static VectorN add(const VectorN &p_a, const VectorN &p_b);
 	static void add_in_place(const VectorN &p_a, VectorN &r_result);
@@ -55,6 +60,8 @@ public:
 	static VectorN snapped(const VectorN &p_vector, const VectorN &p_by);
 	static VectorN snappedf(const VectorN &p_vector, const double p_by);
 	static VectorN subtract(const VectorN &p_a, const VectorN &p_b);
+	static VectorN value_on_axis(const double p_value, const int64_t p_axis);
+	static VectorN with_dimension(const VectorN &p_vector, const int64_t p_dimension);
 	static VectorN with_length(const VectorN &p_vector, const double p_length = 1.0);
 
 	// Conversion.

@@ -31,6 +31,13 @@
 #include "render/wireframe_canvas/wireframe_canvas_rendering_engine_nd.h"
 #include "render/wireframe_canvas/wireframe_render_canvas_nd.h"
 
+#if GDEXTENSION
+// GDExtension has a nervous breakdown whenever singleton or casted classes are not registered.
+// We don't need to register these in principle, and we don't need it for a module, just for GDExtension.
+#include "render/wireframe_canvas/wireframe_canvas_rendering_engine_nd.h"
+#include "render/wireframe_canvas/wireframe_render_canvas_nd.h"
+#endif // GDEXTENSION
+
 inline void add_godot_singleton(const StringName &p_singleton_name, Object *p_object) {
 #if GDEXTENSION
 	Engine::get_singleton()->register_singleton(p_singleton_name, p_object);

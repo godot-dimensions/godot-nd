@@ -40,6 +40,20 @@
 				Returns the angle in radians between two N-dimensional vectors. The dimensions of the vectors do not need to match.
 			</description>
 		</method>
+		<method name="axis_color" qualifiers="static">
+			<return type="Color" />
+			<param index="0" name="axis" type="int" />
+			<description>
+				Returns a color representing the given axis index. The color tries to be as unique as possible for as long as possible, cycling through red, green, blue, yellow, magenta, cyan, orange, purple, teal, chartreuse, pink, and sky blue, then cycling bright/dark, saturated/desaturated, slightly more hue variation, and finally repeating the cycle after 192 colors.
+			</description>
+		</method>
+		<method name="axis_letter" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="axis" type="int" />
+			<description>
+				Returns a letter representing the given axis index. The letters start with XYZ, then iterate backwards through the alphabet from W, then use Greek letters, then Georgian, then Japanese, then Chinese. For the first hundred or so, only visually distinct characters are used, so many characters are skipped if they look similar to another character. For axis index 21092 and above, a question mark is returned.
+			</description>
+		</method>
 		<method name="bounce" qualifiers="static">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="vector" type="PackedFloat64Array" />
@@ -382,6 +396,22 @@
 			<param index="0" name="vector" type="PackedFloat64Array" />
 			<description>
 				Converts a VectorN ([PackedFloat64Array]) to a Vector4. It will use the first 4 numbers in the array, while the rest are discarded. If the array has fewer than 4 numbers, the missing numbers are assumed to be 0.
+			</description>
+		</method>
+		<method name="value_on_axis" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="value" type="float" />
+			<param index="1" name="axis" type="int" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that has the value of [param value] on the given [param axis] index, and [code]0.0[/code] on all axes with lower indices.
+			</description>
+		</method>
+		<method name="with_dimension" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="dimension" type="int" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the input vector resized to the given [param dimension], either removing excessive dimensions, adding [code]0.0[/code] to the end of the vector until it reaches the given dimension, or doing nothing if the input vector already has the same dimension as [param dimension].
 			</description>
 		</method>
 		<method name="with_length" qualifiers="static">
