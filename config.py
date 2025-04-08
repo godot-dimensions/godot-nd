@@ -11,9 +11,11 @@ def get_doc_classes():
 	return [
 		# General.
 		"CameraND",
+		"GeometryND",
 		"RenderingEngineND",
 		"RenderingServerND",
 		"NodeND",
+		"PlaneND",
 		"RectND",
 		"TransformND",
 		"VectorND",

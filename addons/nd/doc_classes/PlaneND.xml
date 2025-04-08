@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PlaneND" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		N-dimensional plane.
+	</brief_description>
+	<description>
+		PlaneND represents an N-dimensional plane or hyperplane. When the dimension of the normal vector matches the dimension of the space, the plane effectively cuts that space in half.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="distance_to" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="point" type="PackedFloat64Array" />
+			<description>
+				Calculates the signed distance from a point to the plane. The distance is positive if the point is on the same side as the normal vector, and negative if it is on the opposite side.
+			</description>
+		</method>
+		<method name="flipped" qualifiers="const">
+			<return type="PlaneND" />
+			<description>
+				Returns a new [PlaneND] that is the flipped version of this plane. The normal vector is negated, and the distance is negated.
+			</description>
+		</method>
+		<method name="from_normal_distance" qualifiers="static">
+			<return type="PlaneND" />
+			<param index="0" name="normal" type="PackedFloat64Array" />
+			<param index="1" name="distance" type="float" />
+			<description>
+				Creates a plane from a normal vector and a distance from the origin. The normal vector defines the orientation of the plane, and the distance specifies how far the plane is from the origin along the normal vector.
+			</description>
+		</method>
+		<method name="from_normal_point" qualifiers="static">
+			<return type="PlaneND" />
+			<param index="0" name="normal" type="PackedFloat64Array" />
+			<param index="1" name="point" type="PackedFloat64Array" />
+			<description>
+				Creates a plane from a normal vector and a point on the plane. The normal vector defines the orientation of the plane, and the point specifies a location on the plane. The specific point will be lost, it will be used to calculate the distance.
+			</description>
+		</method>
+		<method name="get_center" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Returns the center of the plane. The center is calculated as the normal vector scaled by the distance.
+			</description>
+		</method>
+		<method name="has_point" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="point" type="PackedFloat64Array" />
+			<description>
+				Checks if a point is on the plane. The point is considered to be on the plane if its distance to the plane is approximately zero within the tolerance of [method @GlobalScope.is_zero_approx].
+			</description>
+		</method>
+		<method name="intersect_line" qualifiers="const">
+			<return type="Variant" />
+			<param index="0" name="line_origin" type="PackedFloat64Array" />
+			<param index="1" name="line_direction" type="PackedFloat64Array" />
+			<description>
+				Calculates the intersection point of an infinite line with the plane. The line is defined by its origin and direction. If the line intersects the plane, the method returns the intersection point. If it does not intersect, it returns [code]null[/code]. This is like [method intersect_ray], but allows for intersections behind the origin of the line.
+			</description>
+		</method>
+		<method name="intersect_line_segment" qualifiers="const">
+			<return type="Variant" />
+			<param index="0" name="begin" type="PackedFloat64Array" />
+			<param index="1" name="end" type="PackedFloat64Array" />
+			<description>
+				Calculates the intersection point of a line segment with the plane. The line segment is defined by its start and end points. If the line segment intersects the plane, the method returns the intersection point. If it does not intersect, it returns [code]null[/code].
+			</description>
+		</method>
+		<method name="intersect_ray" qualifiers="const">
+			<return type="Variant" />
+			<param index="0" name="ray_origin" type="PackedFloat64Array" />
+			<param index="1" name="ray_direction" type="PackedFloat64Array" />
+			<description>
+				Calculates the intersection point of a ray with the plane. The ray is defined by its origin and direction. If the ray intersects the plane, the method returns the intersection point. If it does not intersect, it returns [code]null[/code]. This is like [method intersect_line], but only considers intersections in front of the ray's origin.
+			</description>
+		</method>
+		<method name="is_equal_approx" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="PlaneND" />
+			<description>
+				Returns [code]true[/code] if this [PlaneND] and [param other] are approximately equal, by running [method @GlobalScope.is_equal_approx] on the distance and [method VectorND.is_equal_approx] on the normal vector.
+				[b]Note:[/b] This function is only concerned with mathematical equality, regardless of dimensions. For example, a 2D plane will be considered equal to a 3D plane with a Z of zero. If you need to ensure dimensions are equal as well, check their dimensions before calling this function.
+			</description>
+		</method>
+		<method name="is_equal_approx_any_side" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="PlaneND" />
+			<description>
+				Returns [code]true[/code] if this [PlaneND] and [param other] are approximately equal, by running [method @GlobalScope.is_equal_approx] on the distance and [method VectorND.is_equal_approx] on the normal vector, and also considers the planes equal if they are in the same location but only differ by a flip.
+				[b]Note:[/b] This function is only concerned with mathematical equality, regardless of dimensions. For example, a 2D plane will be considered equal to a 3D plane with a Z of zero. If you need to ensure dimensions are equal as well, check their dimensions before calling this function.
+			</description>
+		</method>
+		<method name="is_point_over" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="point" type="PackedFloat64Array" />
+			<description>
+				Checks if a point is on the same side of the plane as the normal vector. The point is considered to be on the same side if its distance to the plane is positive.
+			</description>
+		</method>
+		<method name="normalize">
+			<return type="void" />
+			<description>
+				In-place version of [method normalized]. The normal vector is normalized, and the distance is adjusted accordingly to keep the plane in the same location.
+			</description>
+		</method>
+		<method name="normalized" qualifiers="const">
+			<return type="PlaneND" />
+			<description>
+				Returns a new [PlaneND] that is the normalized version of this plane. The normal vector is normalized, and the distance is adjusted accordingly to keep the plane in the same location.
+			</description>
+		</method>
+		<method name="project" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="point" type="PackedFloat64Array" />
+			<description>
+				Projects a point onto the plane. The projection is calculated as the closest point on the plane to the given point. The resulting point is guaranteed to be on the plane within floating point error tolerance.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
+			The dimension of the plane. This is the same as the length of the normal vector.
+		</member>
+		<member name="distance" type="float" setter="set_distance" getter="get_distance" default="0.0">
+			The distance from the origin to the plane along the normal vector.
+		</member>
+		<member name="normal" type="PackedFloat64Array" setter="set_normal" getter="get_normal" default="PackedFloat64Array()">
+			The normal vector of the plane. This vector is perpendicular to the plane and defines its orientation in space.
+		</member>
+	</members>
+</class>

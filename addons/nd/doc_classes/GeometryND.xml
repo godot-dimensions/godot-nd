@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="GeometryND" inherits="Object" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Functions for working with ND geometry.
+	</brief_description>
+	<description>
+		GeometryND is a singleton that provides functions for working with ND geometry. All methods are static and should be called with the class name [code]GeometryND.[/code] as a prefix.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="closest_point_between_line_segments" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="line1_a" type="PackedFloat64Array" />
+			<param index="1" name="line1_b" type="PackedFloat64Array" />
+			<param index="2" name="line2_a" type="PackedFloat64Array" />
+			<param index="3" name="line2_b" type="PackedFloat64Array" />
+			<description>
+				Given two line segments in ND space, return a point on the first line segment that is closest to the second line segment. The line segments are defined by two points each.
+			</description>
+		</method>
+		<method name="closest_point_between_lines" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="line1_point" type="PackedFloat64Array" />
+			<param index="1" name="line1_dir" type="PackedFloat64Array" />
+			<param index="2" name="line2_point" type="PackedFloat64Array" />
+			<param index="3" name="line2_dir" type="PackedFloat64Array" />
+			<description>
+				Given two lines in ND space, return a point on the first line that is closest to the second line. The lines are defined by a point on the line and a direction vector. The direction vector does not need to be normalized.
+			</description>
+		</method>
+		<method name="closest_point_on_line" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="line_position" type="PackedFloat64Array" />
+			<param index="1" name="line_direction" type="PackedFloat64Array" />
+			<param index="2" name="point" type="PackedFloat64Array" />
+			<description>
+				Returns the closest point on a line to a given point. The line is defined by a point on the line and a direction vector. The direction vector does not need to be normalized. This is the ND version of [method Geometry3D.get_closest_point_to_segment_uncapped].
+			</description>
+		</method>
+		<method name="closest_point_on_line_segment" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="line_a" type="PackedFloat64Array" />
+			<param index="1" name="line_b" type="PackedFloat64Array" />
+			<param index="2" name="point" type="PackedFloat64Array" />
+			<description>
+				Returns the closest point on a line segment to a given point. The line segment is defined by two points. This is the ND version of [method Geometry3D.get_closest_point_to_segment].
+			</description>
+		</method>
+		<method name="closest_point_on_ray" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="ray_origin" type="PackedFloat64Array" />
+			<param index="1" name="ray_direction" type="PackedFloat64Array" />
+			<param index="2" name="point" type="PackedFloat64Array" />
+			<description>
+				Returns the closest point on a ray to a given point. The ray is defined by its origin point and direction vector. The direction vector does not need to be normalized.
+			</description>
+		</method>
+	</methods>
+</class>

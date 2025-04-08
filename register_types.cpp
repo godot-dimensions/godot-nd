@@ -7,6 +7,8 @@
 #endif
 
 // General.
+#include "math/geometry_nd.h"
+#include "math/plane_nd.h"
 #include "math/rect_nd.h"
 #include "math/transform_nd.h"
 #include "math/vector_nd.h"
@@ -58,6 +60,8 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 	// Note: Classes MUST be registered in inheritance order.
 	// When the inheritance doesn't matter, alphabetical order is used.
 	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE) {
+		GDREGISTER_CLASS(GeometryND);
+		GDREGISTER_CLASS(PlaneND);
 		GDREGISTER_CLASS(RectND);
 		GDREGISTER_CLASS(TransformND);
 		GDREGISTER_CLASS(VectorND);
@@ -68,6 +72,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		// General.
 		GDREGISTER_CLASS(NodeND);
 		GDREGISTER_CLASS(CameraND);
+		add_godot_singleton("GeometryND", memnew(GeometryND));
 		add_godot_singleton("VectorND", memnew(VectorND));
 		// Virtual classes.
 		GDREGISTER_CLASS(MaterialND);

@@ -91,13 +91,14 @@ public:
 	Ref<TransformND> scaled_global(const VectorN &p_scale) const;
 	void scale_local(const VectorN &p_scale);
 	Ref<TransformND> scaled_local(const VectorN &p_scale) const;
-	void scale_uniform(const real_t p_scale);
-	Ref<TransformND> scaled_uniform(const real_t p_scale) const;
+	void scale_uniform(const double p_scale);
+	Ref<TransformND> scaled_uniform(const double p_scale) const;
 
 	// Validation methods.
 	Ref<TransformND> conformalized() const;
 	Ref<TransformND> normalized() const;
 	Ref<TransformND> orthonormalized() const;
+	Ref<TransformND> orthonormalized_axis_aligned() const;
 	Ref<TransformND> orthogonalized() const;
 	bool is_conformal() const;
 	bool is_diagonal() const;
@@ -121,6 +122,7 @@ public:
 	static Ref<TransformND> from_4d(const Projection &p_basis, const Vector4 &p_origin = Vector4(0, 0, 0, 0));
 
 	// Constructors.
+	static Ref<TransformND> from_basis_columns(const Vector<VectorN> &p_columns);
 	static Ref<TransformND> from_position(const VectorN &p_position);
 	static Ref<TransformND> from_position_rotation(const VectorN &p_position, const int p_rot_from, const int p_rot_to, const double p_rot_angle);
 	static Ref<TransformND> from_position_rotation_scale(const VectorN &p_position, const int p_rot_from, const int p_rot_to, const double p_rot_angle, const VectorN &p_scale);
@@ -130,5 +132,6 @@ public:
 	static Ref<TransformND> from_scale(const VectorN &p_scale);
 	static Ref<TransformND> from_swap_rotation(const int p_rot_from, const int p_rot_to);
 	static Ref<TransformND> identity_basis(const int p_dimension);
+	static Ref<TransformND> identity_transform(const int p_dimension);
 	TransformND() {}
 };

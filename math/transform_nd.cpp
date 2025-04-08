@@ -688,24 +688,26 @@ Ref<TransformND> TransformND::scaled_local(const VectorN &p_scale) const {
 		ret_columns.set(i, VectorND::multiply_scalar(_columns[i], scale));
 	}
 	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(_origin);
 	return ret;
 }
 
-void TransformND::scale_uniform(const real_t p_scale) {
+void TransformND::scale_uniform(const double p_scale) {
 	for (int i = 0; i < _columns.size(); i++) {
 		_columns.set(i, VectorND::multiply_scalar(_columns[i], p_scale));
 	}
 }
 
-Ref<TransformND> TransformND::scaled_uniform(const real_t p_scale) const {
+Ref<TransformND> TransformND::scaled_uniform(const double p_scale) const {
 	Ref<TransformND> ret;
 	ret.instantiate();
 	Vector<VectorN> ret_columns;
 	ret_columns.resize(_columns.size());
 	for (int i = 0; i < ret_columns.size(); i++) {
-		ret_columns.set(i, VectorND::multiply_scalar(ret_columns[i], p_scale));
+		ret_columns.set(i, VectorND::multiply_scalar(_columns[i], p_scale));
 	}
 	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(_origin);
 	return ret;
 }
 
@@ -729,6 +731,7 @@ Ref<TransformND> TransformND::normalized() const {
 		ret_columns.set(i, VectorND::normalized(_columns[i]));
 	}
 	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(_origin);
 	return ret;
 }
 
@@ -750,6 +753,33 @@ Ref<TransformND> TransformND::orthonormalized() const {
 		ret_columns.set(i, VectorND::normalized(column));
 	}
 	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(_origin);
+	return ret;
+}
+
+Ref<TransformND> TransformND::orthonormalized_axis_aligned() const {
+	Ref<TransformND> ret;
+	ret.instantiate();
+	Vector<VectorN> ret_columns;
+	const int column_count = _columns.size();
+	ret_columns.resize(column_count);
+	// Gram-Schmidt Process, now in ND.
+	// https://en.wikipedia.org/wiki/Gram-Schmidt_process
+	for (int i = 0; i < column_count; i++) {
+		VectorN column = _columns[i];
+		for (int j = 0; j < i; j++) {
+			const VectorN &other_column = ret_columns[j];
+			const double dot = VectorND::dot(column, other_column);
+			column = VectorND::subtract(column, VectorND::multiply_scalar(other_column, dot));
+		}
+		const int64_t max_abs_index = VectorND::max_absolute_axis_index(column);
+		if (max_abs_index != -1) {
+			column = VectorND::value_on_axis_with_dimension(SIGN(column[max_abs_index]), max_abs_index, column_count);
+		}
+		ret_columns.set(i, VectorND::normalized(column));
+	}
+	ret->set_all_basis_columns(ret_columns);
+	ret->set_origin(_origin);
 	return ret;
 }
 
@@ -942,6 +972,13 @@ Ref<TransformND> TransformND::from_4d(const Projection &p_basis, const Vector4 &
 
 // Constructors.
 
+Ref<TransformND> TransformND::from_basis_columns(const Vector<VectorN> &p_columns) {
+	Ref<TransformND> ret;
+	ret.instantiate();
+	ret->set_all_basis_columns(p_columns);
+	return ret;
+}
+
 Ref<TransformND> TransformND::from_position(const VectorN &p_position) {
 	Ref<TransformND> ret;
 	ret.instantiate();
@@ -1064,6 +1101,12 @@ Ref<TransformND> TransformND::identity_basis(const int p_dimension) {
 	return ret;
 }
 
+Ref<TransformND> TransformND::identity_transform(const int p_dimension) {
+	Ref<TransformND> ret = identity_basis(p_dimension);
+	ret->set_origin(VectorND::fill(0.0, p_dimension));
+	return ret;
+}
+
 void TransformND::_bind_methods() {
 	// Trivial getters and setters.
 	ClassDB::bind_method(D_METHOD("get_all_basis_columns"), &TransformND::get_all_basis_columns_bind);
@@ -1125,6 +1168,7 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("conformalized"), &TransformND::conformalized);
 	ClassDB::bind_method(D_METHOD("normalized"), &TransformND::normalized);
 	ClassDB::bind_method(D_METHOD("orthonormalized"), &TransformND::orthonormalized);
+	ClassDB::bind_method(D_METHOD("orthonormalized_axis_aligned"), &TransformND::orthonormalized_axis_aligned);
 	ClassDB::bind_method(D_METHOD("orthogonalized"), &TransformND::orthogonalized);
 	ClassDB::bind_method(D_METHOD("is_conformal"), &TransformND::is_conformal);
 	ClassDB::bind_method(D_METHOD("is_diagonal"), &TransformND::is_diagonal);
@@ -1152,6 +1196,7 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_static_method("TransformND", D_METHOD("from_scale", "scale"), &TransformND::from_scale);
 	ClassDB::bind_static_method("TransformND", D_METHOD("from_swap_rotation", "rot_from", "rot_to"), &TransformND::from_swap_rotation);
 	ClassDB::bind_static_method("TransformND", D_METHOD("identity_basis", "dimension"), &TransformND::identity_basis);
+	ClassDB::bind_static_method("TransformND", D_METHOD("identity_transform", "dimension"), &TransformND::identity_transform);
 	// Properties.
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "origin", PROPERTY_HINT_NONE, "suffix:m"), "set_origin", "get_origin");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");

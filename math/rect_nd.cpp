@@ -99,6 +99,12 @@ double RectND::get_surface() const {
 // Point math functions.
 
 void RectND::expand_self_to_point(const VectorN &p_vector) {
+	if (_position.size() < p_vector.size()) {
+		_position.resize(p_vector.size());
+	}
+	if (_size.size() < p_vector.size()) {
+		_size.resize(p_vector.size());
+	}
 	const VectorN end = get_end();
 	for (int i = 0; i < _position.size(); ++i) {
 		if (p_vector[i] < _position[i]) {
@@ -185,24 +191,23 @@ Ref<RectND> RectND::intersection(const Ref<RectND> &p_other) const {
 }
 
 Ref<RectND> RectND::merge(const Ref<RectND> &p_other) const {
-	const VectorN end = get_end();
-	const VectorN other_end = p_other->get_end();
-	const VectorN other_position = p_other->get_position();
-	const int dimension = MIN(MIN(_position.size(), end.size()), MIN(other_position.size(), other_end.size()));
-	VectorN merged_position = _position;
-	VectorN merged_size = _size;
+	const int dimension = MAX(get_dimension(), p_other->get_dimension());
+	VectorN other_start = VectorND::with_dimension(p_other->get_position(), dimension);
+	VectorN other_end = VectorND::with_dimension(p_other->get_end(), dimension);
+	VectorN merged_start = VectorND::with_dimension(_position, dimension);
+	VectorN merged_end = VectorND::with_dimension(get_end(), dimension);
 	for (int i = 0; i < dimension; ++i) {
-		if (other_position[i] < _position[i]) {
-			merged_position.set(i, other_position[i]);
+		if (other_start[i] < merged_start[i]) {
+			merged_start.set(i, other_start[i]);
 		}
-		if (other_end[i] > end[i]) {
-			merged_size.set(i, other_end[i] - merged_position[i]);
+		if (other_end[i] > merged_end[i]) {
+			merged_end.set(i, other_end[i]);
 		}
 	}
 	Ref<RectND> merged;
 	merged.instantiate();
-	merged->set_position(merged_position);
-	merged->set_size(merged_size);
+	merged->set_position(merged_start);
+	merged->set_end(merged_end);
 	return merged;
 }
 

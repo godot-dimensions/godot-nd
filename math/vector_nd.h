@@ -35,6 +35,7 @@ public:
 	static double dot(const VectorN &p_a, const VectorN &p_b);
 	static VectorN drop_first_dimensions(const VectorN &p_vector, const int64_t p_dimensions);
 	static VectorN duplicate(const VectorN &p_vector);
+	static VectorN fill(const double p_value, const int64_t p_dimension);
 	static VectorN floor(const VectorN &p_vector);
 	static VectorN inverse(const VectorN &p_vector);
 	static bool is_equal_approx(const VectorN &p_a, const VectorN &p_b);
@@ -45,6 +46,9 @@ public:
 	static double length_squared(const VectorN &p_vector);
 	static VectorN lerp(const VectorN &p_from, const VectorN &p_to, const double p_weight);
 	static VectorN limit_length(const VectorN &p_vector, const double p_len = 1.0);
+	static int64_t max_absolute_axis_index(const VectorN &p_vector);
+	static int64_t max_axis_index(const VectorN &p_vector);
+	static int64_t min_axis_index(const VectorN &p_vector);
 	static VectorN multiply_vector(const VectorN &p_a, const VectorN &p_b, const bool p_expand = false);
 	static VectorN multiply_scalar(const VectorN &p_vector, const double p_scalar);
 	static void multiply_scalar_and_add_in_place(const VectorN &p_vector, const double p_scalar, VectorN &r_result);
@@ -61,6 +65,7 @@ public:
 	static VectorN snappedf(const VectorN &p_vector, const double p_by);
 	static VectorN subtract(const VectorN &p_a, const VectorN &p_b);
 	static VectorN value_on_axis(const double p_value, const int64_t p_axis);
+	static VectorN value_on_axis_with_dimension(const double p_value, const int64_t p_axis, const int64_t p_dimension);
 	static VectorN with_dimension(const VectorN &p_vector, const int64_t p_dimension);
 	static VectorN with_length(const VectorN &p_vector, const double p_length = 1.0);
 

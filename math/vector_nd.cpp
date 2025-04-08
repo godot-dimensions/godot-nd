@@ -293,6 +293,15 @@ VectorN VectorND::duplicate(const VectorN &p_vector) {
 	return duplicate_vector;
 }
 
+VectorN VectorND::fill(const double p_value, const int64_t p_dimension) {
+	VectorN filled_vector;
+	filled_vector.resize(p_dimension);
+	for (int64_t i = 0; i < p_dimension; i++) {
+		filled_vector.set(i, p_value);
+	}
+	return filled_vector;
+}
+
 VectorN VectorND::floor(const VectorN &p_vector) {
 	const int64_t dimension = p_vector.size();
 	VectorN floor_vector;
@@ -391,6 +400,49 @@ VectorN VectorND::limit_length(const VectorN &p_vector, const double p_len) {
 		}
 	}
 	return limited;
+}
+
+int64_t VectorND::max_absolute_axis_index(const VectorN &p_vector) {
+	const int64_t dimension = p_vector.size();
+	ERR_FAIL_COND_V(dimension == 0, -1);
+	int64_t max_index = 0;
+	double max_value = Math::abs(p_vector[0]);
+	for (int64_t i = 1; i < dimension; i++) {
+		double abs_value = Math::abs(p_vector[i]);
+		if (abs_value > max_value) {
+			max_value = abs_value;
+			max_index = i;
+		}
+	}
+	return max_index;
+}
+
+int64_t VectorND::max_axis_index(const VectorN &p_vector) {
+	const int64_t dimension = p_vector.size();
+	ERR_FAIL_COND_V(dimension == 0, -1);
+	int64_t max_index = 0;
+	double max_value = p_vector[0];
+	for (int64_t i = 1; i < dimension; i++) {
+		if (p_vector[i] > max_value) {
+			max_value = p_vector[i];
+			max_index = i;
+		}
+	}
+	return max_index;
+}
+
+int64_t VectorND::min_axis_index(const VectorN &p_vector) {
+	const int64_t dimension = p_vector.size();
+	ERR_FAIL_COND_V(dimension == 0, -1);
+	int64_t min_index = 0;
+	double min_value = p_vector[0];
+	for (int64_t i = 1; i < dimension; i++) {
+		if (p_vector[i] < min_value) {
+			min_value = p_vector[i];
+			min_index = i;
+		}
+	}
+	return min_index;
 }
 
 VectorN VectorND::multiply_vector(const VectorN &p_a, const VectorN &p_b, const bool p_expand) {
@@ -583,6 +635,18 @@ VectorN VectorND::value_on_axis(const double p_value, const int64_t p_axis) {
 	return vector;
 }
 
+VectorN VectorND::value_on_axis_with_dimension(const double p_value, const int64_t p_axis, const int64_t p_dimension) {
+	VectorN vector;
+	vector.resize(p_dimension);
+	for (int64_t i = 0; i < p_dimension; i++) {
+		vector.set(i, 0.0);
+	}
+	if (likely(p_axis < p_dimension)) {
+		vector.set(p_axis, p_value);
+	}
+	return vector;
+}
+
 VectorN VectorND::with_dimension(const VectorN &p_vector, const int64_t p_dimension) {
 	const int64_t old_dimension = p_vector.size();
 	VectorN new_vector;
@@ -705,6 +769,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("dot", "a", "b"), &VectorND::dot);
 	ClassDB::bind_static_method("VectorND", D_METHOD("drop_first_dimensions", "vector", "dimensions"), &VectorND::drop_first_dimensions);
 	ClassDB::bind_static_method("VectorND", D_METHOD("duplicate", "vector"), &VectorND::duplicate);
+	ClassDB::bind_static_method("VectorND", D_METHOD("fill", "value", "dimension"), &VectorND::fill);
 	ClassDB::bind_static_method("VectorND", D_METHOD("floor", "vector"), &VectorND::floor);
 	ClassDB::bind_static_method("VectorND", D_METHOD("inverse", "vector"), &VectorND::inverse);
 	ClassDB::bind_static_method("VectorND", D_METHOD("is_equal_approx", "a", "b"), &VectorND::is_equal_approx);
@@ -715,6 +780,9 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("length_squared", "vector"), &VectorND::length_squared);
 	ClassDB::bind_static_method("VectorND", D_METHOD("lerp", "from", "to", "weight"), &VectorND::lerp);
 	ClassDB::bind_static_method("VectorND", D_METHOD("limit_length", "vector", "length"), &VectorND::limit_length, DEFVAL(1.0));
+	ClassDB::bind_static_method("VectorND", D_METHOD("max_absolute_axis_index", "vector"), &VectorND::max_absolute_axis_index);
+	ClassDB::bind_static_method("VectorND", D_METHOD("max_axis_index", "vector"), &VectorND::max_axis_index);
+	ClassDB::bind_static_method("VectorND", D_METHOD("min_axis_index", "vector"), &VectorND::min_axis_index);
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_vector", "a", "b", "expand"), &VectorND::multiply_vector, DEFVAL(false));
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_scalar", "vector", "scalar"), &VectorND::multiply_scalar);
 	ClassDB::bind_static_method("VectorND", D_METHOD("negate", "vector"), &VectorND::negate);

@@ -242,6 +242,13 @@
 				Constructs an identity basis matrix of the specified dimension. This is a square matrix with [code]1.0[/code] for the diagonal and [code]0.0[/code] for the rest. The origin will be empty.
 			</description>
 		</method>
+		<method name="identity_transform" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Constructs an identity transformation matrix of the specified dimension. This is a square matrix with [code]1.0[/code] for the diagonal and [code]0.0[/code] for the rest. The origin will be a zero vector of the specified dimension.
+			</description>
+		</method>
 		<method name="inverse" qualifiers="const">
 			<return type="TransformND" />
 			<description>
@@ -342,6 +349,12 @@
 				Returns a copy of the transform with the basis matrix orthonormalized, meaning both orthogonal and normalized. This means that the transform has no scale, shear, or skew, but may have rotation or flip/reflection.
 			</description>
 		</method>
+		<method name="orthonormalized_axis_aligned" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Returns a copy of the transform with the basis matrix orthonormalized and axis-aligned, meaning that the basis vectors are perpendicular to each other and aligned with the axes. This means that the transform has no scale, shear, or skew, and is axis-aligned.
+			</description>
+		</method>
 		<method name="scaled_global" qualifiers="const">
 			<return type="TransformND" />
 			<param index="0" name="scale" type="PackedFloat64Array" />
@@ -360,7 +373,7 @@
 			<return type="TransformND" />
 			<param index="0" name="scale" type="float" />
 			<description>
-				Returns a copy of the transform scaled uniformly by the specified scale in local space. This is equivalent to multiplying every element of the basis matrix by the scale.
+				Returns a copy of the transform scaled uniformly by the specified scale in local space. This is equivalent to multiplying every element of the basis matrix by the scale. The origin vector is not affected.
 			</description>
 		</method>
 		<method name="set_all_basis_columns">

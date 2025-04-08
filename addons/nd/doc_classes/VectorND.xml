@@ -169,6 +169,14 @@
 				Returns a new VectorN ([PackedFloat64Array]) that is a copy of the input vector.
 			</description>
 		</method>
+		<method name="fill" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="value" type="float" />
+			<param index="1" name="dimension" type="int" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is filled with the given [param value] for each component. The dimension of the vector is defined by [param dimension]. For example, [code]fill(1.0, 3)[/code] will return [code][1.0, 1.0, 1.0][/code].
+			</description>
+		</method>
 		<method name="floor" qualifiers="static">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="vector" type="PackedFloat64Array" />
@@ -266,6 +274,27 @@
 			<param index="1" name="length" type="float" default="1.0" />
 			<description>
 				Returns a new VectorN ([PackedFloat64Array]) that is the input vector scaled to a length of [param length]. If the input vector is shorter than [param length], it will be returned unchanged.
+			</description>
+		</method>
+		<method name="max_absolute_axis_index" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns the index of the component with the largest absolute value in the input vector (farthest from zero).
+			</description>
+		</method>
+		<method name="max_axis_index" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns the index of the component with the largest value in the input vector (most positive).
+			</description>
+		</method>
+		<method name="min_axis_index" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns the index of the component with the smallest value in the input vector (most negative).
 			</description>
 		</method>
 		<method name="multiply_scalar" qualifiers="static">
