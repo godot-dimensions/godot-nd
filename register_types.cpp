@@ -137,8 +137,10 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+		remove_godot_singleton("GeometryND");
 		remove_godot_singleton("RenderingServerND");
 		remove_godot_singleton("VectorND");
+		memdelete(GeometryND::get_singleton());
 		memdelete(RenderingServerND::get_singleton());
 		memdelete(VectorND::get_singleton());
 	}
