@@ -20,16 +20,16 @@
 #include "nodes/node_nd.h"
 
 // Virtual classes.
-#include "mesh/material_nd.h"
-#include "mesh/mesh_nd.h"
-#include "mesh/wire/wire_mesh_nd.h"
+#include "model/material_nd.h"
+#include "model/mesh_nd.h"
+#include "model/wire/wire_mesh_nd.h"
 
 // Mesh.
-#include "mesh/mesh_instance_nd.h"
-#include "mesh/wire/array_wire_mesh_nd.h"
-#include "mesh/wire/box_wire_mesh_nd.h"
-#include "mesh/wire/orthoplex_wire_mesh_nd.h"
-#include "mesh/wire/wire_material_nd.h"
+#include "model/mesh_instance_nd.h"
+#include "model/wire/array_wire_mesh_nd.h"
+#include "model/wire/box_wire_mesh_nd.h"
+#include "model/wire/orthoplex_wire_mesh_nd.h"
+#include "model/wire/wire_material_nd.h"
 
 // Render.
 #include "render/rendering_engine_nd.h"

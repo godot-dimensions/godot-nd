@@ -3,7 +3,7 @@
 #include "editor_viewport_nd_defines.h"
 
 #include "../../math/rect_nd.h"
-#include "../../mesh/mesh_instance_nd.h"
+#include "../../model/mesh_instance_nd.h"
 
 class CameraND;
 class RenderingEngineND;

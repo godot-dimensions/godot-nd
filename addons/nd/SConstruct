@@ -9,8 +9,8 @@ env.Append(
     CPPPATH=[
         "./,src/,../../",
         "../../math",
-        "../../mesh",
-        "../../mesh/wire",
+        "../../model",
+        "../../model/wire",
         "../../nodes",
         "../../render",
         "../../render/wireframe_canvas",
@@ -22,8 +22,8 @@ sources = (
     + Glob("src/*.cpp")
     + Glob("../../*.cpp")
     + Glob("../../math/*.cpp")
-    + Glob("../../mesh/*.cpp")
-    + Glob("../../mesh/wire/*.cpp")
+    + Glob("../../model/*.cpp")
+    + Glob("../../model/wire/*.cpp")
     + Glob("../../nodes/*.cpp")
     + Glob("../../render/*.cpp")
     + Glob("../../render/wireframe_canvas/*.cpp")

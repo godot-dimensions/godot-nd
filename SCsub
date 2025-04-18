@@ -13,7 +13,7 @@ env_nd.add_source_files(env.modules_sources, "*.cpp")
 env_nd.add_source_files(env.modules_sources, "math/*.cpp")
 env_nd.add_source_files(env.modules_sources, "nodes/*.cpp")
 
-SConscript("mesh/SCsub")
+SConscript("model/SCsub")
 SConscript("render/SCsub")
 
 if env.editor_build:
