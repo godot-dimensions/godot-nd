@@ -10,6 +10,7 @@ env.Append(
         "./,src/,../../",
         "../../math",
         "../../model",
+        "../../model/cell",
         "../../model/off",
         "../../model/wire",
         "../../nodes",
@@ -24,6 +25,7 @@ sources = (
     + Glob("../../*.cpp")
     + Glob("../../math/*.cpp")
     + Glob("../../model/*.cpp")
+    + Glob("../../model/cell/*.cpp")
     + Glob("../../model/off/*.cpp")
     + Glob("../../model/wire/*.cpp")
     + Glob("../../nodes/*.cpp")

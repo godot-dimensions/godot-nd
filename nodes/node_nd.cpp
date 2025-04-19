@@ -109,6 +109,7 @@ int NodeND::get_dimension() const {
 }
 
 void NodeND::set_dimension(const int p_dimension) {
+	ERR_FAIL_COND_MSG(p_dimension < 0, "NodeND: Dimension cannot be negative.");
 	_transform->set_dimension(p_dimension);
 }
 

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="BoxCellMeshND" inherits="CellMeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A ND cell mesh representing a box.
+	</brief_description>
+	<description>
+		BoxCellMeshND is a class for generating cell meshes representing boxes. The box is centered at the origin, and is axis-aligned by default; if you want a box facing a different direction, you can rotate the [MeshInstanceND] node the box is attached to.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="from_box_wire_mesh" qualifiers="static">
+			<return type="BoxCellMeshND" />
+			<param index="0" name="wire_mesh" type="BoxWireMeshND" />
+			<description>
+				Creates a box cell mesh from [BoxWireMeshND]. The box cell mesh will have the same size and material as the wireframe mesh.
+			</description>
+		</method>
+		<method name="to_box_wire_mesh" qualifiers="const">
+			<return type="BoxWireMeshND" />
+			<description>
+				Converts this box cell mesh to a [BoxWireMeshND]. The wireframe mesh will have the same size and material as the cell mesh.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="half_extents" type="PackedFloat64Array" setter="set_half_extents" getter="get_half_extents">
+			The half-extents of the box mesh in meters, also known as just "extents". This is the "radius" of the box. This is a wrapper around [member size] for situations where you want to use the extents instead of size. Since the box is centered at the origin, one vertex is located at the half-extents, and the rest have some of the components negated.
+		</member>
+		<member name="polytope_cells" type="bool" setter="set_polytope_cells" getter="get_polytope_cells" default="false">
+			If [code]true[/code], when rendering as a wireframe, interpret the cells of the box mesh as part of a larger box polytope instead of just simplexes. Each polytope is defined by a set of consecutive cells that share the same starting vertex.
+		</member>
+		<member name="size" type="PackedFloat64Array" setter="set_size" getter="get_size" default="PackedFloat64Array()">
+			The size of the box mesh in meters. This is the "diameter" size of the box in ND space, where each component is the size of the box in one of the 4 dimensions. This is the value that is stored internally.
+		</member>
+	</members>
+</class>

@@ -272,6 +272,7 @@ double TransformND::determinant() const {
 		if (pivot_row != pivot_column_index) {
 			for (int inner_column_index = 0; inner_column_index < column_count; ++inner_column_index) {
 				VectorN column_vector = local_columns[inner_column_index];
+				ERR_FAIL_COND_V_MSG(column_vector.size() < row_count, 0.0, "TransformND.determinant: This function requires a non-jagged square matrix.");
 				const double column_index_number = column_vector[pivot_column_index];
 				const double pivot_row_number = column_vector[pivot_row];
 				// Swap the two row elements and save them back.
@@ -293,6 +294,7 @@ double TransformND::determinant() const {
 				for (int inner_column_index = pivot_column_index; inner_column_index < column_count; inner_column_index++) {
 					// local_columns[c][r] -= factor * local_columns[c][i]
 					VectorN inner_column_vector = local_columns[inner_column_index];
+					ERR_FAIL_COND_V_MSG(inner_column_vector.size() < row_count, 0.0, "TransformND.determinant: This function requires a non-jagged square matrix.");
 					const double old_val = inner_column_vector[row_index];
 					const double pivot_c_val = inner_column_vector[pivot_column_index];
 					const double new_val = old_val - factor * pivot_c_val;

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="CellMeshND" inherits="MeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Base class for ND cell meshes.
+	</brief_description>
+	<description>
+		CellMeshND is the base class for all ND cell meshes. Cell meshes are defined using vertices and cells, where each cell of an N-dimensional mesh is an (N-1)-dimensional simplex defined by N vertices. Cell meshes are used to represent rendered ND objects similar to how 3D objects are represented using triangles.
+		To use CellMeshND, use one of the descendant classes, such as [ArrayCellMeshND] or [BoxCellMeshND].
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_get_cell_indices" qualifiers="virtual">
+			<return type="PackedInt32Array" />
+			<description>
+				Callback method that should return the cell indices of a cell mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_cell_indices] for details of the returned data.
+			</description>
+		</method>
+		<method name="calculate_edge_indices_from_cell_indices" qualifiers="static">
+			<return type="PackedInt32Array" />
+			<param index="0" name="cell_indices" type="PackedInt32Array" />
+			<param index="1" name="dimension" type="int" />
+			<param index="2" name="deduplicate" type="bool" />
+			<description>
+				Calculates the edge indices from the [param cell_indices] array of simplex cells. The [param dimension] parameter specifies the number of dimensions of the mesh, such that every [param dimension] cell indices make up a cell. If [param deduplicate] is [code]true[/code], duplicate edges will be removed from the returned array. The returned edge indices array points to the vertices of the mesh, where each edge is defined by a pair of indices.
+			</description>
+		</method>
+		<method name="cell_mesh_clear_cache">
+			<return type="void" />
+			<description>
+				CellMeshND caches the edge data for performance reasons. This method clears the cache, forcing the cell mesh to recalculate the edge data the next time it is needed. You should run this method if you are making your own [CellMeshND]-derived class and you change the vertices or cells. You do not need to run this when using the built-in classes such as [ArrayCellMeshND] or [BoxCellMeshND], they will automatically clear the cache when needed.
+			</description>
+		</method>
+		<method name="get_cell_count">
+			<return type="int" />
+			<description>
+				Gets the number of cells in the cell mesh. Each cell has [member get_indices_per_cell] vertex indices. Multiplying these together gives the length of the [method get_cell_indices] array.
+			</description>
+		</method>
+		<method name="get_cell_indices">
+			<return type="PackedInt32Array" />
+			<description>
+				Gets the cell indices of the cell mesh. Each set of [method get_indices_per_cell] integers represents the indices of the vertices that make up a cell, for a total of [method get_cell_count] cells. The vertices can be obtained using [method MeshND.get_vertices], or using the [method get_cell_positions] method. Integers in this array should not exceed the length of the vertices array.
+			</description>
+		</method>
+		<method name="get_indices_per_cell" qualifiers="const">
+			<return type="int" />
+			<description>
+				Gets the number of indices per cell. This is the number of vertices that make up a cell. For example, a triangle has 3 vertices, so the number of indices per cell is 3. The total number of indices in the [method get_cell_indices] array is equal to this value multiplied by [member get_cell_count].
+			</description>
+		</method>
+		<method name="to_array_cell_mesh">
+			<return type="ArrayCellMeshND" />
+			<description>
+				Converts this CellMeshND to an [ArrayCellMeshND]. If the mesh is already an [ArrayCellMeshND], this method will make a copy, but this method is intended for converting subtypes such as [BoxCellMeshND]. The array mesh will have the same vertices, cells, and material as this mesh. Converting a non-array mesh to an array mesh is useful for modifying the geometry of the mesh, such as adding or removing vertices or cells.
+			</description>
+		</method>
+	</methods>
+</class>

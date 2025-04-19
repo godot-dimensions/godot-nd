@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="ArrayCellMeshND" inherits="CellMeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Custom ND cell mesh class.
+	</brief_description>
+	<description>
+		ArrayCellMeshND is a class for specifying cell meshes with arrays of data, including the vertices and cells. Unlike the specialized [CellMeshND] classes such as [BoxCellMeshND], ArrayCellMeshND can store any cell mesh, allowing users to create custom meshes with arbitrary data.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="append_vertex">
+			<return type="int" />
+			<param index="0" name="vertex" type="PackedFloat64Array" />
+			<param index="1" name="deduplicate_vertices" type="bool" default="true" />
+			<description>
+				Append a vertex to the cell mesh. If [param deduplicate_vertices] is [code]true[/code], the method will check if the vertex already exists in the [member vertices] array and return the index of the existing vertex. If the vertex does not exist, it will be appended to the vertices array and its index will be returned. In both cases, the returned index points to a vertex identical to the input vertex.
+			</description>
+		</method>
+		<method name="merge_with">
+			<return type="void" />
+			<param index="0" name="other" type="ArrayCellMeshND" />
+			<param index="1" name="transform" type="TransformND" />
+			<description>
+				Merges the current cell mesh with another cell mesh, copying the contents of [param other] into this cell mesh with a relative transform of [param transform]. If only one of the meshes has normals, the other normals will be initialized to zero.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="cell_indices" type="PackedInt32Array" setter="set_cell_indices" getter="get_cell_indices" default="PackedInt32Array()">
+			The indices of the cell cells. Every 4 integers defines a cell cell. Each integer is an index to the [member vertices] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
+		</member>
+	</members>
+</class>

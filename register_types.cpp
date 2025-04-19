@@ -20,11 +20,16 @@
 #include "nodes/node_nd.h"
 
 // Virtual classes.
+#include "model/cell/cell_mesh_nd.h"
 #include "model/material_nd.h"
 #include "model/mesh_nd.h"
 #include "model/wire/wire_mesh_nd.h"
 
 // Model.
+#include "model/cell/array_cell_mesh_nd.h"
+#include "model/cell/box_cell_mesh_nd.h"
+#include "model/cell/cell_material_nd.h"
+#include "model/cell/orthoplex_cell_mesh_nd.h"
 #include "model/mesh_instance_nd.h"
 #include "model/off/off_document_nd.h"
 #include "model/wire/array_wire_mesh_nd.h"
@@ -95,13 +100,18 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		// Virtual classes.
 		GDREGISTER_CLASS(MaterialND);
 		GDREGISTER_CLASS(MeshND);
+		GDREGISTER_CLASS(CellMeshND);
 		GDREGISTER_CLASS(WireMeshND);
 		// Model.
+		GDREGISTER_CLASS(ArrayCellMeshND);
 		GDREGISTER_CLASS(ArrayWireMeshND);
+		GDREGISTER_CLASS(BoxCellMeshND);
 		GDREGISTER_CLASS(BoxWireMeshND);
 		GDREGISTER_CLASS(MeshInstanceND);
 		GDREGISTER_CLASS(OFFDocumentND);
+		GDREGISTER_CLASS(OrthoplexCellMeshND);
 		GDREGISTER_CLASS(OrthoplexWireMeshND);
+		GDREGISTER_CLASS(CellMaterialND);
 		GDREGISTER_CLASS(WireMaterialND);
 		// Render.
 #if GDEXTENSION

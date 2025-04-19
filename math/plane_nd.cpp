@@ -124,19 +124,39 @@ Ref<PlaneND> PlaneND::from_normal_point(const VectorN &p_normal, const VectorN &
 Ref<PlaneND> PlaneND::from_points(const Vector<VectorN> &p_points) {
 	Ref<PlaneND> plane;
 	ERR_FAIL_COND_V_MSG(p_points.is_empty(), Ref<PlaneND>(), "PlaneND.from_points: No points provided.");
+	const int point_count = p_points.size();
 	VectorN added = p_points[0];
-	for (int i = 1; i < p_points.size(); i++) {
+	for (int i = 1; i < point_count; i++) {
 		added = VectorND::add(added, p_points[i]);
 	}
 	Vector<VectorN> basis_columns;
-	basis_columns.resize(p_points.size());
-	for (int i = 1; i < p_points.size(); i++) {
+	basis_columns.resize(point_count);
+	for (int i = 1; i < point_count; i++) {
 		basis_columns.set(i - 1, VectorND::subtract(p_points[i], p_points[0]));
 	}
-	basis_columns.set(p_points.size() - 1, added);
+	const int64_t last_column = point_count - 1;
+	basis_columns.set(last_column, added);
 	Ref<TransformND> basis = TransformND::from_basis_columns(basis_columns);
 	basis = basis->orthonormalized();
-	const VectorN normal = basis->get_basis_column(p_points.size() - 1);
+	// Iterate until we have a valid positive determinant basis.
+	double det = basis->determinant();
+	if (!Math::is_equal_approx(det, 1.0)) {
+		for (int i = 0; i < point_count && Math::is_zero_approx(det); i++) {
+			const VectorN new_column = VectorND::value_on_axis_with_dimension(1.0, i, point_count);
+			basis->set_basis_column(last_column, new_column);
+			det = basis->determinant();
+		}
+		if (det < 0.0) {
+			basis->set_basis_column(last_column, VectorND::negate(basis->get_basis_column(last_column)));
+		}
+		basis = basis->orthonormalized();
+		det = basis->determinant();
+	}
+	if (!Math::is_equal_approx(det, 1.0)) {
+		return Ref<PlaneND>();
+	}
+	// Now that we have a valid basis, we can get the normal.
+	const VectorN normal = basis->get_basis_column(last_column);
 	plane.instantiate();
 	plane->set_normal(normal);
 	plane->set_distance(VectorND::dot(normal, p_points[0]));
