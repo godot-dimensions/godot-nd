@@ -25,6 +25,7 @@ def get_doc_classes():
 		"MaterialND",
 		"MeshInstanceND",
 		"MeshND",
+		"OFFDocumentND",
 		"OrthoplexWireMeshND",
 		"WireMaterialND",
 		"WireMeshND",

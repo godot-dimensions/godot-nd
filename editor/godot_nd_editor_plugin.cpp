@@ -40,6 +40,18 @@ void EditorCreateNDSceneButton::_notification(int p_what) {
 	}
 }
 
+void GodotNDEditorPlugin::_add_nd_main_screen() {
+	Control *godot_editor_main_screen = EditorInterface::get_singleton()->get_editor_main_screen();
+	if (godot_editor_main_screen->has_node(NodePath("EditorMainScreenND"))) {
+		_main_screen = GET_NODE_TYPE(godot_editor_main_screen, EditorMainScreenND, "EditorMainScreenND");
+		ERR_PRINT("EditorMainScreenND already exists.");
+	} else {
+		_main_screen = memnew(EditorMainScreenND);
+		_main_screen->setup(get_undo_redo());
+		godot_editor_main_screen->add_child(_main_screen);
+	}
+}
+
 void GodotNDEditorPlugin::_move_nd_main_screen_tab_button() const {
 	Control *editor = EditorInterface::get_singleton()->get_base_control();
 	ERR_FAIL_NULL(editor);
@@ -87,8 +99,17 @@ void GodotNDEditorPlugin::_create_nd_scene() {
 void GodotNDEditorPlugin::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
+			_off_scene_nd_importer.instantiate();
+			_off_wire_nd_importer.instantiate();
+			add_import_plugin(_off_scene_nd_importer);
+			add_import_plugin(_off_wire_nd_importer);
+			_add_nd_main_screen();
 			_move_nd_main_screen_tab_button();
 			call_deferred(StringName("_inject_nd_scene_button"));
+		} break;
+		case NOTIFICATION_EXIT_TREE: {
+			remove_import_plugin(_off_scene_nd_importer);
+			remove_import_plugin(_off_wire_nd_importer);
 		} break;
 	}
 }
@@ -116,12 +137,4 @@ void GodotNDEditorPlugin::_bind_methods() {
 
 GodotNDEditorPlugin::GodotNDEditorPlugin() {
 	set_name(StringName("GodotNDEditorPlugin"));
-	Control *godot_editor_main_screen = EditorInterface::get_singleton()->get_editor_main_screen();
-	if (godot_editor_main_screen->has_node(NodePath("EditorMainScreenND"))) {
-		_main_screen = GET_NODE_TYPE(godot_editor_main_screen, EditorMainScreenND, "EditorMainScreenND");
-	} else {
-		_main_screen = memnew(EditorMainScreenND);
-		_main_screen->setup(get_undo_redo());
-		godot_editor_main_screen->add_child(_main_screen);
-	}
 }

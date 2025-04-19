@@ -10,6 +10,7 @@ env.Append(
         "./,src/,../../",
         "../../math",
         "../../model",
+        "../../model/off",
         "../../model/wire",
         "../../nodes",
         "../../render",
@@ -23,6 +24,7 @@ sources = (
     + Glob("../../*.cpp")
     + Glob("../../math/*.cpp")
     + Glob("../../model/*.cpp")
+    + Glob("../../model/off/*.cpp")
     + Glob("../../model/wire/*.cpp")
     + Glob("../../nodes/*.cpp")
     + Glob("../../render/*.cpp")
@@ -42,11 +44,15 @@ if env["target"] == "editor":
     env.Append(CPPPATH=[
         "../../editor",
         "../../editor/icons",
+        "../../editor/import",
+        "../../editor/import/off",
         "../../editor/viewport",
     ])
     sources += (
         Glob("../../editor/*.cpp")
         + Glob("../../editor/icons/*.cpp")
+        + Glob("../../editor/import/*.cpp")
+        + Glob("../../editor/import/off/*.cpp")
         + Glob("../../editor/viewport/*.cpp")
     )
 

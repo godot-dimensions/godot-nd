@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="OFFDocumentND" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Import ND mesh data from the OFF file format.
+	</brief_description>
+	<description>
+		OFFDocumentND provides functions for working with the OFF file format, which is a simple text-based format for representing polygonal geometry in ND. There are functions for loading and saving OFF files, and for converting the OFF data to a ND [ArrayWireMeshND] resource.
+		In the editor, you can import OFF files as [ArrayWireMeshND] or a scene the mesh in a [MeshInstanceND] node. To change the type, select the file in the FileSystem dock, and change the "Import As" dropdown in the Import dock.
+	</description>
+	<tutorials>
+		<link title="Wikipedia OFF file format">https://en.wikipedia.org/wiki/OFF_(file_format)</link>
+	</tutorials>
+	<methods>
+		<method name="generate_node">
+			<return type="Node" />
+			<param index="0" name="deduplicate_edges" type="bool" default="true" />
+			<description>
+				Generates a scene with a [MeshInstanceND] node that contains an [ArrayWireMeshND] mesh generated from the OFF data.
+			</description>
+		</method>
+		<method name="generate_wire_mesh_nd">
+			<return type="ArrayWireMeshND" />
+			<param index="0" name="deduplicate_edges" type="bool" default="true" />
+			<description>
+				Generates a ND [ArrayWireMeshND] resource from the OFF data, for use with [MeshInstanceND]. If there are any per-face colors, they will be used as edge colors in a [WireMaterialND], and any cell colors of higher dimension will be discarded. If [param deduplicate_edges] is [code]true[/code], the generated wire mesh will only have one edge for each unique edge in the OFF data. Note that converting to a wireframe is a one-way operation, the resulting [ArrayWireMeshND] cannot be converted back to OFF data.
+			</description>
+		</method>
+		<method name="load_from_file" qualifiers="static">
+			<return type="OFFDocumentND" />
+			<param index="0" name="path" type="String" />
+			<description>
+				Loads an OFF file from disk and returns an OFFDocumentND with the data. If there is a problem with the file, at most one warning will be printed, and the code will attempt to continue loading the file anyway.
+			</description>
+		</method>
+		<method name="save_to_file">
+			<return type="void" />
+			<param index="0" name="path" type="String" />
+			<description>
+				Saves the OFF data to a file on disk in the OFF format (".off" file extension) with any dimension (4OFF, 5OFF, etc). If [member edge_count] is zero, the edge count will be calculated from the face data.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="edge_count" type="int" setter="set_edge_count" getter="get_edge_count" default="0">
+			The number of edges in the mesh. This is not used in any of the generate functions, but is stored in the OFF data.
+		</member>
+	</members>
+</class>

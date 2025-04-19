@@ -1,5 +1,7 @@
 #pragma once
 
+#include "import/off/editor_import_plugin_off_scene_nd.h"
+#include "import/off/editor_import_plugin_off_wire_nd.h"
 #include "viewport/editor_main_screen_nd.h"
 
 #if GDEXTENSION
@@ -35,8 +37,11 @@ protected:
 
 class GodotNDEditorPlugin : public EditorPlugin {
 	GDCLASS(GodotNDEditorPlugin, EditorPlugin);
+	Ref<EditorImportPluginOFFSceneND> _off_scene_nd_importer;
+	Ref<EditorImportPluginOFFWireND> _off_wire_nd_importer;
 	EditorMainScreenND *_main_screen = nullptr;
 
+	void _add_nd_main_screen();
 	void _move_nd_main_screen_tab_button() const;
 	void _inject_nd_scene_button();
 	void _create_nd_scene();

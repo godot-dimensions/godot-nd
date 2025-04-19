@@ -24,8 +24,9 @@
 #include "model/mesh_nd.h"
 #include "model/wire/wire_mesh_nd.h"
 
-// Mesh.
+// Model.
 #include "model/mesh_instance_nd.h"
+#include "model/off/off_document_nd.h"
 #include "model/wire/array_wire_mesh_nd.h"
 #include "model/wire/box_wire_mesh_nd.h"
 #include "model/wire/orthoplex_wire_mesh_nd.h"
@@ -95,10 +96,11 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(MaterialND);
 		GDREGISTER_CLASS(MeshND);
 		GDREGISTER_CLASS(WireMeshND);
-		// Mesh.
+		// Model.
 		GDREGISTER_CLASS(ArrayWireMeshND);
 		GDREGISTER_CLASS(BoxWireMeshND);
 		GDREGISTER_CLASS(MeshInstanceND);
+		GDREGISTER_CLASS(OFFDocumentND);
 		GDREGISTER_CLASS(OrthoplexWireMeshND);
 		GDREGISTER_CLASS(WireMaterialND);
 		// Render.
@@ -114,6 +116,10 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 #ifdef GDEXTENSION
 		GDREGISTER_CLASS(EditorCameraND);
 		GDREGISTER_CLASS(EditorCreateNDSceneButton);
+		GDREGISTER_CLASS(EditorImportPluginBaseND);
+		GDREGISTER_CLASS(EditorImportPluginOFFBaseND);
+		GDREGISTER_CLASS(EditorImportPluginOFFSceneND);
+		GDREGISTER_CLASS(EditorImportPluginOFFWireND);
 		GDREGISTER_CLASS(EditorInputSurfaceND);
 		GDREGISTER_CLASS(EditorMainScreenND);
 		GDREGISTER_CLASS(EditorMainViewportND);

@@ -7,6 +7,7 @@ env_nd = env_modules.Clone()
 
 env_nd.add_source_files(env.modules_sources, "*.cpp")
 env_nd.add_source_files(env.modules_sources, "icons/*.cpp")
+env_nd.add_source_files(env.modules_sources, "import/off/*.cpp")
 env_nd.add_source_files(env.modules_sources, "viewport/*.cpp")
 
 # The rest of this file handles generating the ND icons header file.
