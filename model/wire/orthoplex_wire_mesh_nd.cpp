@@ -28,9 +28,9 @@ void OrthoplexWireMeshND::set_size(const VectorN &p_size) {
 PackedInt32Array OrthoplexWireMeshND::get_edge_indices() {
 	if (_edge_indices_cache.is_empty()) {
 		const int dimension = _size.size();
-		ERR_FAIL_COND_V_MSG(dimension > 10000, _edge_indices_cache, "OrthoplexWireMeshND: Too many dimensions for orthoplex.");
+		ERR_FAIL_COND_V_MSG(dimension > 1000, _edge_indices_cache, "OrthoplexWireMeshND: Too many dimensions for orthoplex.");
 		const int vertex_count = 2 * dimension;
-		_edge_indices_cache.resize(vertex_count * (dimension + 1));
+		_edge_indices_cache.resize(2 * vertex_count * (dimension - 1));
 		int index = 0;
 		for (int start_vertex = 0; start_vertex < vertex_count; start_vertex += 2) {
 			for (int end_vertex = start_vertex + 2; end_vertex < vertex_count; end_vertex += 2) {
