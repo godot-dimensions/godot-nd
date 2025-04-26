@@ -1,18 +1,13 @@
 #include "off_document_nd.h"
 
-#if GDEXTENSION
-#include <godot_cpp/classes/file_access.hpp>
-//#include <godot_cpp/classes/mesh_instance3d.hpp>
-//#include <godot_cpp/classes/standard_material3d.hpp>
-//#include <godot_cpp/classes/surface_tool.hpp>
-#include <godot_cpp/templates/hash_set.hpp>
-#elif GODOT_MODULE
-//#include "scene/3d/mesh_instance_3d.h"
-//#include "scene/resources/surface_tool.h"
-#endif
-
+#include "../cell/cell_material_nd.h"
 #include "../mesh_instance_nd.h"
 #include "../wire/wire_material_nd.h"
+
+#if GDEXTENSION
+#include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/templates/hash_set.hpp>
+#endif
 
 void OFFDocumentND::_count_unique_edges_from_faces() {
 	_edge_count = 0;
@@ -46,6 +41,163 @@ int OFFDocumentND::_find_or_insert_vertex(const VectorN &p_vertex, const bool p_
 	}
 	_vertices.append(p_vertex);
 	return vertex_count;
+}
+
+// OFF stores cells with indices to faces, but this provides indices of vertices.
+Vector<Vector<PackedInt32Array>> OFFDocumentND::_calculate_cell_vertex_indices() {
+	const int64_t cell_face_indices_size = _cell_face_indices.size();
+	Vector<Vector<PackedInt32Array>> ret;
+	if (cell_face_indices_size == 0) {
+		return ret;
+	}
+	ret.resize(cell_face_indices_size);
+	// Special case: OFF faces already store vertices.
+	Vector<PackedInt32Array> prev_dimension_cell_vertex_indices = _cell_face_indices[0];
+	ret.set(0, prev_dimension_cell_vertex_indices);
+	// General cases: OFF cells store faces from the previous dimension.
+	for (int64_t i = 1; i < cell_face_indices_size; i++) {
+		const Vector<PackedInt32Array> cell_face_indices = _cell_face_indices[i];
+		Vector<PackedInt32Array> dim_cell_vertex_indices;
+		dim_cell_vertex_indices.resize(cell_face_indices.size());
+		for (int64_t cell_number = 0; cell_number < cell_face_indices.size(); cell_number++) {
+			PackedInt32Array face_indices = cell_face_indices[cell_number];
+			const int64_t face_size = face_indices.size();
+			PackedInt32Array this_cell_vertex_indices;
+			for (int64_t face_number = 0; face_number < face_size; face_number++) {
+				const int32_t face_index = face_indices[face_number];
+				ERR_CONTINUE(face_index >= prev_dimension_cell_vertex_indices.size());
+				const PackedInt32Array face_vertex_indices = prev_dimension_cell_vertex_indices[face_index];
+				for (int64_t vertex_number = 0; vertex_number < face_vertex_indices.size(); vertex_number++) {
+					const int32_t vertex_index = face_vertex_indices[vertex_number];
+					if (!this_cell_vertex_indices.has(vertex_index)) {
+						this_cell_vertex_indices.append(vertex_index);
+					}
+				}
+			}
+			dim_cell_vertex_indices.set(cell_number, this_cell_vertex_indices);
+		}
+		prev_dimension_cell_vertex_indices = dim_cell_vertex_indices;
+		ret.set(i, dim_cell_vertex_indices);
+	}
+	return ret;
+}
+
+Vector<Vector<PackedInt32Array>> OFFDocumentND::_calculate_simplex_vertex_indices(const Vector<Vector<PackedInt32Array>> &p_cell_vertex_indices) {
+	const int64_t cell_face_indices_size = _cell_face_indices.size();
+	CRASH_COND(p_cell_vertex_indices.size() != cell_face_indices_size);
+	Vector<Vector<PackedInt32Array>> ret;
+	if (cell_face_indices_size == 0) {
+		return ret;
+	}
+	ret.resize(cell_face_indices_size);
+	// Special case: OFF faces store vertices, so we need to compose them into edges (1D simplexes) for triangles.
+	Vector<PackedInt32Array> prev_dimension_simplex_vertex_indices;
+	{
+		Vector<PackedInt32Array> prev_dimension_cell_vertex_indices = p_cell_vertex_indices[0];
+		for (int64_t i = 0; i < prev_dimension_cell_vertex_indices.size(); i++) {
+			const PackedInt32Array polygon_vertex_indices = prev_dimension_cell_vertex_indices[i];
+			const int64_t triangle_count = polygon_vertex_indices.size() - 2;
+			ERR_CONTINUE(triangle_count < 1);
+			PackedInt32Array triangle_vertex_indices;
+			triangle_vertex_indices.resize(3 * triangle_count);
+			// This logic assumes that the face is a flat convex 2D polygon with vertices in a consistent winding order.
+			// We break it into triangles by connecting the first vertex to every pair of adjacent vertices.
+			const int32_t pivot_vertex_index = polygon_vertex_indices[0];
+			int64_t simplex_iter = 0;
+			for (int64_t triangle_index = 0; triangle_index < triangle_count; triangle_index++) {
+				triangle_vertex_indices.set(simplex_iter++, pivot_vertex_index);
+				triangle_vertex_indices.set(simplex_iter++, polygon_vertex_indices[triangle_index + 1]);
+				triangle_vertex_indices.set(simplex_iter++, polygon_vertex_indices[triangle_index + 2]);
+			}
+			prev_dimension_simplex_vertex_indices.append(triangle_vertex_indices);
+		}
+	}
+	ret.set(0, prev_dimension_simplex_vertex_indices);
+	// General cases: OFF cells store faces from the previous dimension (which we've calculated simplexes for).
+	// This code generates more advanced simplexes for each successive dimension.
+	for (int64_t i = 1; i < cell_face_indices_size; i++) {
+		const Vector<PackedInt32Array> dim_cell_face_indices = _cell_face_indices[i];
+		const Vector<PackedInt32Array> dim_cell_vertex_indices = p_cell_vertex_indices[i];
+		CRASH_COND(dim_cell_face_indices.size() != dim_cell_vertex_indices.size());
+		const int64_t prev_dimension_verts_per_simplex = i + 2;
+		const int64_t current_dimension_verts_per_simplex = i + 3;
+		Vector<PackedInt32Array> dim_simplex_vertex_indices;
+		dim_simplex_vertex_indices.resize(dim_cell_face_indices.size());
+		int32_t prev_cell_pivot_vertex = -1;
+		for (int cell_number = 0; cell_number < dim_cell_face_indices.size(); cell_number++) {
+			const PackedInt32Array face_indices = dim_cell_face_indices[cell_number];
+			const PackedInt32Array vertex_indices = dim_cell_vertex_indices[cell_number];
+			ERR_FAIL_COND_V(vertex_indices.size() < 2, ret);
+			PackedInt32Array simplex_indices;
+			int64_t simplex_iter = 0;
+			const int64_t face_size = face_indices.size();
+			// This logic assumes that the face is a "flat" convex polytope where all vertices are "visible" to the chosen pivot vertex.
+			const int32_t pivot_vertex_index = (vertex_indices[0] == prev_cell_pivot_vertex) ? vertex_indices[1] : vertex_indices[0];
+			for (int64_t face_number = 0; face_number < face_size; face_number++) {
+				PackedInt32Array face_vertex_indices = prev_dimension_simplex_vertex_indices[face_indices[face_number]];
+				if (face_vertex_indices.has(pivot_vertex_index)) {
+					// Skip any faces connected to the pivot vertex.
+					// For example, if making tetrahedra out of a box, we only want the 3 opposite faces to connect 6 tetrahedra.
+					continue;
+				}
+				int64_t face_vert_iter = 0;
+				const int64_t face_simplex_count = face_vertex_indices.size() / prev_dimension_verts_per_simplex;
+				simplex_indices.resize(simplex_iter + current_dimension_verts_per_simplex * face_simplex_count);
+				for (int64_t new_simplex_number = 0; new_simplex_number < face_simplex_count; new_simplex_number++) {
+					simplex_indices.set(simplex_iter++, pivot_vertex_index);
+					for (int64_t face_simplex_number = 0; face_simplex_number < prev_dimension_verts_per_simplex; face_simplex_number++) {
+						simplex_indices.set(simplex_iter++, face_vertex_indices[face_vert_iter++]);
+					}
+				}
+			}
+			dim_simplex_vertex_indices.set(cell_number, simplex_indices);
+			prev_cell_pivot_vertex = pivot_vertex_index;
+		}
+		ret.set(i, dim_simplex_vertex_indices);
+		prev_dimension_simplex_vertex_indices = dim_simplex_vertex_indices;
+	}
+	return ret;
+}
+
+Ref<ArrayCellMeshND> OFFDocumentND::generate_array_cell_mesh_nd() {
+	Ref<ArrayCellMeshND> cell_mesh;
+	cell_mesh.instantiate();
+	cell_mesh->set_dimension(_dimension);
+	cell_mesh->set_vertices(_vertices);
+	const Vector<Vector<PackedInt32Array>> cell_vertex_indices = _calculate_cell_vertex_indices();
+	const Vector<Vector<PackedInt32Array>> simplex_vertex_indices = _calculate_simplex_vertex_indices(cell_vertex_indices);
+	const int64_t simplex_vertex_indices_size = simplex_vertex_indices.size();
+	CRASH_COND(simplex_vertex_indices_size != _cell_colors.size());
+	ERR_FAIL_COND_V(simplex_vertex_indices_size == 0, cell_mesh);
+	// After those calculations, we can discard most of the data.
+	// We just need the last array of the simplex vertex indices.
+	const Vector<PackedInt32Array> last_simplex_vertex_indices = simplex_vertex_indices[simplex_vertex_indices_size - 1];
+	const int64_t last_vertices_per_simplex = simplex_vertex_indices_size + 2;
+	const PackedColorArray last_cell_colors = _cell_colors[simplex_vertex_indices_size - 1];
+	int64_t cell_colors_iter = 0;
+	PackedColorArray packed_cell_colors;
+	PackedInt32Array packed_cell_indices;
+	for (int i = 0; i < last_simplex_vertex_indices.size(); i++) {
+		PackedInt32Array simplex_vertex_indices_for_cell = last_simplex_vertex_indices[i];
+		packed_cell_indices.append_array(simplex_vertex_indices_for_cell);
+		if (_has_any_cell_colors) {
+			const int64_t simplexes_in_face = simplex_vertex_indices_for_cell.size() / last_vertices_per_simplex;
+			packed_cell_colors.resize(cell_colors_iter + simplexes_in_face);
+			for (int simplex_number = 0; simplex_number < simplexes_in_face; simplex_number++) {
+				packed_cell_colors.set(cell_colors_iter++, last_cell_colors[i]);
+			}
+		}
+	}
+	cell_mesh->set_cell_indices(packed_cell_indices);
+	if (_has_any_cell_colors) {
+		Ref<CellMaterialND> cell_material;
+		cell_material.instantiate();
+		cell_material->set_albedo_source_flags(MaterialND::COLOR_SOURCE_FLAG_PER_CELL);
+		cell_material->set_albedo_color_array(packed_cell_colors);
+		cell_mesh->set_material(cell_material);
+	}
+	ERR_FAIL_COND_V_MSG(!cell_mesh->is_mesh_data_valid(), cell_mesh, "OFFDocumentND: Failed to import OFF as cell mesh, mesh data is not valid.");
+	return cell_mesh;
 }
 
 Ref<ArrayWireMeshND> OFFDocumentND::generate_wire_mesh_nd(const bool p_deduplicate_edges) {
@@ -313,6 +465,7 @@ void OFFDocumentND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_edge_count", "edge_count"), &OFFDocumentND::set_edge_count);
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "edge_count"), "set_edge_count", "get_edge_count");
 
+	ClassDB::bind_method(D_METHOD("generate_array_cell_mesh_nd"), &OFFDocumentND::generate_array_cell_mesh_nd);
 	ClassDB::bind_method(D_METHOD("generate_wire_mesh_nd", "deduplicate_edges"), &OFFDocumentND::generate_wire_mesh_nd, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("generate_node", "deduplicate_edges"), &OFFDocumentND::generate_node, DEFVAL(true));
 

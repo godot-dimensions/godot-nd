@@ -11,6 +11,12 @@
 		<link title="Wikipedia OFF file format">https://en.wikipedia.org/wiki/OFF_(file_format)</link>
 	</tutorials>
 	<methods>
+		<method name="generate_array_cell_mesh_nd">
+			<return type="ArrayCellMeshND" />
+			<description>
+				Generates an ND [ArrayCellMeshND] resource from the OFF data, for use with [MeshInstanceND]. If there are any per-cell colors in the highest dimension, they will be used as cell colors in a [CellMaterialND], and any lower dimension colors will be discarded.
+			</description>
+		</method>
 		<method name="generate_node">
 			<return type="Node" />
 			<param index="0" name="deduplicate_edges" type="bool" default="true" />
@@ -22,7 +28,7 @@
 			<return type="ArrayWireMeshND" />
 			<param index="0" name="deduplicate_edges" type="bool" default="true" />
 			<description>
-				Generates a ND [ArrayWireMeshND] resource from the OFF data, for use with [MeshInstanceND]. If there are any per-face colors, they will be used as edge colors in a [WireMaterialND], and any cell colors of higher dimension will be discarded. If [param deduplicate_edges] is [code]true[/code], the generated wire mesh will only have one edge for each unique edge in the OFF data. Note that converting to a wireframe is a one-way operation, the resulting [ArrayWireMeshND] cannot be converted back to OFF data.
+				Generates an ND [ArrayWireMeshND] resource from the OFF data, for use with [MeshInstanceND]. If there are any per-face colors, they will be used as edge colors in a [WireMaterialND], and any cell colors of higher dimension will be discarded. If [param deduplicate_edges] is [code]true[/code], the generated wire mesh will only have one edge for each unique edge in the OFF data. Note that converting to a wireframe is a one-way operation, the resulting [ArrayWireMeshND] cannot be converted back to OFF data.
 			</description>
 		</method>
 		<method name="load_from_file" qualifiers="static">

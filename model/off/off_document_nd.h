@@ -2,6 +2,9 @@
 
 #include "../../godot_nd_defines.h"
 
+#include "../cell/array_cell_mesh_nd.h"
+#include "../wire/array_wire_mesh_nd.h"
+
 #if GDEXTENSION
 #include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/resource.hpp>
@@ -9,8 +12,6 @@
 #include "core/io/resource.h"
 #include "scene/resources/mesh.h"
 #endif
-
-#include "../wire/array_wire_mesh_nd.h"
 
 class OFFDocumentND : public Resource {
 	GDCLASS(OFFDocumentND, Resource);
@@ -24,6 +25,8 @@ class OFFDocumentND : public Resource {
 
 	void _count_unique_edges_from_faces();
 	int _find_or_insert_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
+	Vector<Vector<PackedInt32Array>> _calculate_cell_vertex_indices();
+	Vector<Vector<PackedInt32Array>> _calculate_simplex_vertex_indices(const Vector<Vector<PackedInt32Array>> &p_cell_vertex_indices);
 
 protected:
 	static void _bind_methods();
@@ -41,6 +44,7 @@ public:
 	Vector<VectorN> get_vertices() const { return _vertices; }
 	void set_vertices(const Vector<VectorN> &p_vertices) { _vertices = p_vertices; }
 
+	Ref<ArrayCellMeshND> generate_array_cell_mesh_nd();
 	Ref<ArrayWireMeshND> generate_wire_mesh_nd(const bool p_deduplicate_edges = true);
 	Node *generate_node(const bool p_deduplicate_edges = true);
 

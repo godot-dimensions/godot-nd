@@ -99,8 +99,10 @@ void GodotNDEditorPlugin::_create_nd_scene() {
 void GodotNDEditorPlugin::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
+			_off_cell_nd_importer.instantiate();
 			_off_scene_nd_importer.instantiate();
 			_off_wire_nd_importer.instantiate();
+			add_import_plugin(_off_cell_nd_importer);
 			add_import_plugin(_off_scene_nd_importer);
 			add_import_plugin(_off_wire_nd_importer);
 			_add_nd_main_screen();
@@ -108,6 +110,7 @@ void GodotNDEditorPlugin::_notification(int p_what) {
 			call_deferred(StringName("_inject_nd_scene_button"));
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
+			remove_import_plugin(_off_cell_nd_importer);
 			remove_import_plugin(_off_scene_nd_importer);
 			remove_import_plugin(_off_wire_nd_importer);
 		} break;
