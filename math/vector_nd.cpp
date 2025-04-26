@@ -2,6 +2,12 @@
 
 #include <algorithm>
 
+#if GDEXTENSION
+#include <godot_cpp/variant/typed_array.hpp>
+#elif GODOT_MODULE
+#include "core/variant/typed_array.h"
+#endif
+
 // Cosmetic functions.
 
 float _get_axis_color_hue_nd(int64_t p_index) {
@@ -305,6 +311,26 @@ VectorN VectorND::fill(const double p_value, const int64_t p_dimension) {
 	return filled_vector;
 }
 
+Vector<VectorN> VectorND::fill_array(const double p_value, const int64_t p_vector_amount, const int64_t p_dimension) {
+	Vector<VectorN> filled_array;
+	filled_array.resize(p_vector_amount);
+	const VectorN filled_vector = fill(p_value, p_dimension);
+	for (int64_t i = 0; i < p_vector_amount; i++) {
+		filled_array.set(i, filled_vector);
+	}
+	return filled_array;
+}
+
+TypedArray<VectorN> VectorND::fill_array_bind(const double p_value, const int64_t p_vector_amount, const int64_t p_dimension) {
+	Vector<VectorN> filled_array = VectorND::fill_array(p_value, p_vector_amount, p_dimension);
+	TypedArray<VectorN> filled_array_variant;
+	filled_array_variant.resize(p_vector_amount);
+	for (int64_t i = 0; i < p_vector_amount; i++) {
+		filled_array_variant[i] = filled_array[i];
+	}
+	return filled_array_variant;
+}
+
 VectorN VectorND::floor(const VectorN &p_vector) {
 	const int64_t dimension = p_vector.size();
 	VectorN floor_vector;
@@ -511,6 +537,97 @@ VectorN VectorND::normalized(const VectorN &p_vector) {
 		norm.set(i, p_vector[i] * scale);
 	}
 	return norm;
+}
+
+VectorN VectorND::perpendicular(const Vector<VectorN> &p_input_vectors) {
+	// Handle edge cases and determine if the input is valid.
+	ERR_FAIL_COND_V_MSG(p_input_vectors.is_empty(), VectorN(), "VectorND.perpendicular: Cannot compute a vector perpendicular to nothing.");
+	const int64_t count = p_input_vectors.size();
+	const int64_t dimension = p_input_vectors[0].size();
+	ERR_FAIL_COND_V_MSG(count != dimension - 1, VectorN(), "VectorND.perpendicular: Expected exactly N-1 vectors for N-dimensional space.");
+	for (int64_t input_vec_index = 1; input_vec_index < count; input_vec_index++) {
+		const VectorN input_vector = p_input_vectors[input_vec_index];
+		ERR_FAIL_COND_V_MSG(input_vector.size() != dimension, VectorN(), "VectorND.perpendicular: All input vectors must have the same dimension.");
+	}
+	if (dimension > 100) {
+		WARN_PRINT("VectorND.perpendicular: Calculating a perpendicular vector in " + itos(dimension) + "-dimensional space will be very slow.");
+	}
+	// Allocate the result vector and a matrix to perform the intermediate calculations.
+	VectorN result = VectorND::fill(0.0, dimension);
+	const int64_t sub_size = count; // == dimension - 1
+	Vector<VectorN> sub_matrix = VectorND::fill_array(0.0, sub_size, sub_size);
+	// Flip the entire result if dimension is even.
+	const bool global_parity = (dimension % 2 == 0);
+	// This algorithm was found by ChatGPT and manually tweaked. It is likely suboptimal.
+	for (int64_t dimension_index = 0; dimension_index < dimension; dimension_index++) {
+		// Build the (N-1)x(N-1) submatrix omitting column `dimension_index`.
+		// The naming convention of rows vs columns is for matching the typical
+		// Gaussian elimination algorithm, but the actual math works either way.
+		for (int64_t row_index = 0; row_index < sub_size; row_index++) {
+			int64_t row_col_index = 0;
+			VectorN row = sub_matrix[row_index];
+			for (int64_t column_index = 0; column_index < dimension; column_index++) {
+				if (column_index == dimension_index) {
+					continue;
+				}
+				row.set(row_col_index++, p_input_vectors[row_index][column_index]);
+			}
+			sub_matrix.set(row_index, row);
+		}
+
+		// Compute det(sub_matrix) via Gaussian elimination.
+		double det = 1.0;
+		bool pivot_parity = dimension_index % 2;
+		for (int64_t pivot_index = 0; pivot_index < sub_size; pivot_index++) {
+			// Find the pivot row.
+			int64_t pivot = pivot_index;
+			while (pivot < sub_size && sub_matrix[pivot][pivot_index] == 0.0) {
+				pivot++;
+			}
+			if (pivot == sub_size) {
+				det = 0.0;
+				break;
+			}
+			if (pivot != pivot_index) {
+				VectorN tmp = sub_matrix[pivot_index];
+				sub_matrix.set(pivot_index, sub_matrix[pivot]);
+				sub_matrix.set(pivot, tmp);
+				pivot_parity = !pivot_parity;
+			}
+			const double pivot_val = sub_matrix[pivot_index][pivot_index];
+			if (pivot_val == 0.0) {
+				det = 0.0;
+				break;
+			}
+			for (int64_t row_index = pivot_index + 1; row_index < sub_size; row_index++) {
+				const double factor = sub_matrix[row_index][pivot_index] / pivot_val;
+				VectorN mat_row = sub_matrix[row_index];
+				for (int64_t column_index = pivot_index; column_index < sub_size; column_index++) {
+					mat_row.set(column_index, mat_row[column_index] - factor * sub_matrix[pivot_index][column_index]);
+				}
+				sub_matrix.set(row_index, mat_row);
+			}
+		}
+		if (det != 0.0) {
+			for (int64_t diagonal_index = 0; diagonal_index < sub_size; diagonal_index++) {
+				det *= sub_matrix[diagonal_index][diagonal_index];
+			}
+		}
+		// Cofactor sign and global flip.
+		const bool parity_sign_flip = global_parity ^ pivot_parity;
+		const double cofactor = parity_sign_flip ? -det : det;
+		result.set(dimension_index, cofactor);
+	}
+	return result;
+}
+
+VectorN VectorND::perpendicular_bind(const TypedArray<VectorN> &p_input_vectors) {
+	Vector<VectorN> vectors;
+	vectors.resize(p_input_vectors.size());
+	for (int64_t i = 0; i < p_input_vectors.size(); i++) {
+		vectors.set(i, p_input_vectors[i]);
+	}
+	return VectorND::perpendicular(vectors);
 }
 
 VectorN VectorND::posmod(const VectorN &p_vector, const double p_mod) {
@@ -774,6 +891,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("drop_first_dimensions", "vector", "dimensions"), &VectorND::drop_first_dimensions);
 	ClassDB::bind_static_method("VectorND", D_METHOD("duplicate", "vector"), &VectorND::duplicate);
 	ClassDB::bind_static_method("VectorND", D_METHOD("fill", "value", "dimension"), &VectorND::fill);
+	ClassDB::bind_static_method("VectorND", D_METHOD("fill_array", "value", "vector_amount", "dimension"), &VectorND::fill_array_bind);
 	ClassDB::bind_static_method("VectorND", D_METHOD("floor", "vector"), &VectorND::floor);
 	ClassDB::bind_static_method("VectorND", D_METHOD("inverse", "vector"), &VectorND::inverse);
 	ClassDB::bind_static_method("VectorND", D_METHOD("is_equal_approx", "a", "b"), &VectorND::is_equal_approx);
@@ -791,6 +909,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_scalar", "vector", "scalar"), &VectorND::multiply_scalar);
 	ClassDB::bind_static_method("VectorND", D_METHOD("negate", "vector"), &VectorND::negate);
 	ClassDB::bind_static_method("VectorND", D_METHOD("normalized", "vector"), &VectorND::normalized);
+	ClassDB::bind_static_method("VectorND", D_METHOD("perpendicular", "input_vectors"), &VectorND::perpendicular_bind);
 	ClassDB::bind_static_method("VectorND", D_METHOD("posmod", "vector", "mod"), &VectorND::posmod);
 	ClassDB::bind_static_method("VectorND", D_METHOD("posmodv", "vector", "modv"), &VectorND::posmodv);
 	ClassDB::bind_static_method("VectorND", D_METHOD("project", "vector", "on_normal"), &VectorND::project);

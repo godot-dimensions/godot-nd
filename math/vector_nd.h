@@ -36,6 +36,8 @@ public:
 	static VectorN drop_first_dimensions(const VectorN &p_vector, const int64_t p_dimensions);
 	static VectorN duplicate(const VectorN &p_vector);
 	static VectorN fill(const double p_value, const int64_t p_dimension);
+	static Vector<VectorN> fill_array(const double p_value, const int64_t p_vector_amount, const int64_t p_dimension);
+	static TypedArray<VectorN> fill_array_bind(const double p_value, const int64_t p_vector_amount, const int64_t p_dimension);
 	static VectorN floor(const VectorN &p_vector);
 	static VectorN inverse(const VectorN &p_vector);
 	static bool is_equal_approx(const VectorN &p_a, const VectorN &p_b);
@@ -54,6 +56,8 @@ public:
 	static void multiply_scalar_and_add_in_place(const VectorN &p_vector, const double p_scalar, VectorN &r_result);
 	static VectorN negate(const VectorN &p_vector);
 	static VectorN normalized(const VectorN &p_vector);
+	static VectorN perpendicular(const Vector<VectorN> &p_input_vectors);
+	static VectorN perpendicular_bind(const TypedArray<VectorN> &p_input_vectors);
 	static VectorN posmod(const VectorN &p_vector, const double p_mod);
 	static VectorN posmodv(const VectorN &p_vector, const VectorN &p_modv);
 	static VectorN project(const VectorN &p_vector, const VectorN &p_on_normal);

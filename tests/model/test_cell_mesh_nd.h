@@ -43,9 +43,6 @@ TEST_CASE("[CellMeshND] Decompose Box Polytope Cell into Simplexes") {
 	vertices.append(VectorN{ 1, 1, 1 });
 	cell_indices = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	decomposed = CellMeshND::decompose_polytope_cell_into_simplexes(vertices, cell_indices, 3, -1, Vector<VectorN>());
-	for (int i = 0; i < decomposed.size(); i++) {
-		print_line(decomposed[i]);
-	}
 	CHECK(decomposed.size() == 6);
 	// 4D case.
 	vertices.clear();

@@ -101,8 +101,8 @@
 			<param index="0" name="a" type="PackedFloat64Array" />
 			<param index="1" name="b" type="PackedFloat64Array" />
 			<description>
-				Returns the N-dimensional analog of the cross product for [param a] and [param b]. This is the unsigned area of the parallelogram formed by the two vectors.
-				[b]Note:[/b] The 3D cross product has 2 properties, the result is perpendicular to the inputs, and the result has a magnitude equal to the area of the parallelogram formed by the inputs. This method provides the second property, but not the first, like [method Vector2.cross].
+				Returns the N-dimensional analog of the cross product magnitude for [param a] and [param b]. This is the unsigned area of the parallelogram formed by the two vectors.
+				[b]Note:[/b] The 3D cross product has 2 properties, the result is perpendicular to the inputs, and the result has a magnitude equal to the area of the parallelogram formed by the inputs. This method provides the second property, but not the first, like [method Vector2.cross]. If you want a perpendicular vector, use [method perpendicular] instead.
 			</description>
 		</method>
 		<method name="direction_to" qualifiers="static">
@@ -175,6 +175,15 @@
 			<param index="1" name="dimension" type="int" />
 			<description>
 				Returns a new VectorN ([PackedFloat64Array]) that is filled with the given [param value] for each component. The dimension of the vector is defined by [param dimension]. For example, [code]fill(1.0, 3)[/code] will return [code][1.0, 1.0, 1.0][/code].
+			</description>
+		</method>
+		<method name="fill_array" qualifiers="static">
+			<return type="PackedFloat64Array[]" />
+			<param index="0" name="value" type="float" />
+			<param index="1" name="vector_amount" type="int" />
+			<param index="2" name="dimension" type="int" />
+			<description>
+				Returns an array of VectorN ([PackedFloat64Array]) that are filled with the given [param value] for each component in every vector. The amount of vectors is defined by [param vector_amount], and the dimension of each vector is defined by [param dimension]. For example, [code]fill_array(1.0, 3, 2)[/code] will return [code][[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]][/code].
 			</description>
 		</method>
 		<method name="floor" qualifiers="static">
@@ -326,6 +335,16 @@
 			<param index="0" name="vector" type="PackedFloat64Array" />
 			<description>
 				Returns a new VectorN ([PackedFloat64Array]) that is the normalized version of the input vector. The returned vector will have a length of [code]1.0[/code], or [code]0.0[/code] if the input vector is a zero vector.
+			</description>
+		</method>
+		<method name="perpendicular" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="input_vectors" type="PackedFloat64Array[]" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is the perpendicular vector to the input vectors. This is the N-dimensional equivalent of [method Vector3.cross] in 3D, except that it does not always take two input vectors.
+				This algorithm works for all dimensions it makes sense for, meaning 2D and up. There must be at least 1 input vector, the dimension of each vector must be one more than the number of input vectors, and every vector must be completely filled with numbers to be all of the same dimension. This function will be slow for dimensions above about a hundred.
+				This uses the typical chirality convention found in math. In 2D, if the input is +X, the output is +Y. In 3D, if the inputs are +X and +Y, the output is +Z (like [method Vector3.cross]). In 4D, if the inputs are +X, +Y, and +Z, the output is +W. In 5D, if the inputs are +X, +Y, +Z, and +W, the output is +V, and so on.
+				If the input vectors are not linearly independent, the output will be a zero vector of that dimension. If the output is non-zero, the angle to all input vectors is 90 degrees. If the output is non-zero, the input vectors and the output vector can be used as the columns of a square matrix with a positive determinant, where the output vector is the last column.
 			</description>
 		</method>
 		<method name="posmod" qualifiers="static">
