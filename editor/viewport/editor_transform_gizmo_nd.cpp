@@ -447,7 +447,7 @@ void EditorTransformGizmoND::_highlight_mesh() {
 	MeshInstanceND *mesh_instance = _get_highlightable_gizmo_mesh();
 	Ref<WireMaterialND> material = mesh_instance->get_meta(StringName("original_material"));
 	Ref<WireMaterialND> highlight_material = material->duplicate(true);
-	WireMaterialND::WireColorSource source = highlight_material->get_albedo_source();
+	WireMaterialND::WireColorSourceND source = highlight_material->get_albedo_source();
 	if (source == WireMaterialND::WIRE_COLOR_SOURCE_SINGLE_COLOR) {
 		highlight_material->set_albedo_color(highlight_material->get_albedo_color().lightened(0.5));
 	} else if (source == WireMaterialND::WIRE_COLOR_SOURCE_PER_EDGE_ONLY) {

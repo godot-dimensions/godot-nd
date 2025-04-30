@@ -8,12 +8,7 @@ Color _get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<Mesh
 	if (p_material.is_null()) {
 		return Color(1.0f, 1.0f, 1.0f);
 	}
-	const PackedColorArray &color_array = p_material->get_albedo_color_array();
-	const Color single_color = p_material->get_albedo_color();
-	if (p_edge_index < color_array.size()) {
-		return color_array[p_edge_index] * single_color;
-	}
-	return single_color;
+	return p_material->get_albedo_color_of_edge(p_edge_index, p_mesh);
 }
 
 void WireframeCanvasRenderingEngineND::setup_for_viewport() {

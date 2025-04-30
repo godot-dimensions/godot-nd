@@ -1,11 +1,22 @@
 #include "wire_material_nd.h"
 
-WireMaterialND::WireColorSource WireMaterialND::get_albedo_source() const {
-	return _albedo_source;
+#include "../mesh_nd.h"
+
+MaterialND::ColorSourceFlagsND WireMaterialND::_wire_source_to_flags(const WireColorSourceND p_wire_source) {
+	switch (p_wire_source) {
+		case WireMaterialND::WIRE_COLOR_SOURCE_SINGLE_COLOR:
+			return MaterialND::COLOR_SOURCE_FLAG_SINGLE_COLOR;
+		case WireMaterialND::WIRE_COLOR_SOURCE_PER_EDGE_ONLY:
+			return MaterialND::COLOR_SOURCE_FLAG_PER_EDGE;
+		case WireMaterialND::WIRE_COLOR_SOURCE_PER_EDGE_AND_SINGLE:
+			return MaterialND::ColorSourceFlagsND(MaterialND::COLOR_SOURCE_FLAG_PER_EDGE | MaterialND::COLOR_SOURCE_FLAG_SINGLE_COLOR);
+	}
+	return MaterialND::COLOR_SOURCE_FLAG_NONE;
 }
 
-void WireMaterialND::set_albedo_source(const WireColorSource p_albedo_source) {
+void WireMaterialND::set_albedo_source(const WireColorSourceND p_albedo_source) {
 	_albedo_source = p_albedo_source;
+	set_albedo_source_flags(_wire_source_to_flags(p_albedo_source));
 	notify_property_list_changed();
 }
 

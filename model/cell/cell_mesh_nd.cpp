@@ -109,16 +109,14 @@ void CellMeshND::cell_mesh_clear_cache() {
 }
 
 void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
-	const Ref<CellMaterialND> cell_material = p_material;
-	if (cell_material.is_valid()) {
-		const CellMaterialND::CellColorSourceND albedo_source = cell_material->get_albedo_source();
-		if (albedo_source == CellMaterialND::CELL_COLOR_SOURCE_PER_CELL_ONLY || albedo_source == CellMaterialND::CELL_COLOR_SOURCE_PER_CELL_AND_SINGLE) {
-			const PackedInt32Array cell_indices = get_cell_indices();
-			PackedColorArray color_array = p_material->get_albedo_color_array();
-			const int cell_count = cell_indices.size() / 4;
-			if (color_array.size() < cell_count) {
-				p_material->resize_albedo_color_array(cell_count);
-			}
+	const MaterialND::ColorSourceFlagsND albedo_source = p_material->get_albedo_source_flags();
+	if (albedo_source & MaterialND::COLOR_SOURCE_FLAG_PER_CELL) {
+		const PackedInt32Array cell_indices = get_cell_indices();
+		PackedColorArray color_array = p_material->get_albedo_color_array();
+		const int64_t vertices_per_cell = _dimension + 1;
+		const int64_t cell_count = cell_indices.size() / vertices_per_cell;
+		if (color_array.size() < cell_count) {
+			p_material->resize_albedo_color_array(cell_count);
 		}
 	}
 	MeshND::validate_material_for_mesh(p_material);
@@ -255,6 +253,9 @@ Vector<VectorN> CellMeshND::get_edge_positions() {
 }
 
 void CellMeshND::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("get_dimension"), &CellMeshND::get_dimension);
+	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &CellMeshND::set_dimension);
+
 	ClassDB::bind_method(D_METHOD("cell_mesh_clear_cache"), &CellMeshND::cell_mesh_clear_cache);
 	ClassDB::bind_method(D_METHOD("get_cell_count"), &CellMeshND::get_cell_count);
 	ClassDB::bind_method(D_METHOD("get_indices_per_cell"), &CellMeshND::get_indices_per_cell);
@@ -262,6 +263,8 @@ void CellMeshND::_bind_methods() {
 
 	ClassDB::bind_static_method("CellMeshND", D_METHOD("calculate_edge_indices_from_cell_indices", "cell_indices", "dimension", "deduplicate"), &CellMeshND::calculate_edge_indices_from_cell_indices);
 	ClassDB::bind_method(D_METHOD("get_cell_indices"), &CellMeshND::get_cell_indices);
+
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension"), "set_dimension", "get_dimension");
 
 	GDVIRTUAL_BIND(_get_cell_indices);
 }

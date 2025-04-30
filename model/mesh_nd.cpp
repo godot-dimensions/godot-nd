@@ -1,6 +1,7 @@
 #include "mesh_nd.h"
 
 #include "wire/array_wire_mesh_nd.h"
+#include "wire/wire_material_nd.h"
 
 #if GDEXTENSION
 #include <godot_cpp/templates/hash_set.hpp>
@@ -60,11 +61,14 @@ bool MeshND::validate_mesh_data() {
 
 void MeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 	GDVIRTUAL_CALL(_validate_material_for_mesh, p_material);
-	const PackedInt32Array edge_indices = get_edge_indices();
-	PackedColorArray color_array = p_material->get_albedo_color_array();
-	const int edge_count = edge_indices.size() / 2;
-	if (color_array.size() < edge_count) {
-		p_material->resize_albedo_color_array(edge_count);
+	const Ref<WireMaterialND> wire_material = p_material;
+	if (wire_material.is_valid()) {
+		const PackedInt32Array edge_indices = get_edge_indices();
+		PackedColorArray color_array = p_material->get_albedo_color_array();
+		const int edge_count = edge_indices.size() / 2;
+		if (color_array.size() < edge_count) {
+			p_material->resize_albedo_color_array(edge_count);
+		}
 	}
 }
 

@@ -29,6 +29,27 @@
 				Gets the albedo color array of the material. This may be used to color various parts of the mesh.
 			</description>
 		</method>
+		<method name="get_albedo_color_of_edge">
+			<return type="Color" />
+			<param index="0" name="edge_index" type="int" />
+			<param index="1" name="for_mesh" type="MeshND" />
+			<description>
+				Gets the albedo color of the edge with the given index. The [param for_mesh] parameter is used to determine which mesh the edge belongs to. This function will cache the calculated edge colors, so it can be called multiple times without performance issues.
+			</description>
+		</method>
+		<method name="get_albedo_source_flags" qualifiers="const">
+			<return type="int" enum="MaterialND.ColorSourceFlagsND" />
+			<description>
+				Gets low-level flags that determine how the mesh is colored. This is meant to be used by the renderer to determine the appearance of colored objects.
+				[b]Note:[/b] When making materials, use the high-level properties from the derived classes instead, such as [member WireMaterialND.albedo_source] or [member CellMaterialND.albedo_source].
+			</description>
+		</method>
+		<method name="is_default_material" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if this material is equivalent to the default material, meaning that its only color source is a single color, and that color is exactly white.
+			</description>
+		</method>
 		<method name="resize_albedo_color_array">
 			<return type="void" />
 			<param index="0" name="size" type="int" />
@@ -51,5 +72,33 @@
 				Sets the color array of the material. This may be used to color various parts of the mesh.
 			</description>
 		</method>
+		<method name="set_albedo_source_flags">
+			<return type="void" />
+			<param index="0" name="albedo_source_flags" type="int" enum="MaterialND.ColorSourceFlagsND" />
+			<description>
+				Sets low-level flags that determine how the mesh is colored. This method can be used to implement a custom material type.
+				[b]Note:[/b] When making materials, use the high-level properties from the derived classes instead, such as [member WireMaterialND.albedo_source] or [member CellMaterialND.albedo_source].
+			</description>
+		</method>
 	</methods>
+	<constants>
+		<constant name="COLOR_SOURCE_FLAG_SINGLE_COLOR" value="1" enum="ColorSourceFlagsND">
+			Flag to indicate that the color source is a single color. If this flag is set together with any other flag, the single color acts as a modulate color.
+		</constant>
+		<constant name="COLOR_SOURCE_FLAG_PER_VERT" value="2" enum="ColorSourceFlagsND">
+			Flag to indicate that each item in the color array is used for a vertex.
+		</constant>
+		<constant name="COLOR_SOURCE_FLAG_PER_EDGE" value="4" enum="ColorSourceFlagsND">
+			Flag to indicate that each item in the color array is used for an edge.
+		</constant>
+		<constant name="COLOR_SOURCE_FLAG_PER_CELL" value="8" enum="ColorSourceFlagsND">
+			Flag to indicate that each item in the color array is used for a cell.
+		</constant>
+		<constant name="COLOR_SOURCE_FLAG_CELL_TEXTURE_MAP" value="16" enum="ColorSourceFlagsND">
+			Flag to indicate that each cell should be colored based on the UVW coordinates of its four vertices.
+		</constant>
+		<constant name="COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP" value="32" enum="ColorSourceFlagsND">
+			Flag to indicate that the mesh color should be sampled from a 4D texture mapped to the mesh's local space.
+		</constant>
+	</constants>
 </class>

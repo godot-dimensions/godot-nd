@@ -30,5 +30,8 @@
 		<member name="cell_indices" type="PackedInt32Array" setter="set_cell_indices" getter="get_cell_indices" default="PackedInt32Array()">
 			The indices of the cell cells. Every 4 integers defines a cell cell. Each integer is an index to the [member vertices] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
 		</member>
+		<member name="vertices" type="PackedFloat64Array[]" setter="set_vertices" getter="get_vertices" default="[]">
+			The vertices of the cell mesh. Each vertex is a VectorN ([PackedFloat64Array]) with a length equal to the number of dimensions. Indices of cells and edges refer to the items in this array. The vertices array must be kept consistent with the cell indices array, such that each cell index points to a valid vertex index, or else the mesh is invalid.
+		</member>
 	</members>
 </class>

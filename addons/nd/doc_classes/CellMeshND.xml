@@ -56,4 +56,9 @@
 			</description>
 		</method>
 	</methods>
+	<members>
+		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
+			The dimension of the mesh. The amount of indices making up a simplex cell is usually equal to the dimension.
+		</member>
+	</members>
 </class>

@@ -121,6 +121,16 @@ void ArrayCellMeshND::set_vertices(const Vector<VectorN> &p_vertices) {
 	reset_mesh_data_validation();
 }
 
+void ArrayCellMeshND::set_vertices_bind(const TypedArray<VectorN> &p_vertices) {
+	_vertices.clear();
+	_vertices.resize(p_vertices.size());
+	for (int i = 0; i < p_vertices.size(); i++) {
+		_vertices.set(i, p_vertices[i]);
+	}
+	_clear_cache();
+	reset_mesh_data_validation();
+}
+
 void ArrayCellMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("append_vertex", "vertex", "deduplicate_vertices"), &ArrayCellMeshND::append_vertex, DEFVAL(true));
 
@@ -128,5 +138,7 @@ void ArrayCellMeshND::_bind_methods() {
 
 	// Only bind the setters here because the getters are already bound in CellMeshND.
 	ClassDB::bind_method(D_METHOD("set_cell_indices", "cell_indices"), &ArrayCellMeshND::set_cell_indices);
+	ClassDB::bind_method(D_METHOD("set_vertices", "vertices"), &ArrayCellMeshND::set_vertices_bind);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "cell_indices"), "set_cell_indices", "get_cell_indices");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "vertices", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_vertices", "get_vertices");
 }

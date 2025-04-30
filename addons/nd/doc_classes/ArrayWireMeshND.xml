@@ -48,7 +48,7 @@
 			The indices of the edges. Every 2 integers defines an edge. Each integer is an index to the [member vertices] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
 		</member>
 		<member name="vertices" type="PackedFloat64Array[]" setter="set_vertices" getter="get_vertices" default="[]">
-			The vertices of the wireframe mesh. Each vertex is a VectorN ([PackedFloat64Array]). The vertices array must be kept consistent with the edge indices array, such that each edge index points to a valid vertex index, or else the mesh is invalid.
+			The vertices of the wireframe mesh. Each vertex is a VectorN ([PackedFloat64Array]) with a length equal to the number of dimensions. Indices of edges refer to the items in this array. The vertices array must be kept consistent with the edge indices array, such that each edge index points to a valid vertex index, or else the mesh is invalid.
 		</member>
 	</members>
 </class>
