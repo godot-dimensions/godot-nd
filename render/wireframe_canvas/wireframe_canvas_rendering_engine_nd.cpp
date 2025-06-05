@@ -42,8 +42,12 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 		}
 		const bool direct_project = camera_relative_vertices[0].size() < 3;
 		PackedVector2Array projected_vertices;
-		for (int vertex = 0; vertex < camera_relative_vertices.size(); vertex++) {
-			projected_vertices.push_back(camera->world_to_viewport_local_normal(camera_relative_vertices[vertex], direct_project));
+		{
+			const int64_t vertex_count = camera_relative_vertices.size();
+			projected_vertices.resize(vertex_count);
+			for (int vertex = 0; vertex < vertex_count; vertex++) {
+				projected_vertices.set(vertex, camera->world_to_viewport_local_normal(camera_relative_vertices[vertex], direct_project));
+			}
 		}
 		PackedColorArray edge_colors;
 		PackedVector2Array edge_vertices;
