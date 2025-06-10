@@ -8,5 +8,5 @@
 /**                  export-ignore
 /addons              !export-ignore
 /addons/**           !export-ignore
-/addons/2pt5d/src    export-ignore
-/addons/2pt5d/src/** export-ignore
+/addons/nd/src       export-ignore
+/addons/nd/src/**    export-ignore
