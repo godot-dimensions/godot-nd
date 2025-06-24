@@ -17,6 +17,7 @@
 #include "math/transform_nd.h"
 #include "math/vector_nd.h"
 #include "nodes/camera_nd.h"
+#include "nodes/marker_nd.h"
 #include "nodes/node_nd.h"
 
 // Virtual classes.
@@ -113,6 +114,8 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(OrthoplexWireMeshND);
 		GDREGISTER_CLASS(CellMaterialND);
 		GDREGISTER_CLASS(WireMaterialND);
+		// Depends on mesh.
+		GDREGISTER_CLASS(MarkerND);
 		// Render.
 #if GDEXTENSION
 		GDREGISTER_CLASS(WireframeRenderCanvasND);

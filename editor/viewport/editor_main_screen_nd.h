@@ -13,6 +13,8 @@
 #include "scene/gui/menu_button.h"
 #endif
 
+class MarkerND;
+
 // Main class for the ND editor main screen.
 // Has a toolbar at the top and a display of the ND scene below it.
 // Has an EditorMainViewportND, or up to 4 of them, for displaying the ND scene.
@@ -62,6 +64,7 @@ private:
 	EditorMainViewportND *_editor_main_viewports[_MAX_VIEWPORTS] = { nullptr };
 	HBoxContainer *_toolbar_hbox = nullptr;
 	EditorTransformGizmoND *_transform_gizmo_nd = nullptr;
+	MarkerND *_origin_marker = nullptr;
 	Label *_dimensions_label;
 
 	PackedColorArray _axis_colors;

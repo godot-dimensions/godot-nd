@@ -34,6 +34,8 @@ def get_doc_classes():
 		"OrthoplexWireMeshND",
 		"WireMaterialND",
 		"WireMeshND",
+		# Depends on mesh.
+		"MarkerND",
 	]
 
 

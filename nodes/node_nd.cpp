@@ -111,6 +111,7 @@ int NodeND::get_dimension() const {
 void NodeND::set_dimension(const int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "NodeND: Dimension cannot be negative.");
 	_transform->set_dimension(p_dimension);
+	emit_signal("dimension_changed");
 }
 
 int NodeND::get_input_dimension() const {
@@ -119,6 +120,7 @@ int NodeND::get_input_dimension() const {
 
 void NodeND::set_input_dimension(const int p_input_dimension) {
 	_transform->set_basis_column_count(p_input_dimension);
+	emit_signal("dimension_changed");
 }
 
 int NodeND::get_output_dimension() const {
@@ -127,6 +129,7 @@ int NodeND::get_output_dimension() const {
 
 void NodeND::set_output_dimension(const int p_output_dimension) {
 	_transform->set_origin_dimension(p_output_dimension);
+	emit_signal("dimension_changed");
 }
 
 // Visibility.
@@ -218,6 +221,8 @@ void NodeND::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(DIMENSION_MODE_SQUARE);
 	BIND_ENUM_CONSTANT(DIMENSION_MODE_NON_SQUARE);
+
+	ADD_SIGNAL(MethodInfo("dimension_changed"));
 }
 
 void NodeND::_validate_property(PropertyInfo &p_property) const {

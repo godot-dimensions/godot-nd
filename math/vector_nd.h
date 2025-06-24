@@ -72,6 +72,7 @@ public:
 	static VectorN value_on_axis_with_dimension(const double p_value, const int64_t p_axis, const int64_t p_dimension);
 	static VectorN with_dimension(const VectorN &p_vector, const int64_t p_dimension);
 	static VectorN with_length(const VectorN &p_vector, const double p_length = 1.0);
+	static VectorN zero(const int64_t p_dimension);
 
 	// Conversion.
 	static VectorN from_2d(const Vector2 &p_vector);

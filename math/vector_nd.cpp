@@ -797,6 +797,15 @@ VectorN VectorND::with_length(const VectorN &p_vector, const double p_length) {
 	return norm;
 }
 
+VectorN VectorND::zero(const int64_t p_dimension) {
+	VectorN filled_vector;
+	filled_vector.resize(p_dimension);
+	for (int64_t i = 0; i < p_dimension; i++) {
+		filled_vector.set(i, 0.0);
+	}
+	return filled_vector;
+}
+
 // Conversion.
 
 VectorN VectorND::from_2d(const Vector2 &p_vector) {
@@ -923,6 +932,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("value_on_axis", "value", "axis"), &VectorND::value_on_axis);
 	ClassDB::bind_static_method("VectorND", D_METHOD("with_dimension", "vector", "dimension"), &VectorND::with_dimension);
 	ClassDB::bind_static_method("VectorND", D_METHOD("with_length", "vector", "length"), &VectorND::with_length, DEFVAL(1.0));
+	ClassDB::bind_static_method("VectorND", D_METHOD("zero", "dimension"), &VectorND::zero);
 	// Conversion.
 	ClassDB::bind_static_method("VectorND", D_METHOD("from_2d", "vector"), &VectorND::from_2d);
 	ClassDB::bind_static_method("VectorND", D_METHOD("from_3d", "vector"), &VectorND::from_3d);

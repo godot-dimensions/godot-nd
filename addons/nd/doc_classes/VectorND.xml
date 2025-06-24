@@ -470,5 +470,12 @@
 				Returns a new VectorN ([PackedFloat64Array]) that is the input vector scaled to a length of [param length]. If the input vector is shorter than [param length], it will be scaled up to match the length. If the input vector is longer than [param length], it will be scaled down to match the length. This is the same as getting the normalized vector and multiplying it by [param length].
 			</description>
 		</method>
+		<method name="zero" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is filled with [code]0.0[/code] for each component. The dimension of the vector is defined by [param dimension]. For example, [code]zero(3)[/code] will return [code][0.0, 0.0, 0.0][/code].
+			</description>
+		</method>
 	</methods>
 </class>
