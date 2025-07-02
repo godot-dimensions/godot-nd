@@ -140,7 +140,7 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 				}
 			}
 			if (camera->get_depth_fade()) {
-				const double depth = abs((VectorND::length(a_vert_nd) + VectorND::length(b_vert_nd)) * 0.5);
+				const double depth = Math::abs((VectorND::length(a_vert_nd) + VectorND::length(b_vert_nd)) * 0.5);
 				double alpha = 1.0;
 
 				const double depth_far = camera_clip_far;
