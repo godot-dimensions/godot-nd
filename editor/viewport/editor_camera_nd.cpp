@@ -68,10 +68,15 @@ void EditorCameraND::_update_camera_auto_orthographicness() {
 	const bool should_be_orthographic = screen_projected_axis_count <= 2;
 	if (should_be_orthographic) {
 		_camera->set_projection_type(CameraND::PROJECTION_ORTHOGRAPHIC);
-		_camera->set_near(-_camera->get_far());
+		if (_camera->get_clip_near() > 0.0) {
+			_positive_clip_near = _camera->get_clip_near();
+		}
+		_camera->set_clip_near(-_camera->get_clip_far());
 	} else {
 		_camera->set_projection_type(CameraND::PROJECTION_PERSPECTIVE);
-		_camera->set_near(0.05);
+		if (_camera->get_clip_near() < 0.0) {
+			_camera->set_clip_near(_positive_clip_near);
+		}
 	}
 }
 
@@ -85,8 +90,8 @@ const CameraND *EditorCameraND::get_camera_readonly() const {
 }
 
 double EditorCameraND::change_speed_and_zoom(const double p_change) {
-	const double min_distance = _camera->get_near() * 4.0;
-	const double max_distance = _camera->get_far() * 0.25;
+	const double min_distance = _camera->get_clip_near() * 4.0;
+	const double max_distance = _camera->get_clip_far() * 0.25;
 	if (unlikely(min_distance > max_distance)) {
 		_target_speed_and_zoom = (min_distance + max_distance) * 0.5;
 	} else {
@@ -184,7 +189,10 @@ void EditorCameraND::set_orthogonal_view_plane(const int p_right, const int p_up
 	}
 	if (_is_auto_orthographic) {
 		_camera->set_projection_type(CameraND::PROJECTION_ORTHOGRAPHIC);
-		_camera->set_near(-_camera->get_far());
+		if (_camera->get_clip_near() > 0.0) {
+			_positive_clip_near = _camera->get_clip_near();
+		}
+		_camera->set_clip_near(-_camera->get_clip_far());
 	}
 	_pitch_angle = 0.0;
 	set_transform(_target_transform);

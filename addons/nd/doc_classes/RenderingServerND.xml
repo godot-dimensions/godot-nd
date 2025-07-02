@@ -25,8 +25,7 @@
 		</method>
 		<method name="register_rendering_engine">
 			<return type="void" />
-			<param index="0" name="name" type="String" />
-			<param index="1" name="engine" type="RenderingEngineND" />
+			<param index="0" name="engine" type="RenderingEngineND" />
 			<description>
 				Register a [RenderingEngineND] with the rendering server. If registered in the editor, the rendering engine will be available as an option in the inspector of [CameraND] nodes.
 			</description>

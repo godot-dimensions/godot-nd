@@ -40,8 +40,8 @@ private:
 
 	double _depth_fade_start = 25.0;
 	double _orthographic_size = 5.0;
-	double _near = 0.05;
-	double _far = 4000.0;
+	double _clip_near = 0.05;
+	double _clip_far = 4000.0;
 	double _perp_fade_distance = 5.0;
 	double _perp_fade_slope = 1.0;
 	bool _is_current = false;
@@ -85,11 +85,11 @@ public:
 	double get_orthographic_size() const;
 	void set_orthographic_size(const double p_orthographic_size);
 
-	double get_near() const;
-	void set_near(const double p_near);
+	double get_clip_near() const;
+	void set_clip_near(const double p_clip_near);
 
-	double get_far() const;
-	void set_far(const double p_far);
+	double get_clip_far() const;
+	void set_clip_far(const double p_clip_far);
 
 	PerpFadeMode get_perp_fade_mode() const;
 	void set_perp_fade_mode(const PerpFadeMode p_perp_fade_mode);

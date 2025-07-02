@@ -17,7 +17,7 @@ class RenderingServerND : public Object {
 	// We could add a "WorldND" class in the future if we want to add this feature, but it's not necessary for now.
 	Vector<MeshInstanceND *> _mesh_instances;
 
-	Ref<RenderingEngineND> _get_rendering_engine(const String &p_name) const;
+	Ref<RenderingEngineND> _get_rendering_engine(const String &p_friendly_name) const;
 	TypedArray<MeshInstanceND> _get_visible_mesh_instances() const;
 	bool _is_render_frame_connected = false;
 	void _render_frame();
@@ -36,8 +36,8 @@ public:
 	void register_mesh_instance(MeshInstanceND *p_mesh_instance);
 	void unregister_mesh_instance(MeshInstanceND *p_mesh_instance);
 
-	void register_rendering_engine(const String &p_name, const Ref<RenderingEngineND> &p_engine);
-	void unregister_rendering_engine(const String &p_name);
+	void register_rendering_engine(const Ref<RenderingEngineND> &p_engine);
+	void unregister_rendering_engine(const String &p_friendly_name);
 	PackedStringArray get_rendering_engine_names() const;
 
 	static RenderingServerND *get_singleton() { return singleton; }

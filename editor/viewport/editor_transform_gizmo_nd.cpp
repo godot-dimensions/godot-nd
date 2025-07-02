@@ -653,8 +653,11 @@ void EditorTransformGizmoND::set_keep_mode(const KeepMode p_mode) {
 	} else if (_is_scale_linear_enabled) {
 		_is_scale_planar_enabled = true;
 	}
-	const bool is_plane_visible = _is_move_planar_enabled || _is_scale_planar_enabled;
 	Vector<MeshInstanceND *> &plane_meshes = _meshes[TRANSFORM_MOVE_PLANE];
+	if (plane_meshes.is_empty()) {
+		return; // Happens when loading editor settings before the theme updated signal reaches this gizmo.
+	}
+	const bool is_plane_visible = _is_move_planar_enabled || _is_scale_planar_enabled;
 	for (int i = 0; i < plane_meshes.size(); i++) {
 		plane_meshes[i]->set_visible(is_plane_visible);
 	}

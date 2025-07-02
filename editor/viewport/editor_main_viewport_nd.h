@@ -57,6 +57,7 @@ protected:
 public:
 	void focus_selected_nodes();
 	Ref<TransformND> get_view_camera_transform() const;
+	EditorCameraND *get_editor_camera_nd() const { return _editor_camera_nd; }
 	void navigation_freelook(const Ref<InputEventMouseMotion> &p_input_event);
 	void navigation_orbit(const Ref<InputEventMouseMotion> &p_input_event);
 	void navigation_pan(const Ref<InputEventMouseMotion> &p_input_event);

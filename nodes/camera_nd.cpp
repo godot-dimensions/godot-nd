@@ -111,7 +111,7 @@ bool CameraND::is_position_behind(const VectorN &p_global_position) const {
 		return false;
 	}
 	const VectorN global_offset = VectorND::subtract(p_global_position, global_xform->get_origin());
-	return VectorND::dot(depth_vector, global_offset) > -_near;
+	return VectorND::dot(depth_vector, global_offset) > -_clip_near;
 }
 
 VectorN CameraND::viewport_to_world_ray_origin(const Vector2 &p_viewport_position) const {
@@ -234,20 +234,20 @@ void CameraND::set_orthographic_size(const double p_orthographic_size) {
 	_orthographic_size = p_orthographic_size;
 }
 
-double CameraND::get_near() const {
-	return _near;
+double CameraND::get_clip_near() const {
+	return _clip_near;
 }
 
-void CameraND::set_near(const double p_near) {
-	_near = p_near;
+void CameraND::set_clip_near(const double p_clip_near) {
+	_clip_near = p_clip_near;
 }
 
-double CameraND::get_far() const {
-	return _far;
+double CameraND::get_clip_far() const {
+	return _clip_far;
 }
 
-void CameraND::set_far(const double p_far) {
-	_far = p_far;
+void CameraND::set_clip_far(const double p_clip_far) {
+	_clip_far = p_clip_far;
 }
 
 CameraND::PerpFadeMode CameraND::get_perp_fade_mode() const {
@@ -276,6 +276,7 @@ void CameraND::set_perp_fade_slope(const double p_perp_fade_slope) {
 }
 
 void CameraND::_bind_methods() {
+	// Be sure to keep the relevant properties in sync with EditorCameraSettingsND.
 	ClassDB::bind_method(D_METHOD("is_current"), &CameraND::is_current);
 	ClassDB::bind_method(D_METHOD("set_current", "enabled"), &CameraND::set_current);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "current"), "set_current", "is_current");
@@ -317,13 +318,13 @@ void CameraND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_orthographic_size", "orthographic_size"), &CameraND::set_orthographic_size);
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "orthographic_size", PROPERTY_HINT_NONE, "suffix:m"), "set_orthographic_size", "get_orthographic_size");
 
-	ClassDB::bind_method(D_METHOD("get_near"), &CameraND::get_near);
-	ClassDB::bind_method(D_METHOD("set_near", "near"), &CameraND::set_near);
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "near", PROPERTY_HINT_RANGE, "0.001,1000,0.001,or_greater,exp,suffix:m"), "set_near", "get_near");
+	ClassDB::bind_method(D_METHOD("get_clip_near"), &CameraND::get_clip_near);
+	ClassDB::bind_method(D_METHOD("set_clip_near", "clip_near"), &CameraND::set_clip_near);
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "clip_near", PROPERTY_HINT_RANGE, "0.001,1000,0.001,or_less,or_greater,exp,suffix:m"), "set_clip_near", "get_clip_near");
 
-	ClassDB::bind_method(D_METHOD("get_far"), &CameraND::get_far);
-	ClassDB::bind_method(D_METHOD("set_far", "far"), &CameraND::set_far);
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "far", PROPERTY_HINT_RANGE, "0.01,4000,0.01,or_greater,exp,suffix:m"), "set_far", "get_far");
+	ClassDB::bind_method(D_METHOD("get_clip_far"), &CameraND::get_clip_far);
+	ClassDB::bind_method(D_METHOD("set_clip_far", "clip_far"), &CameraND::set_clip_far);
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "clip_far", PROPERTY_HINT_RANGE, "0.01,4000,0.01,or_less,or_greater,exp,suffix:m"), "set_clip_far", "get_clip_far");
 
 	ClassDB::bind_method(D_METHOD("get_perp_fade_mode"), &CameraND::get_perp_fade_mode);
 	ClassDB::bind_method(D_METHOD("set_perp_fade_mode", "perp_fade_mode"), &CameraND::set_perp_fade_mode);

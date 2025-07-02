@@ -52,6 +52,7 @@
 #ifdef TOOLS_ENABLED
 #include "editor/godot_nd_editor_plugin.h"
 #include "editor/viewport/editor_camera_nd.h"
+#include "editor/viewport/editor_camera_settings_nd.h"
 #include "editor/viewport/editor_input_surface_nd.h"
 #include "editor/viewport/editor_main_screen_nd.h"
 #include "editor/viewport/editor_main_viewport_nd.h"
@@ -122,15 +123,17 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(WireframeCanvasRenderingEngineND);
 #endif // GDEXTENSION
 		RenderingServerND *rendering_server = memnew(RenderingServerND);
-		rendering_server->register_rendering_engine("Wireframe Canvas", memnew(WireframeCanvasRenderingEngineND));
+		rendering_server->register_rendering_engine(memnew(WireframeCanvasRenderingEngineND));
 		add_godot_singleton("RenderingServerND", rendering_server);
 #ifdef TOOLS_ENABLED
 	} else if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
 #ifdef GDEXTENSION
 		GDREGISTER_CLASS(EditorCameraND);
+		GDREGISTER_CLASS(EditorCameraSettingsND);
 		GDREGISTER_CLASS(EditorCreateNDSceneButton);
 		GDREGISTER_CLASS(EditorImportPluginBaseND);
 		GDREGISTER_CLASS(EditorImportPluginOFFBaseND);
+		GDREGISTER_CLASS(EditorImportPluginOFFCellND);
 		GDREGISTER_CLASS(EditorImportPluginOFFSceneND);
 		GDREGISTER_CLASS(EditorImportPluginOFFWireND);
 		GDREGISTER_CLASS(EditorInputSurfaceND);

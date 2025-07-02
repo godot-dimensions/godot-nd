@@ -4,13 +4,21 @@
 
 #if GDEXTENSION
 #include <godot_cpp/classes/button.hpp>
+#include <godot_cpp/classes/config_file.hpp>
+#include <godot_cpp/classes/confirmation_dialog.hpp>
+#include <godot_cpp/classes/editor_inspector.hpp>
 #include <godot_cpp/classes/h_box_container.hpp>
 #include <godot_cpp/classes/label.hpp>
 #include <godot_cpp/classes/menu_button.hpp>
+#include <godot_cpp/classes/spin_box.hpp>
 #elif GODOT_MODULE
+#include "core/io/config_file.h"
+#include "editor/editor_inspector.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/button.h"
+#include "scene/gui/dialogs.h"
 #include "scene/gui/menu_button.h"
+#include "scene/gui/spin_box.h"
 #endif
 
 class MarkerND;
@@ -22,7 +30,7 @@ class EditorMainScreenND : public Control {
 	GDCLASS(EditorMainScreenND, Control);
 
 	// Defined for readability but not intended to be changed.
-	static const int _MAX_VIEWPORTS = 1;
+	static constexpr int _MAX_VIEWPORTS = 1;
 
 public:
 	// Ensure the MODE items are kept in sync with EditorTransformGizmoND::GizmoMode.
@@ -46,35 +54,52 @@ public:
 		TRANSFORM_SETTING_KEEP_MAX, // 4
 	};
 
-	enum ViewLayoutItem {
-		VIEW_LAYOUT_ITEM_1_VIEWPORT, // 0
-		VIEW_LAYOUT_ITEM_2_VIEWPORTS_TOP_BOTTOM, // 1
-		VIEW_LAYOUT_ITEM_2_VIEWPORTS_LEFT_RIGHT, // 2
-		VIEW_LAYOUT_ITEM_3_VIEWPORTS_TOP_WIDE, // 3
-		VIEW_LAYOUT_ITEM_3_VIEWPORTS_RIGHT_TALL, // 4
-		VIEW_LAYOUT_ITEM_4_VIEWPORTS, // 5
-		VIEW_LAYOUT_ITEM_VIEWPORT_MAX, // 6
+	enum LayoutItem {
+		LAYOUT_ITEM_1_VIEWPORT, // 0
+		LAYOUT_ITEM_2_VIEWPORTS_TOP_BOTTOM, // 1
+		LAYOUT_ITEM_2_VIEWPORTS_LEFT_RIGHT, // 2
+		LAYOUT_ITEM_3_VIEWPORTS_TOP_WIDE, // 3
+		LAYOUT_ITEM_3_VIEWPORTS_RIGHT_TALL, // 4
+		LAYOUT_ITEM_4_VIEWPORTS, // 5
+		LAYOUT_ITEM_VIEWPORT_MAX, // 6
+	};
+
+	enum ViewItem {
+		VIEW_ITEM_RENDERING_ENGINE,
+		VIEW_ITEM_SHOW_ORIGIN_MARKER,
+		VIEW_ITEM_CAMERA_SETTINGS,
 	};
 
 private:
 	Button *_toolbar_buttons[TOOLBAR_BUTTON_MAX] = { nullptr };
 	MenuButton *_transform_settings_menu = nullptr;
-	MenuButton *_view_layout_menu = nullptr;
+	MenuButton *_layout_menu = nullptr;
+	MenuButton *_view_menu = nullptr;
+	PopupMenu *_rendering_engine_menu_popup = nullptr;
+	ConfirmationDialog *_camera_settings_dialog = nullptr;
+	EditorInspector *_camera_settings_inspector = nullptr;
+	EditorCameraSettingsND *_camera_settings = nullptr;
 	Control *_editor_main_viewport_holder = nullptr;
 	EditorMainViewportND *_editor_main_viewports[_MAX_VIEWPORTS] = { nullptr };
 	HBoxContainer *_toolbar_hbox = nullptr;
 	EditorTransformGizmoND *_transform_gizmo_nd = nullptr;
 	MarkerND *_origin_marker = nullptr;
-	Label *_dimensions_label;
+	Label *_dimensions_label = nullptr;
+	Ref<ConfigFile> _nd_editor_config_file;
+	String _nd_editor_config_file_path;
 
 	PackedColorArray _axis_colors;
 	double _information_label_auto_hide_time = 0.0;
 
+	void _apply_nd_editor_settings();
 	int _calculate_scene_dimension(Node *p_node) const;
 	void _on_button_toggled(const bool p_toggled_on, const int p_option);
 	void _on_selection_changed();
 	void _on_transform_settings_menu_id_pressed(const int p_id);
-	void _on_view_layout_menu_id_pressed(const int p_id);
+	void _on_layout_menu_id_pressed(const int p_id);
+	void _on_view_menu_id_pressed(const int p_id);
+	void _on_rendering_engine_menu_id_pressed(const int p_id);
+	void _update_rendering_engine_menu();
 	void _update_theme();
 
 protected:
@@ -88,4 +113,5 @@ public:
 	void update_dimension();
 
 	void setup(EditorUndoRedoManager *p_undo_redo_manager);
+	~EditorMainScreenND();
 };

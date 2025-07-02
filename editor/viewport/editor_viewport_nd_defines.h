@@ -70,6 +70,7 @@
 #endif
 
 class EditorCameraND;
+class EditorCameraSettingsND;
 class EditorInputSurfaceND;
 class EditorMainScreenND;
 class EditorMainViewportND;

@@ -14,6 +14,7 @@ class EditorCameraND : public NodeND {
 	Ref<TransformND> _target_transform;
 	double _pitch_angle;
 
+	double _positive_clip_near = 0.05;
 	double _target_speed_and_zoom = 4.0;
 	int _zoom_failed_attempts_count = 0;
 	bool _is_auto_orthographic = true;

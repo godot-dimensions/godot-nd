@@ -15,6 +15,7 @@
 #if GDEXTENSION
 // Extremely common classes used by most files. Customize for your extension as needed.
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/core/version.hpp>
 #include <godot_cpp/variant/string.hpp>
 #define GDEXTMOD_GUI_INPUT _gui_input
 #define GET_NODE_TYPE(m_parent, m_type, m_path) m_parent->get_node<m_type>(NodePath(m_path))
@@ -28,6 +29,30 @@ using namespace godot;
 #define GDEXTMOD_GUI_INPUT gui_input
 #define GET_NODE_TYPE(m_parent, m_type, m_path) Object::cast_to<m_type>(m_parent->get_node(NodePath(m_path)))
 #define MODULE_OVERRIDE override
+
+#ifndef GODOT_VERSION_MAJOR
+// Prior to Godot 4.5, the Godot version macros were just "VERSION_*" which did not match the godot-cpp API.
+// See https://github.com/godotengine/godot/pull/103557
+#define GODOT_VERSION_MAJOR VERSION_MAJOR
+#define GODOT_VERSION_MINOR VERSION_MINOR
+#define GODOT_VERSION_PATCH VERSION_PATCH
+#endif
+
+#if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 6
+// Prior to Godot 4.6, the internal API of free_rid in RenderingServer and other servers did not match the exposed API.
+// See https://github.com/godotengine/godot/pull/107139
+#define free_rid free
+#endif
+
+#if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR > 4
+// In Godot 4.5 and later, Math_TAU was replaced with Math::TAU, and a few other things also moved to the Math namespace.
+#define ABS Math::abs
+#define Math_E Math::E
+#define Math_PI Math::PI
+#define Math_SQRT12 Math::SQRT12
+#define Math_SQRT2 Math::SQRT2
+#define Math_TAU Math::TAU
+#endif
 
 #define MOUSE_BUTTON_LEFT MouseButton::LEFT
 #else

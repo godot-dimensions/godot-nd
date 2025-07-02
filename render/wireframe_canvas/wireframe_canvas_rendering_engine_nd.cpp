@@ -17,6 +17,13 @@ void WireframeCanvasRenderingEngineND::setup_for_viewport() {
 	get_viewport()->add_child(wire_canvas);
 }
 
+void WireframeCanvasRenderingEngineND::cleanup_for_viewport() {
+	WireframeRenderCanvasND *wire_canvas = GET_NODE_TYPE(get_viewport(), WireframeRenderCanvasND, "WireframeRenderCanvasND");
+	if (wire_canvas) {
+		wire_canvas->queue_free();
+	}
+}
+
 void WireframeCanvasRenderingEngineND::render_frame() {
 	WireframeRenderCanvasND *wire_canvas = GET_NODE_TYPE(get_viewport(), WireframeRenderCanvasND, "WireframeRenderCanvasND");
 	ERR_FAIL_NULL_MSG(wire_canvas, "WireframeCanvasRenderingEngineND: Canvas was null.");
@@ -30,6 +37,8 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 	const bool camera_has_perp_fading = camera->get_perp_fade_mode() != CameraND::PERP_FADE_DISABLED;
 	const bool camera_has_perp_fade_hue_shift = camera->get_perp_fade_mode() & CameraND::PERP_FADE_HUE_SHIFT;
 	const bool camera_has_perp_fade_transparency = camera->get_perp_fade_mode() & CameraND::PERP_FADE_TRANSPARENCY;
+	const double camera_clip_far = camera->get_clip_far();
+	const double camera_clip_near = camera->get_clip_near();
 	for (int mesh_index = 0; mesh_index < mesh_instances.size(); mesh_index++) {
 		MeshInstanceND *mesh_inst = Object::cast_to<MeshInstanceND>(mesh_instances[mesh_index]);
 		ERR_CONTINUE(mesh_inst == nullptr);
@@ -66,22 +75,22 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 			} else {
 				const double a_z = a_vert_nd[2];
 				const double b_z = b_vert_nd[2];
-				if (a_z > -camera->get_near()) {
-					if (b_z > -camera->get_near()) {
+				if (a_z > -camera_clip_near) {
+					if (b_z > -camera_clip_near) {
 						// Both points are behind the camera, so we skip this edge.
 						continue;
 					} else {
 						// A is behind the camera, while B is in front of the camera.
-						const double factor = (a_z + camera->get_near()) / (a_z - b_z);
+						const double factor = (a_z + camera_clip_near) / (a_z - b_z);
 						const VectorN clipped = VectorND::lerp(a_vert_nd, b_vert_nd, factor);
 						edge_vertices.push_back(camera->world_to_viewport_local_normal(clipped));
 						edge_vertices.push_back(projected_vertices[b_index]);
 					}
 				} else {
 					edge_vertices.push_back(projected_vertices[a_index]);
-					if (b_z > -camera->get_near()) {
+					if (b_z > -camera_clip_near) {
 						// B is behind the camera, while A is in front of the camera.
-						const double factor = (b_z + camera->get_near()) / (b_z - a_z);
+						const double factor = (b_z + camera_clip_near) / (b_z - a_z);
 						const VectorN clipped = VectorND::lerp(b_vert_nd, a_vert_nd, factor);
 						edge_vertices.push_back(camera->world_to_viewport_local_normal(clipped));
 					} else {
@@ -106,7 +115,8 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 							const double perp_magnitude = ABS(perp_w);
 							if (camera_has_perp_fade_hue_shift) {
 								const float value = edge_color.get_v();
-								const Color target_color = perp_w > 0.0 ? Color(value, 0.0f, 0.0f) : Color(0.0f, value, value);
+								const float half_value = edge_color.get_v();
+								const Color target_color = perp_w > 0.0 ? Color(value, half_value, 0.0f) : Color(0.0f, half_value, value);
 								edge_color = edge_color.lerp(target_color, MIN(1.0, perp_magnitude));
 							}
 							if (camera_has_perp_fade_transparency) {
@@ -114,11 +124,11 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 							}
 						} break;
 						default: {
-							const double perp_w = perp_dimensions[0];
-							const double perp_v = perp_dimensions[1];
 							const double perp_magnitude = VectorND::length(perp_dimensions);
 							if (camera_has_perp_fade_hue_shift) {
-								const float target_hue = Math::atan2(perp_v, perp_w) / Math_TAU + 1.0f;
+								const double perp_w = perp_dimensions[0];
+								const double perp_v = perp_dimensions[1];
+								const float target_hue = Math::atan2(-perp_v, perp_w) / Math_TAU + (13.0 / 12.0);
 								const Color target_color = Color::from_hsv(target_hue, 1.0, edge_color.get_v());
 								edge_color = edge_color.lerp(target_color, MIN(1.0, perp_magnitude));
 							}
@@ -133,7 +143,7 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 				const double depth = abs((VectorND::length(a_vert_nd) + VectorND::length(b_vert_nd)) * 0.5);
 				double alpha = 1.0;
 
-				const double depth_far = camera->get_far();
+				const double depth_far = camera_clip_far;
 				const double start = camera->get_depth_fade_start();
 
 				if (depth > depth_far) {

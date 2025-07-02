@@ -12,6 +12,8 @@ protected:
 	static void _bind_methods() {}
 
 public:
-	void setup_for_viewport() override;
-	void render_frame() override;
+	virtual String get_friendly_name() const override { return "Wireframe Canvas"; }
+	virtual void setup_for_viewport() override;
+	virtual void cleanup_for_viewport() override;
+	virtual void render_frame() override;
 };
