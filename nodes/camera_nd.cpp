@@ -115,7 +115,8 @@ bool CameraND::is_position_behind(const VectorN &p_global_position) const {
 }
 
 VectorN CameraND::viewport_to_world_ray_origin(const Vector2 &p_viewport_position) const {
-	ERR_FAIL_COND_V_MSG(!is_inside_tree(), VectorN(), "CameraND is not inside the scene tree.");
+	Viewport *viewport = get_viewport();
+	ERR_FAIL_COND_V_MSG(viewport == nullptr, VectorN(), "Camera4D must be in the scene tree to convert viewport coordinates to world coordinates.");
 	const Ref<TransformND> global_xform = get_global_transform();
 	const VectorN global_pos = global_xform->get_origin();
 	// Perspective cameras always have their ray origin at the camera's position.
@@ -123,7 +124,7 @@ VectorN CameraND::viewport_to_world_ray_origin(const Vector2 &p_viewport_positio
 		return global_pos;
 	}
 	// Orthographic cameras have ray origins offset by the orthographic size.
-	const Vector2 viewport_size = get_viewport()->call(StringName("get_size"));
+	const Vector2 viewport_size = viewport->call(StringName("get_size"));
 	const double pixel_size = _keep_aspect == KEEP_WIDTH ? viewport_size.x : viewport_size.y;
 	const Vector2 scaled_position = (p_viewport_position * 2.0f - viewport_size) * (_orthographic_size / pixel_size);
 	const VectorN x = VectorND::multiply_scalar(global_xform->get_basis_column(0), scaled_position.x);
@@ -132,7 +133,8 @@ VectorN CameraND::viewport_to_world_ray_origin(const Vector2 &p_viewport_positio
 }
 
 VectorN CameraND::viewport_to_world_ray_direction(const Vector2 &p_viewport_position) const {
-	ERR_FAIL_COND_V_MSG(!is_inside_tree(), VectorN(), "CameraND is not inside the scene tree.");
+	Viewport *viewport = get_viewport();
+	ERR_FAIL_COND_V_MSG(viewport == nullptr, VectorN(), "Camera4D must be in the scene tree to convert viewport coordinates to world coordinates.");
 	const Ref<TransformND> global_xform = get_global_transform();
 	// 0D, 1D, or 2D camera transforms can just directly map viewport positions to world positions.
 	// As such, the camera does not really have a ray direction, so return an empty vector.
@@ -145,7 +147,7 @@ VectorN CameraND::viewport_to_world_ray_direction(const Vector2 &p_viewport_posi
 		return VectorND::negate(depth_vector);
 	}
 	// Perspective cameras have ray directions pointing more to the side when near the sides of the viewport.
-	const Vector2 viewport_size = get_viewport()->call(StringName("get_size"));
+	const Vector2 viewport_size = viewport->call(StringName("get_size"));
 	const double pixel_size = _keep_aspect == KEEP_WIDTH ? viewport_size.x : viewport_size.y;
 	const Vector2 scaled_position = (p_viewport_position * 2.0f - viewport_size) / pixel_size;
 	const VectorN x = VectorND::multiply_scalar(global_xform->get_basis_column(0), scaled_position.x);
@@ -167,9 +169,11 @@ Vector2 CameraND::world_to_viewport_local_normal(const VectorN &p_local_position
 }
 
 Vector2 CameraND::world_to_viewport(const VectorN &p_global_position) const {
+	Viewport *viewport = get_viewport();
+	ERR_FAIL_COND_V_MSG(viewport == nullptr, Vector2(), "Camera4D must be in the scene tree to convert world coordinates to viewport coordinates.");
 	const Ref<TransformND> global_xform = get_global_transform();
 	const VectorN local_position = global_xform->xform_transposed(p_global_position);
-	const Vector2 viewport_size = get_viewport()->call(StringName("get_size"));
+	const Vector2 viewport_size = viewport->call(StringName("get_size"));
 	const double pixel_size = _keep_aspect == KEEP_WIDTH ? viewport_size.x : viewport_size.y;
 	const bool force_orthographic = global_xform->get_basis_column_count() < 3;
 	const Vector2 projected = world_to_viewport_local_normal(local_position, force_orthographic);

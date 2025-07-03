@@ -204,6 +204,7 @@ Ref<ArrayWireMeshND> OFFDocumentND::generate_wire_mesh_nd(const bool p_deduplica
 	Ref<ArrayWireMeshND> wire_mesh;
 	wire_mesh.instantiate();
 	wire_mesh->set_vertices(_vertices);
+	ERR_FAIL_COND_V_MSG(_cell_face_indices.is_empty(), wire_mesh, "OFFDocumentND: Cannot generate wire mesh from OFF document with no cell face indices.");
 	Ref<WireMaterialND> wire_material;
 	if (_has_any_cell_colors) {
 		wire_material.instantiate();
