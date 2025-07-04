@@ -95,10 +95,10 @@
 			Flag to indicate that each item in the color array is used for a cell.
 		</constant>
 		<constant name="COLOR_SOURCE_FLAG_CELL_TEXTURE_MAP" value="16" enum="ColorSourceFlagsND">
-			Flag to indicate that each cell should be colored based on the UVW coordinates of its four vertices.
+			Flag to indicate that each cell should be colored based on the texture mapping coordinates of its vertices into N-1 dimensional space.
 		</constant>
 		<constant name="COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP" value="32" enum="ColorSourceFlagsND">
-			Flag to indicate that the mesh color should be sampled from a 4D texture mapped to the mesh's local space.
+			Flag to indicate that the mesh color should be sampled from an ND texture mapped to the mesh's ND local space.
 		</constant>
 	</constants>
 </class>
