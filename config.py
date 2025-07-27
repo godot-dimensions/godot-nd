@@ -14,6 +14,7 @@ def get_doc_classes():
 		"GeometryND",
 		"RenderingEngineND",
 		"RenderingServerND",
+		"MathND",
 		"NodeND",
 		"PlaneND",
 		"RectND",

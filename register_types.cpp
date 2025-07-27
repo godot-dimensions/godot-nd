@@ -12,6 +12,7 @@
 
 // General.
 #include "math/geometry_nd.h"
+#include "math/math_nd.h"
 #include "math/plane_nd.h"
 #include "math/rect_nd.h"
 #include "math/transform_nd.h"
@@ -86,6 +87,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 	// When the inheritance doesn't matter, alphabetical order is used.
 	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE) {
 		GDREGISTER_CLASS(GeometryND);
+		GDREGISTER_CLASS(MathND);
 		GDREGISTER_CLASS(PlaneND);
 		GDREGISTER_CLASS(RectND);
 		GDREGISTER_CLASS(TransformND);
