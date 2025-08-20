@@ -11,6 +11,41 @@ protected:
 	static void _bind_methods();
 
 public:
+	// These are a superset of the directions found in Godot's Vector3 type.
+	// These align with the G4MF specification: https://github.com/godot-dimensions/g4mf/blob/main/specification/parts/coordinate_system.md
+	static const VectorN DIR_RIGHT;
+	static const VectorN DIR_LEFT;
+	static const VectorN DIR_UP;
+	static const VectorN DIR_DOWN;
+	static const VectorN DIR_BACK;
+	static const VectorN DIR_FORWARD;
+	static const VectorN DIR_ANA;
+	static const VectorN DIR_KATA;
+	static const VectorN DIR_SURSUM;
+	static const VectorN DIR_DEORSUM;
+
+	static const VectorN MODEL_LEFT_SIDE;
+	static const VectorN MODEL_RIGHT_SIDE;
+	static const VectorN MODEL_TOP_SIDE;
+	static const VectorN MODEL_BOTTOM_SIDE;
+	static const VectorN MODEL_FRONT_SIDE;
+	static const VectorN MODEL_REAR_SIDE;
+	static const VectorN MODEL_ANA_SIDE;
+	static const VectorN MODEL_KATA_SIDE;
+	static const VectorN MODEL_SURSUM_SIDE;
+	static const VectorN MODEL_DEORSUM_SIDE;
+
+	static const VectorN CARDINAL_EAST;
+	static const VectorN CARDINAL_WEST;
+	static const VectorN CARDINAL_ZENITH;
+	static const VectorN CARDINAL_NADIR;
+	static const VectorN CARDINAL_SOUTH;
+	static const VectorN CARDINAL_NORTH;
+	static const VectorN CARDINAL_ANTH;
+	static const VectorN CARDINAL_KENTH;
+	static const VectorN CARDINAL_SURTH;
+	static const VectorN CARDINAL_DEORTH;
+
 	// Cosmetic functions.
 	static Color axis_color(int64_t p_axis);
 	static String axis_letter(int64_t p_axis);
@@ -56,6 +91,7 @@ public:
 	static void multiply_scalar_and_add_in_place(const VectorN &p_vector, const double p_scalar, VectorN &r_result);
 	static VectorN negate(const VectorN &p_vector);
 	static VectorN normalized(const VectorN &p_vector);
+	static VectorN one(const int64_t p_dimension);
 	static VectorN perpendicular(const Vector<VectorN> &p_input_vectors);
 	static VectorN perpendicular_bind(const TypedArray<VectorN> &p_input_vectors);
 	static VectorN posmod(const VectorN &p_vector, const double p_mod);

@@ -337,6 +337,13 @@
 				Returns a new VectorN ([PackedFloat64Array]) that is the normalized version of the input vector. The returned vector will have a length of [code]1.0[/code], or [code]0.0[/code] if the input vector is a zero vector.
 			</description>
 		</method>
+		<method name="one" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) that is filled with [code]1.0[/code] for each component. The dimension of the vector is defined by [param dimension]. For example, [code]one(3)[/code] will return [code][1.0, 1.0, 1.0][/code].
+			</description>
+		</method>
 		<method name="perpendicular" qualifiers="static">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="input_vectors" type="PackedFloat64Array[]" />

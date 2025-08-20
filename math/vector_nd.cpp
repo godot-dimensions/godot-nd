@@ -8,6 +8,42 @@
 #include "core/variant/typed_array.h"
 #endif
 
+// These are a superset of the directions found in Godot's Vector3 type.
+// These align with the G4MF specification: https://github.com/godot-dimensions/g4mf/blob/main/specification/parts/coordinate_system.md
+
+const VectorN VectorND::DIR_RIGHT = VectorN{ 1 };
+const VectorN VectorND::DIR_LEFT = VectorN{ -1 };
+const VectorN VectorND::DIR_UP = VectorN{ 0, 1 };
+const VectorN VectorND::DIR_DOWN = VectorN{ 0, -1 };
+const VectorN VectorND::DIR_BACK = VectorN{ 0, 0, 1 };
+const VectorN VectorND::DIR_FORWARD = VectorN{ 0, 0, -1 };
+const VectorN VectorND::DIR_ANA = VectorN{ 0, 0, 0, 1 };
+const VectorN VectorND::DIR_KATA = VectorN{ 0, 0, 0, -1 };
+const VectorN VectorND::DIR_SURSUM = VectorN{ 0, 0, 0, 0, 1 };
+const VectorN VectorND::DIR_DEORSUM = VectorN{ 0, 0, 0, 0, -1 };
+
+const VectorN VectorND::MODEL_LEFT_SIDE = VectorN{ 1 };
+const VectorN VectorND::MODEL_RIGHT_SIDE = VectorN{ -1 };
+const VectorN VectorND::MODEL_TOP_SIDE = VectorN{ 0, 1 };
+const VectorN VectorND::MODEL_BOTTOM_SIDE = VectorN{ 0, -1 };
+const VectorN VectorND::MODEL_FRONT_SIDE = VectorN{ 0, 0, 1 };
+const VectorN VectorND::MODEL_REAR_SIDE = VectorN{ 0, 0, -1 };
+const VectorN VectorND::MODEL_ANA_SIDE = VectorN{ 0, 0, 0, 1 };
+const VectorN VectorND::MODEL_KATA_SIDE = VectorN{ 0, 0, 0, -1 };
+const VectorN VectorND::MODEL_SURSUM_SIDE = VectorN{ 0, 0, 0, 0, 1 };
+const VectorN VectorND::MODEL_DEORSUM_SIDE = VectorN{ 0, 0, 0, 0, -1 };
+
+const VectorN VectorND::CARDINAL_EAST = VectorN{ 1 };
+const VectorN VectorND::CARDINAL_WEST = VectorN{ -1 };
+const VectorN VectorND::CARDINAL_ZENITH = VectorN{ 0, 1 };
+const VectorN VectorND::CARDINAL_NADIR = VectorN{ 0, -1 };
+const VectorN VectorND::CARDINAL_SOUTH = VectorN{ 0, 0, 1 };
+const VectorN VectorND::CARDINAL_NORTH = VectorN{ 0, 0, -1 };
+const VectorN VectorND::CARDINAL_ANTH = VectorN{ 0, 0, 0, 1 };
+const VectorN VectorND::CARDINAL_KENTH = VectorN{ 0, 0, 0, -1 };
+const VectorN VectorND::CARDINAL_SURTH = VectorN{ 0, 0, 0, 0, 1 };
+const VectorN VectorND::CARDINAL_DEORTH = VectorN{ 0, 0, 0, 0, -1 };
+
 // Cosmetic functions.
 
 float _get_axis_color_hue_nd(int64_t p_index) {
@@ -539,6 +575,15 @@ VectorN VectorND::normalized(const VectorN &p_vector) {
 	return norm;
 }
 
+VectorN VectorND::one(const int64_t p_dimension) {
+	VectorN filled_vector;
+	filled_vector.resize(p_dimension);
+	for (int64_t i = 0; i < p_dimension; i++) {
+		filled_vector.set(i, 1.0);
+	}
+	return filled_vector;
+}
+
 VectorN VectorND::perpendicular(const Vector<VectorN> &p_input_vectors) {
 	// Handle edge cases and determine if the input is valid.
 	ERR_FAIL_COND_V_MSG(p_input_vectors.is_empty(), VectorN(), "VectorND.perpendicular: Cannot compute a vector perpendicular to nothing.");
@@ -918,6 +963,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_scalar", "vector", "scalar"), &VectorND::multiply_scalar);
 	ClassDB::bind_static_method("VectorND", D_METHOD("negate", "vector"), &VectorND::negate);
 	ClassDB::bind_static_method("VectorND", D_METHOD("normalized", "vector"), &VectorND::normalized);
+	ClassDB::bind_static_method("VectorND", D_METHOD("one", "dimension"), &VectorND::one);
 	ClassDB::bind_static_method("VectorND", D_METHOD("perpendicular", "input_vectors"), &VectorND::perpendicular_bind);
 	ClassDB::bind_static_method("VectorND", D_METHOD("posmod", "vector", "mod"), &VectorND::posmod);
 	ClassDB::bind_static_method("VectorND", D_METHOD("posmodv", "vector", "modv"), &VectorND::posmodv);
