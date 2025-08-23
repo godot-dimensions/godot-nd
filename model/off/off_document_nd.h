@@ -28,10 +28,20 @@ class OFFDocumentND : public Resource {
 	Vector<Vector<PackedInt32Array>> _calculate_cell_vertex_indices();
 	Vector<Vector<PackedInt32Array>> _calculate_simplex_vertex_indices(const Vector<Vector<PackedInt32Array>> &p_cell_vertex_indices);
 
+	static Ref<OFFDocumentND> _import_load_from_raw_text(const String &p_raw_text, const String &p_path);
+
 protected:
 	static void _bind_methods();
 
 public:
+	void export_save_to_file(const String &p_path);
+
+	static Ref<OFFDocumentND> import_load_from_byte_array(const PackedByteArray &p_data);
+	static Ref<OFFDocumentND> import_load_from_file(const String &p_path);
+	Ref<ArrayCellMeshND> import_generate_array_cell_mesh_nd();
+	Ref<ArrayWireMeshND> import_generate_wire_mesh_nd(const bool p_deduplicate_edges = true);
+	Node *import_generate_node(const bool p_deduplicate_edges = true);
+
 	Vector<PackedColorArray> get_cell_colors() const { return _cell_colors; }
 	void set_cell_colors(const Vector<PackedColorArray> &p_cell_colors) { _cell_colors = p_cell_colors; }
 
@@ -43,11 +53,4 @@ public:
 
 	Vector<VectorN> get_vertices() const { return _vertices; }
 	void set_vertices(const Vector<VectorN> &p_vertices) { _vertices = p_vertices; }
-
-	Ref<ArrayCellMeshND> generate_array_cell_mesh_nd();
-	Ref<ArrayWireMeshND> generate_wire_mesh_nd(const bool p_deduplicate_edges = true);
-	Node *generate_node(const bool p_deduplicate_edges = true);
-
-	static Ref<OFFDocumentND> load_from_file(const String &p_path);
-	void save_to_file(const String &p_path);
 };

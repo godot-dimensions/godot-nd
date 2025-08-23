@@ -159,7 +159,7 @@ Vector<Vector<PackedInt32Array>> OFFDocumentND::_calculate_simplex_vertex_indice
 	return ret;
 }
 
-Ref<ArrayCellMeshND> OFFDocumentND::generate_array_cell_mesh_nd() {
+Ref<ArrayCellMeshND> OFFDocumentND::import_generate_array_cell_mesh_nd() {
 	Ref<ArrayCellMeshND> cell_mesh;
 	cell_mesh.instantiate();
 	cell_mesh->set_dimension(_dimension);
@@ -200,7 +200,7 @@ Ref<ArrayCellMeshND> OFFDocumentND::generate_array_cell_mesh_nd() {
 	return cell_mesh;
 }
 
-Ref<ArrayWireMeshND> OFFDocumentND::generate_wire_mesh_nd(const bool p_deduplicate_edges) {
+Ref<ArrayWireMeshND> OFFDocumentND::import_generate_wire_mesh_nd(const bool p_deduplicate_edges) {
 	Ref<ArrayWireMeshND> wire_mesh;
 	wire_mesh.instantiate();
 	wire_mesh->set_vertices(_vertices);
@@ -232,10 +232,10 @@ Ref<ArrayWireMeshND> OFFDocumentND::generate_wire_mesh_nd(const bool p_deduplica
 	return wire_mesh;
 }
 
-Node *OFFDocumentND::generate_node(const bool p_deduplicate_edges) {
+Node *OFFDocumentND::import_generate_node(const bool p_deduplicate_edges) {
 	MeshInstanceND *mesh_instance_nd = memnew(MeshInstanceND);
 	mesh_instance_nd->set_dimension(_dimension);
-	Ref<ArrayWireMeshND> wire_mesh = generate_wire_mesh_nd(p_deduplicate_edges);
+	Ref<ArrayWireMeshND> wire_mesh = import_generate_wire_mesh_nd(p_deduplicate_edges);
 	mesh_instance_nd->set_mesh(wire_mesh);
 	return mesh_instance_nd;
 }
@@ -246,18 +246,36 @@ enum class OFFDocumentNDReadState {
 	READ_CELLS,
 };
 
-Ref<OFFDocumentND> OFFDocumentND::load_from_file(const String &p_path) {
-	Ref<OFFDocumentND> off_document;
+Ref<OFFDocumentND> OFFDocumentND::import_load_from_byte_array(const PackedByteArray &p_data) {
+	ERR_FAIL_COND_V_MSG(p_data.is_empty(), Ref<OFFDocumentND>(), "OFF import: Error: Given byte array is empty.");
+#if GDEXTENSION
+	const String as_string = p_data.get_string_from_utf8();
+#elif GODOT_MODULE
+	String as_string;
+	if (p_data.size() > 0) {
+		const uint8_t *r = p_data.ptr();
+		as_string.parse_utf8((const char *)r, p_data.size(), true);
+	}
+#endif
+	return OFFDocumentND::_import_load_from_raw_text(as_string, "(in-memory data)");
+}
+
+Ref<OFFDocumentND> OFFDocumentND::import_load_from_file(const String &p_path) {
 #if GDEXTENSION
 	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
-	ERR_FAIL_COND_V_MSG(file.is_null(), off_document, "Error: Could not open file " + p_path + ".");
+	ERR_FAIL_COND_V_MSG(file.is_null(), Ref<OFFDocumentND>(), "OFF import: Error: Could not open file " + p_path + ".");
 #elif GODOT_MODULE
 	Error err;
 	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ, &err);
-	ERR_FAIL_COND_V_MSG(err != OK, off_document, "Error: Could not open file " + p_path + ".");
+	ERR_FAIL_COND_V_MSG(err != OK, Ref<OFFDocumentND>(), "OFF import: Error: Could not open file " + p_path + ".");
 #endif
+	const String file_text = file->get_as_text();
+	return _import_load_from_raw_text(file_text, p_path);
+}
+
+Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw_text, const String &p_path) {
+	Ref<OFFDocumentND> off_document;
 	off_document.instantiate();
-	bool can_warn = true;
 	OFFDocumentNDReadState read_state = OFFDocumentNDReadState::READ_SIZE;
 	Vector<PackedInt32Array> dim_cell_face_indices;
 	PackedColorArray dim_cell_colors;
@@ -267,8 +285,9 @@ Ref<OFFDocumentND> OFFDocumentND::load_from_file(const String &p_path) {
 	int current_cell_index = 0;
 	int current_vertex_index = 0;
 	int vertex_count = 0;
-	while (!file->eof_reached()) {
-		const String line = file->get_line();
+	bool can_warn = true;
+	const PackedStringArray lines = p_raw_text.split("\n", false);
+	for (const String &line : lines) {
 		if (line.is_empty() || line.begins_with("#")) {
 			continue;
 		}
@@ -416,7 +435,7 @@ String _cell_dimension_index_to_off_comment(const int p_dimension) {
 	}
 }
 
-void OFFDocumentND::save_to_file(const String &p_path) {
+void OFFDocumentND::export_save_to_file(const String &p_path) {
 	if (_edge_count == 0) {
 		_count_unique_edges_from_faces();
 	}
@@ -462,14 +481,15 @@ void OFFDocumentND::save_to_file(const String &p_path) {
 }
 
 void OFFDocumentND::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("export_save_to_file", "path"), &OFFDocumentND::export_save_to_file);
+
+	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_load_from_byte_array", "data"), &OFFDocumentND::import_load_from_byte_array);
+	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_load_from_file", "path"), &OFFDocumentND::import_load_from_file);
+	ClassDB::bind_method(D_METHOD("import_generate_array_cell_mesh_nd"), &OFFDocumentND::import_generate_array_cell_mesh_nd);
+	ClassDB::bind_method(D_METHOD("import_generate_wire_mesh_nd", "deduplicate_edges"), &OFFDocumentND::import_generate_wire_mesh_nd, DEFVAL(true));
+	ClassDB::bind_method(D_METHOD("import_generate_node", "deduplicate_edges"), &OFFDocumentND::import_generate_node, DEFVAL(true));
+
 	ClassDB::bind_method(D_METHOD("get_edge_count"), &OFFDocumentND::get_edge_count);
 	ClassDB::bind_method(D_METHOD("set_edge_count", "edge_count"), &OFFDocumentND::set_edge_count);
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "edge_count"), "set_edge_count", "get_edge_count");
-
-	ClassDB::bind_method(D_METHOD("generate_array_cell_mesh_nd"), &OFFDocumentND::generate_array_cell_mesh_nd);
-	ClassDB::bind_method(D_METHOD("generate_wire_mesh_nd", "deduplicate_edges"), &OFFDocumentND::generate_wire_mesh_nd, DEFVAL(true));
-	ClassDB::bind_method(D_METHOD("generate_node", "deduplicate_edges"), &OFFDocumentND::generate_node, DEFVAL(true));
-
-	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("load_from_file", "path"), &OFFDocumentND::load_from_file);
-	ClassDB::bind_method(D_METHOD("save_to_file", "path"), &OFFDocumentND::save_to_file);
 }
