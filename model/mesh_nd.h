@@ -18,6 +18,8 @@ class MeshND : public Resource {
 	bool _is_mesh_data_valid = false;
 
 protected:
+	// Slightly under the 32-bit integer limit to avoid overflows.
+	static constexpr int64_t MAX_VERTICES = 2147483640;
 	static void _bind_methods();
 	virtual bool validate_mesh_data();
 

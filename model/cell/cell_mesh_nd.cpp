@@ -150,9 +150,12 @@ PackedInt32Array CellMeshND::get_cell_indices() {
 
 Vector<VectorN> CellMeshND::get_cell_positions() {
 	if (_cell_positions_cache.is_empty()) {
+		const PackedInt32Array cell_indices = get_cell_indices();
 		const Vector<VectorN> vertices = get_vertices();
-		for (const int i : get_cell_indices()) {
-			_cell_positions_cache.append(vertices[i]);
+		const int32_t vertices_count = vertices.size();
+		for (const int cell_index : cell_indices) {
+			ERR_FAIL_INDEX_V(cell_index, vertices_count, _cell_positions_cache);
+			_cell_positions_cache.append(vertices[cell_index]);
 		}
 	}
 	return _cell_positions_cache;
@@ -245,7 +248,9 @@ Vector<VectorN> CellMeshND::get_edge_positions() {
 	if (_edge_positions_cache.is_empty()) {
 		const PackedInt32Array edge_indices = get_edge_indices();
 		const Vector<VectorN> vertices = get_vertices();
+		const int32_t vertices_count = vertices.size();
 		for (const int edge_index : edge_indices) {
+			ERR_FAIL_INDEX_V(edge_index, vertices_count, _edge_positions_cache);
 			_edge_positions_cache.append(vertices[edge_index]);
 		}
 	}

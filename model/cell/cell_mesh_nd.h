@@ -31,8 +31,8 @@ public:
 	virtual int get_cell_count();
 	virtual int get_indices_per_cell() const;
 	virtual PackedInt32Array get_cell_indices();
-	virtual Vector<VectorN> get_cell_positions();
 	virtual Vector<VectorN> get_cell_normals();
+	Vector<VectorN> get_cell_positions();
 
 	static Vector<PackedInt32Array> decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_cell_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_cell_normals);
 
