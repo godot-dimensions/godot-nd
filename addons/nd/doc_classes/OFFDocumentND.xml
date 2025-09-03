@@ -11,6 +11,12 @@
 		<link title="Wikipedia OFF file format">https://en.wikipedia.org/wiki/OFF_(file_format)</link>
 	</tutorials>
 	<methods>
+		<method name="export_save_to_byte_array">
+			<return type="PackedByteArray" />
+			<description>
+				Saves the OFF data to an in-memory byte array, in the OFF format (".off" file extension) with any dimension (4OFF, 5OFF, etc). If [member edge_count] is zero, the edge count will be calculated from the face data.
+			</description>
+		</method>
 		<method name="export_save_to_file">
 			<return type="void" />
 			<param index="0" name="path" type="String" />

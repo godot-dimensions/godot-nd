@@ -439,6 +439,11 @@ String _cell_dimension_index_to_off_comment(const int p_dimension) {
 	}
 }
 
+PackedByteArray OFFDocumentND::export_save_to_byte_array() {
+	const String file_contents = _export_save_to_string();
+	return file_contents.to_utf8_buffer();
+}
+
 void OFFDocumentND::export_save_to_file(const String &p_path) {
 	if (_edge_count == 0) {
 		_count_unique_edges_from_faces();
@@ -451,10 +456,20 @@ void OFFDocumentND::export_save_to_file(const String &p_path) {
 	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::WRITE, &err);
 	ERR_FAIL_COND_MSG(err != OK, "Error: Could not open file " + p_path + " for writing.");
 #endif
+	const String file_contents = _export_save_to_string();
+	file->store_string(file_contents);
+	file->close();
+}
+
+String OFFDocumentND::_export_save_to_string() {
+	if (_edge_count == 0) {
+		_count_unique_edges_from_faces();
+	}
+	PackedStringArray lines;
 	if (_dimension == 3) {
-		file->store_line("OFF");
+		lines.append("OFF");
 	} else {
-		file->store_line(String::num_int64(_dimension) + "OFF");
+		lines.append(String::num_int64(_dimension) + "OFF");
 	}
 	String size_line = String::num_int64(_vertices.size());
 	if (_cell_face_indices.size() > 0) {
@@ -464,27 +479,29 @@ void OFFDocumentND::export_save_to_file(const String &p_path) {
 			size_line += " " + String::num_int64(dim_cell_face_indices.size());
 		}
 	}
-	file->store_line(size_line);
-	file->store_line("\n# Vertices");
+	lines.append(size_line);
+	lines.append("\n# Vertices");
 	for (int i = 0; i < _vertices.size(); i++) {
-		file->store_line(_vectorn_to_off_nd(_vertices[i]));
+		lines.append(_vectorn_to_off_nd(_vertices[i]));
 	}
 	for (int dim = 0; dim < _cell_face_indices.size(); dim++) {
 		Vector<PackedInt32Array> dim_cell_face_indices = _cell_face_indices[dim];
-		ERR_FAIL_COND(dim_cell_face_indices.size() == 0);
+		ERR_FAIL_COND_V(dim_cell_face_indices.size() == 0, String());
 		PackedColorArray dim_cell_colors = _cell_colors[dim];
-		file->store_line(_cell_dimension_index_to_off_comment(dim));
+		lines.append(_cell_dimension_index_to_off_comment(dim));
 		for (int i = 0; i < dim_cell_face_indices.size(); i++) {
 			String cell_str = _cell_to_off_string_nd(dim_cell_face_indices[i]);
 			if (i < dim_cell_colors.size() && !dim_cell_colors[i].is_equal_approx(Color(1.0f, 1.0f, 1.0f))) {
 				cell_str += _color_to_off_string_nd(dim_cell_colors[i]);
 			}
-			file->store_line(cell_str);
+			lines.append(cell_str);
 		}
 	}
+	return String("\n").join(lines) + String("\n");
 }
 
 void OFFDocumentND::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("export_save_to_byte_array"), &OFFDocumentND::export_save_to_byte_array);
 	ClassDB::bind_method(D_METHOD("export_save_to_file", "path"), &OFFDocumentND::export_save_to_file);
 
 	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_load_from_byte_array", "data"), &OFFDocumentND::import_load_from_byte_array);

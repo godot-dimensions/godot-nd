@@ -28,12 +28,14 @@ class OFFDocumentND : public Resource {
 	Vector<Vector<PackedInt32Array>> _calculate_cell_vertex_indices();
 	Vector<Vector<PackedInt32Array>> _calculate_simplex_vertex_indices(const Vector<Vector<PackedInt32Array>> &p_cell_vertex_indices);
 
+	String _export_save_to_string();
 	static Ref<OFFDocumentND> _import_load_from_raw_text(const String &p_raw_text, const String &p_path);
 
 protected:
 	static void _bind_methods();
 
 public:
+	PackedByteArray export_save_to_byte_array();
 	void export_save_to_file(const String &p_path);
 
 	static Ref<OFFDocumentND> import_load_from_byte_array(const PackedByteArray &p_data);
