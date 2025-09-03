@@ -254,7 +254,11 @@ Ref<OFFDocumentND> OFFDocumentND::import_load_from_byte_array(const PackedByteAr
 	String as_string;
 	if (p_data.size() > 0) {
 		const uint8_t *r = p_data.ptr();
+#if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 5
 		as_string.parse_utf8((const char *)r, p_data.size(), true);
+#else
+		as_string = String::utf8((const char *)r, p_data.size());
+#endif
 	}
 #endif
 	return OFFDocumentND::_import_load_from_raw_text(as_string, "(in-memory data)");
