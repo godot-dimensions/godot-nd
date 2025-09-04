@@ -90,7 +90,7 @@ private:
 	MarkerND *_origin_marker = nullptr;
 	Label *_dimensions_label = nullptr;
 	Ref<ConfigFile> _nd_editor_config_file;
-	String _nd_editor_config_file_path;
+	String _nd_editor_config_file_path = "";
 
 	PackedColorArray _axis_colors;
 	double _information_label_auto_hide_time = 0.0;

@@ -56,7 +56,7 @@ private:
 	int _secondary_axis = -1;
 
 	Ref<TransformND> _old_transform;
-	Variant _transform_reference_value;
+	Variant _transform_reference_value = Variant();
 	TypedArray<Node> _selected_top_nodes;
 	Vector<Ref<TransformND>> _selected_top_node_old_transforms;
 	PackedColorArray _axis_colors;

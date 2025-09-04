@@ -16,7 +16,7 @@ class EditorViewportRotationND : public Control {
 	};
 
 	struct Axis2D {
-		Vector2 screen_point;
+		Vector2 screen_point = Vector2();
 		float z_index = 0.0f;
 		float angle = 0.0f; // Only used by the PLANE axis type.
 		AxisType2D axis_type = AXIS_TYPE_CIRCLE_POSITIVE;
@@ -33,8 +33,8 @@ class EditorViewportRotationND : public Control {
 	EditorMainScreenND *_editor_main_screen = nullptr;
 	EditorMainViewportND *_editor_main_viewport = nullptr;
 	PackedColorArray _axis_colors;
-	Axis2D _focused_axis;
-	Vector2i _orbiting_mouse_start;
+	Axis2D _focused_axis = Axis2D();
+	Vector2i _orbiting_mouse_start = Vector2i();
 	int _dimension = -1;
 	int _orbiting_mouse_button_index = -1;
 	double _editor_scale = 1.0f;

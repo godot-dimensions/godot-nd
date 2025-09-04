@@ -23,7 +23,7 @@ class EditorCameraSettingsND : public Object {
 	double _perp_fade_slope = 1.0;
 
 	Ref<ConfigFile> _nd_editor_config_file;
-	String _nd_editor_config_file_path;
+	String _nd_editor_config_file_path = "";
 	String _rendering_engine = "";
 
 protected:

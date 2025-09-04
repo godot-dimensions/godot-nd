@@ -12,7 +12,7 @@ class EditorCameraND : public NodeND {
 
 	CameraND *_camera = nullptr;
 	Ref<TransformND> _target_transform;
-	double _pitch_angle;
+	double _pitch_angle = 0.0; // Will be set in the constructor.
 
 	double _positive_clip_near = 0.05;
 	double _target_speed_and_zoom = 4.0;
