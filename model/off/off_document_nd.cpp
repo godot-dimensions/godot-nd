@@ -11,6 +11,9 @@
 
 void OFFDocumentND::_count_unique_edges_from_faces() {
 	_edge_count = 0;
+	if (_cell_face_indices.size() == 0) {
+		return;
+	}
 	HashSet<Vector2i> unique_items;
 	Vector<PackedInt32Array> face_cell_indices = _cell_face_indices[0];
 	for (int face_number = 0; face_number < face_cell_indices.size(); face_number++) {
@@ -386,7 +389,7 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 	return off_document;
 }
 
-String _vectorn_to_off_nd(const VectorN &p_vertex) {
+String OFFDocumentND::_vector_n_to_off_nd(const VectorN &p_vertex) {
 	ERR_FAIL_COND_V(p_vertex.size() == 0, String());
 	String ret = String::num(p_vertex[0]);
 	if (p_vertex[0] == (real_t)(int64_t)p_vertex[0]) {
@@ -401,11 +404,11 @@ String _vectorn_to_off_nd(const VectorN &p_vertex) {
 	return ret;
 }
 
-String _color_to_off_string_nd(const Color &p_color) {
+String OFFDocumentND::_color_to_off_string_nd(const Color &p_color) {
 	return " " + String::num_int64(p_color.r * 255.0f) + " " + String::num_int64(p_color.g * 255.0f) + " " + String::num_int64(p_color.b * 255.0f);
 }
 
-String _cell_to_off_string_nd(const PackedInt32Array &p_face) {
+String OFFDocumentND::_cell_to_off_string_nd(const PackedInt32Array &p_face) {
 	String ret = String::num(p_face.size());
 	for (int i = 0; i < p_face.size(); i++) {
 		ret += String(" ") + String::num_int64(p_face[i]);
@@ -413,7 +416,7 @@ String _cell_to_off_string_nd(const PackedInt32Array &p_face) {
 	return ret;
 }
 
-String _cell_dimension_index_to_off_comment(const int p_dimension) {
+String OFFDocumentND::_cell_dimension_index_to_off_comment(const int p_dimension) {
 	// Skip 0D vertices and 1D edges, the former is handled separately and the latter is not stored in the OFF file.
 	switch (p_dimension) {
 		case 0:
@@ -445,9 +448,6 @@ PackedByteArray OFFDocumentND::export_save_to_byte_array() {
 }
 
 void OFFDocumentND::export_save_to_file(const String &p_path) {
-	if (_edge_count == 0) {
-		_count_unique_edges_from_faces();
-	}
 #if GDEXTENSION
 	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::WRITE);
 	ERR_FAIL_COND_MSG(file.is_null(), "Error: Could not open file " + p_path + " for writing.");
@@ -482,7 +482,7 @@ String OFFDocumentND::_export_save_to_string() {
 	lines.append(size_line);
 	lines.append("\n# Vertices");
 	for (int i = 0; i < _vertices.size(); i++) {
-		lines.append(_vectorn_to_off_nd(_vertices[i]));
+		lines.append(_vector_n_to_off_nd(_vertices[i]));
 	}
 	for (int dim = 0; dim < _cell_face_indices.size(); dim++) {
 		Vector<PackedInt32Array> dim_cell_face_indices = _cell_face_indices[dim];
