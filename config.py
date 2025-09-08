@@ -10,6 +10,7 @@ def configure(env):
 def get_doc_classes():
 	return [
 		# General.
+		"BasisND",
 		"CameraND",
 		"GeometryND",
 		"RenderingEngineND",

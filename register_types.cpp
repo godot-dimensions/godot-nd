@@ -90,6 +90,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(MathND);
 		GDREGISTER_CLASS(PlaneND);
 		GDREGISTER_CLASS(RectND);
+		GDREGISTER_CLASS(BasisND);
 		GDREGISTER_CLASS(TransformND);
 		GDREGISTER_CLASS(VectorND);
 		// Render.

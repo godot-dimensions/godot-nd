@@ -72,14 +72,14 @@
 			<return type="TransformND" />
 			<param index="0" name="transform" type="Transform2D" />
 			<description>
-				Creates a 2-dimensional [TransformND] from a [Transform2D]. The basis matrix will be a 2x2 matrix, and the origin will be a 2-dimensional vector.
+				Creates a 2-dimensional [TransformND] from a 2D [Transform2D]. The basis matrix will be a 2x2 matrix, and the origin will be a 2-dimensional vector.
 			</description>
 		</method>
 		<method name="from_3d" qualifiers="static">
 			<return type="TransformND" />
 			<param index="0" name="transform" type="Transform3D" />
 			<description>
-				Creates a 3-dimensional [TransformND] from a [Transform3D]. The basis matrix will be a 3x3 matrix, and the origin will be a 3-dimensional vector.
+				Creates a 3-dimensional [TransformND] from a 3D [Transform3D]. The basis matrix will be a 3x3 matrix, and the origin will be a 3-dimensional vector.
 			</description>
 		</method>
 		<method name="from_4d" qualifiers="static">
@@ -87,7 +87,7 @@
 			<param index="0" name="basis" type="Projection" />
 			<param index="1" name="origin" type="Vector4" />
 			<description>
-				Creates a 4-dimensional [TransformND] from a [Projection] basis matrix and a [Vector4] origin vector. The basis matrix will be a 4x4 matrix, and the origin will be a 4-dimensional vector.
+				Creates a 4-dimensional [TransformND] from a 4D [Projection] basis matrix and a [Vector4] origin vector. The basis matrix will be a 4x4 matrix, and the origin will be a 4-dimensional vector.
 			</description>
 		</method>
 		<method name="from_position" qualifiers="static">
@@ -104,7 +104,7 @@
 			<param index="2" name="rot_to" type="int" />
 			<param index="3" name="rot_angle" type="float" />
 			<description>
-				Creates a transform with both a position and a rotation. The rotation is around the axis from dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the basis matrix is the maximum of [param rot_from] and [param rot_to] plus one.
+				Creates a transform with both a position and a rotation. The rotation is in the plane specified by dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the basis matrix is the maximum of [param rot_from] and [param rot_to] plus one.
 			</description>
 		</method>
 		<method name="from_position_rotation_scale" qualifiers="static">
@@ -115,7 +115,7 @@
 			<param index="3" name="rot_angle" type="float" />
 			<param index="4" name="scale" type="PackedFloat64Array" />
 			<description>
-				Creates a transform with a position, rotation, and scale. The rotation is around the axis from dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the basis matrix is the maximum of [param rot_from] plus one, [param rot_to] plus one, and the length of the scale vector.
+				Creates a transform with a position, rotation, and scale. The rotation is in the plane specified by dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the basis matrix is the maximum of [param rot_from] plus one, [param rot_to] plus one, and the length of the scale vector.
 			</description>
 		</method>
 		<method name="from_position_scale" qualifiers="static">
@@ -132,8 +132,18 @@
 			<param index="1" name="rot_to" type="int" />
 			<param index="2" name="rot_angle" type="float" />
 			<description>
-				Creates a rotation matrix that rotates around the axis from dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the returned transform is the maximum of [param rot_from] and [param rot_to] plus one.
+				Creates a rotation matrix that rotates in the plane specified by dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the returned transform is the maximum of [param rot_from] and [param rot_to] plus one.
 				For parity with how 3D rotations work, you should swap the indices if they have an even separation. For example, use [code]from_rotation(0, 1, angle)[/code], [code]from_rotation(1, 2, angle)[/code], but use [code]from_rotation(2, 0, angle)[/code] instead of [code]from_rotation(0, 2, angle)[/code]. This function will not perform swapping for you, it will conform to the convention of the indices you provide.
+			</description>
+		</method>
+		<method name="from_rotation_scale" qualifiers="static">
+			<return type="TransformND" />
+			<param index="0" name="rot_from" type="int" />
+			<param index="1" name="rot_to" type="int" />
+			<param index="2" name="rot_angle" type="float" />
+			<param index="3" name="scale" type="PackedFloat64Array" />
+			<description>
+				Creates a transform with both a rotation and a scale. The rotation is in the plane specified by dimension [param rot_from] to dimension [param rot_to] by the specified [param rot_angle] in radians. The indices are zero-indexed, and the dimension of the basis matrix is the maximum of [param rot_from] plus one, [param rot_to] plus one, and the length of the scale vector.
 			</description>
 		</method>
 		<method name="from_scale" qualifiers="static">
@@ -151,12 +161,6 @@
 				Creates a rotation matrix that rotates 90 degrees in the plane from [param rot_from] to [param rot_to], effectively swapping the two axes, but negating one to keep the determinant positive.
 			</description>
 		</method>
-		<method name="get_all_basis_columns" qualifiers="const">
-			<return type="PackedFloat64Array[]" />
-			<description>
-				Returns all the basis columns as an array of VectorN ([PackedFloat64Array]) objects.
-			</description>
-		</method>
 		<method name="get_basis_column" qualifiers="const">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="index" type="int" />
@@ -167,7 +171,7 @@
 		<method name="get_basis_column_count" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the amount of basis columns.
+				Returns the amount of basis columns. This is the same as the input dimension of the basis.
 			</description>
 		</method>
 		<method name="get_basis_column_raw" qualifiers="const">
@@ -201,7 +205,7 @@
 		<method name="get_basis_row_count" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the amount of basis rows.
+				Returns the amount of basis rows. This is the same as the output dimension of the basis.
 			</description>
 		</method>
 		<method name="get_dimension" qualifiers="const">
@@ -376,13 +380,6 @@
 				Returns a copy of the transform scaled uniformly by the specified scale in local space. This is equivalent to multiplying every element of the basis matrix by the scale. The origin vector is not affected.
 			</description>
 		</method>
-		<method name="set_all_basis_columns">
-			<return type="void" />
-			<param index="0" name="columns" type="PackedFloat64Array[]" />
-			<description>
-				Sets all the basis columns from an array of VectorN ([PackedFloat64Array]) objects.
-			</description>
-		</method>
 		<method name="set_basis_column">
 			<return type="void" />
 			<param index="0" name="index" type="int" />
@@ -535,6 +532,24 @@
 		</method>
 	</methods>
 	<members>
+		<member name="basis" type="BasisND" setter="set_basis" getter="get_basis">
+			The local basis of the transform, packed into a [BasisND] resource containing VectorN (PackedFloat64Array) column vectors. Changes to the resource after this call will not affect the node's transform. Compared with [member basis_columns], this is less efficient but includes helper methods for manipulating the basis.
+			[b]Note:[/b] This returns a copy of the basis. Code like [code]transform.basis.set_element(1, 2, 3.0)[/code] will not work. You need to copy this to a local variable, modify it, and then set it back. For example:
+			[codeblock]
+			var b: Basis = transform.basis
+			b.set_element(1, 2, 3.0)
+			transform.basis = b
+			[/codeblock]
+		</member>
+		<member name="basis_columns" type="PackedFloat64Array[]" setter="set_all_basis_columns" getter="get_all_basis_columns" default="[]">
+			The local basis of the transform, as an array of VectorN (PackedFloat64Array) column vectors. The amount of columns is the same as [member input_dimension] and the amount of rows is the same as [member output_dimension] (unless the basis is a jagged array).
+			[b]Note:[/b] This returns a copy of the basis. Code like [code]transform.basis_columns[1][2] = 3.0[/code] will not work. You need to copy this to a local variable, modify it, and then set it back. For example:
+			[codeblock]
+			var b = transform.basis_columns
+			b[1][2] = 3.0
+			transform.basis_columns = b
+			[/codeblock]
+		</member>
 		<member name="origin" type="PackedFloat64Array" setter="set_origin" getter="get_origin" default="PackedFloat64Array()">
 			The origin vector of the transform. This represents the position or translation relative to the parent space.
 		</member>

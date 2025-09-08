@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../godot_nd_defines.h"
+#include "basis_nd.h"
 
 #if GDEXTENSION
 #include <godot_cpp/classes/ref_counted.hpp>
@@ -14,11 +14,18 @@ class TransformND : public RefCounted {
 	Vector<VectorN> _columns;
 	VectorN _origin;
 
+	static void _make_basis_square_in_place(Vector<VectorN> &p_basis);
+	static bool _lup_decompose(Vector<VectorN> &p_columns, PackedInt32Array &p_permutations, int p_dimension);
+	static Vector<VectorN> _lup_invert(const Vector<VectorN> &p_decomposed, const PackedInt32Array &p_permutations, int p_dimension);
+
 protected:
 	static void _bind_methods();
 
 public:
 	// Trivial getters and setters.
+	Ref<BasisND> get_basis() const;
+	void set_basis(const Ref<BasisND> &p_basis);
+
 	Vector<VectorN> get_all_basis_columns() const;
 	void set_all_basis_columns(const Vector<VectorN> &p_columns);
 

@@ -27,6 +27,7 @@ ios.release = "bin/libgodot_nd.ios.release.universal.dylib"
 
 ArrayCellMeshND = "icons/ArrayCellMeshND.svg"
 ArrayWireMeshND = "icons/ArrayWireMeshND.svg"
+BasisND = "icons/BasisND.svg"
 BoxCellMeshND = "icons/BoxCellMeshND.svg"
 BoxWireMeshND = "icons/BoxWireMeshND.svg"
 CameraND = "icons/CameraND.svg"

@@ -10,6 +10,14 @@ void NodeND::set_transform(const Ref<TransformND> &p_transform) {
 	_transform = p_transform;
 }
 
+Ref<BasisND> NodeND::get_basis() const {
+	return _transform->get_basis();
+}
+
+void NodeND::set_basis(const Ref<BasisND> &p_basis) {
+	_transform->set_basis(p_basis);
+}
+
 Vector<VectorN> NodeND::get_all_basis_columns() const {
 	return _transform->get_all_basis_columns();
 }
@@ -180,6 +188,8 @@ void NodeND::_bind_methods() {
 	// Transform getters and setters.
 	ClassDB::bind_method(D_METHOD("get_transform"), &NodeND::get_transform);
 	ClassDB::bind_method(D_METHOD("set_transform", "transform"), &NodeND::set_transform);
+	ClassDB::bind_method(D_METHOD("get_basis"), &NodeND::get_basis);
+	ClassDB::bind_method(D_METHOD("set_basis", "basis"), &NodeND::set_basis);
 	ClassDB::bind_method(D_METHOD("get_all_basis_columns"), &NodeND::get_all_basis_columns_bind);
 	ClassDB::bind_method(D_METHOD("set_all_basis_columns", "columns"), &NodeND::set_all_basis_columns_bind);
 	ClassDB::bind_method(D_METHOD("get_position"), &NodeND::get_position);
@@ -214,7 +224,8 @@ void NodeND::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "transform", PROPERTY_HINT_RESOURCE_TYPE, "TransformND", PROPERTY_USAGE_NONE), "set_transform", "get_transform");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "position", PROPERTY_HINT_NONE, "suffix:m"), "set_position", "get_position");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "basis", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array", PROPERTY_USAGE_STORAGE), "set_all_basis_columns", "get_all_basis_columns");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "basis", PROPERTY_HINT_RESOURCE_TYPE, "BasisND", PROPERTY_USAGE_NONE), "set_basis", "get_basis");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "basis_columns", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array", PROPERTY_USAGE_STORAGE), "set_all_basis_columns", "get_all_basis_columns");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "global_transform", PROPERTY_HINT_RESOURCE_TYPE, "TransformND", PROPERTY_USAGE_NONE), "set_global_transform", "get_global_transform");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "global_position", PROPERTY_HINT_NONE, "suffix:m", PROPERTY_USAGE_NONE), "set_global_position", "get_global_position");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "visible"), "set_visible", "is_visible");

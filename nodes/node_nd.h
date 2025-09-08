@@ -32,6 +32,8 @@ public:
 	// Transform getters and setters.
 	Ref<TransformND> get_transform() const;
 	void set_transform(const Ref<TransformND> &p_transform);
+	Ref<BasisND> get_basis() const;
+	void set_basis(const Ref<BasisND> &p_basis);
 	Vector<VectorN> get_all_basis_columns() const;
 	void set_all_basis_columns(const Vector<VectorN> &p_columns);
 	TypedArray<VectorN> get_all_basis_columns_bind() const;

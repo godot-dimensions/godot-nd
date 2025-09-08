@@ -29,13 +29,22 @@
 		</method>
 	</methods>
 	<members>
-		<member name="basis" type="PackedFloat64Array[]" setter="set_all_basis_columns" getter="get_all_basis_columns" default="[]">
-			The local basis of the transform, as an array of column vectors. The amount of columns is the same as [member input_dimension] and the amount of rows is the same as [member output_dimension] (unless the basis is a jagged array).
-			[b]Note:[/b] This returns a copy of the basis. Code like [code]node.basis[1][2] = 3[/code] will not work. You need to copy this to a local variable, modify it, and then set it back. For example:
+		<member name="basis" type="BasisND" setter="set_basis" getter="get_basis">
+			The local basis of the transform, packed into a [BasisND] resource containing VectorN (PackedFloat64Array) column vectors. Changes to the resource after this call will not affect the node's transform. Compared with [member basis_columns], this is less efficient but includes helper methods for manipulating the basis.
+			[b]Note:[/b] This returns a copy of the basis. Code like [code]node.basis.set_element(1, 2, 3.0)[/code] will not work. You need to copy this to a local variable, modify it, and then set it back. For example:
 			[codeblock]
-			var basis = node.basis
-			basis[1][2] = 3
-			node.basis = basis
+			var b: Basis = node.basis
+			b.set_element(1, 2, 3.0)
+			node.basis = b
+			[/codeblock]
+		</member>
+		<member name="basis_columns" type="PackedFloat64Array[]" setter="set_all_basis_columns" getter="get_all_basis_columns" default="[]">
+			The local basis of the transform, as an array of VectorN (PackedFloat64Array) column vectors column vectors. The amount of columns is the same as [member input_dimension] and the amount of rows is the same as [member output_dimension] (unless the basis is a jagged array).
+			[b]Note:[/b] This returns a copy of the basis. Code like [code]node.basis_columns[1][2] = 3.0[/code] will not work. You need to copy this to a local variable, modify it, and then set it back. For example:
+			[codeblock]
+			var b = node.basis_columns
+			b[1][2] = 3.0
+			node.basis_columns = b
 			[/codeblock]
 		</member>
 		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
@@ -53,17 +62,17 @@
 		</member>
 		<member name="input_dimension" type="int" setter="set_input_dimension" getter="get_input_dimension">
 			The input dimension of the transform. This should be the same as the output dimension of all child nodes.
-			This is the same as the number of columns in [member basis], and the same as the number of elements in [member scale_abs]. When [member dimension_mode] is DIMENSION_MODE_SQUARE, this is the same as [member dimension] and [member output_dimension].
+			This is the same as the number of columns in [member basis_columns], and the same as the number of elements in [member scale_abs]. When [member dimension_mode] is DIMENSION_MODE_SQUARE, this is the same as [member dimension] and [member output_dimension].
 		</member>
 		<member name="output_dimension" type="int" setter="set_output_dimension" getter="get_output_dimension">
 			The output dimension of the transform. This should be the same as the input dimension of the parent node.
-			This is the same as the number of rows in [member basis], and the same as the number of elements in [member position]. When [member dimension_mode] is DIMENSION_MODE_SQUARE, this is the same as [member dimension] and [member output_dimension].
+			This is the same as the number of rows in [member basis_columns], and the same as the number of elements in [member position]. When [member dimension_mode] is DIMENSION_MODE_SQUARE, this is the same as [member dimension] and [member output_dimension].
 		</member>
 		<member name="position" type="PackedFloat64Array" setter="set_position" getter="get_position" default="PackedFloat64Array()">
-			The local position of the node. The size of this array is the same as [member output_dimension] which is the same as the number of rows in [member basis] (unless the basis is a jagged array).
+			The local position of the node. The size of this array is the same as [member output_dimension] which is the same as the number of rows in [member basis_columns] (unless the basis is a jagged array).
 		</member>
 		<member name="scale_abs" type="PackedFloat64Array" setter="set_scale_abs" getter="get_scale_abs" default="PackedFloat64Array()">
-			The local absolute scale of the node. This is the length of each basis vector. The size of this array is the same as [member input_dimension] which is the same as the number of columns in [member basis].
+			The local absolute scale of the node. This is the length of each basis vector. The size of this array is the same as [member input_dimension] which is the same as the number of columns in [member basis_columns].
 		</member>
 		<member name="transform" type="TransformND" setter="set_transform" getter="get_transform">
 			The local transformation matrix of the node as a [TransformND].
