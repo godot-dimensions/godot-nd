@@ -131,13 +131,21 @@ Vector<VectorN> MeshND::get_vertices() {
 }
 
 TypedArray<VectorN> MeshND::get_vertices_bind() {
-	Vector<VectorN> vertices = get_vertices();
+	const Vector<VectorN> vertices = get_vertices();
 	TypedArray<VectorN> typed_array_vertices;
 	typed_array_vertices.resize(vertices.size());
 	for (int i = 0; i < vertices.size(); i++) {
 		typed_array_vertices[i] = vertices[i];
 	}
 	return typed_array_vertices;
+}
+
+int MeshND::get_dimension() {
+	const Vector<VectorN> vertices = get_vertices();
+	if (vertices.is_empty()) {
+		return 0;
+	}
+	return vertices[0].size();
 }
 
 void MeshND::_bind_methods() {
@@ -158,6 +166,7 @@ void MeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_edge_indices"), &MeshND::get_edge_indices);
 	ClassDB::bind_method(D_METHOD("get_edge_positions"), &MeshND::get_edge_positions_bind);
 	ClassDB::bind_method(D_METHOD("get_vertices"), &MeshND::get_vertices_bind);
+	ClassDB::bind_method(D_METHOD("get_dimension"), &MeshND::get_dimension);
 
 	GDVIRTUAL_BIND(_get_edge_indices);
 	GDVIRTUAL_BIND(_get_vertices);

@@ -26,6 +26,12 @@ void BoxWireMeshND::set_size(const VectorN &p_size) {
 	}
 }
 
+void BoxWireMeshND::set_dimension(int p_dimension) {
+	ERR_FAIL_COND_MSG(p_dimension < 0, "BoxWireMeshND: Dimension must not be negative.");
+	ERR_FAIL_COND_MSG(p_dimension > 30, "BoxWireMeshND: Too many dimensions for wireframe box.");
+	set_size(VectorND::with_dimension(_size, p_dimension));
+}
+
 PackedInt32Array BoxWireMeshND::get_edge_indices() {
 	if (_edge_indices_cache.is_empty()) {
 		const uint64_t dimension = _size.size();
@@ -72,6 +78,9 @@ Ref<WireMeshND> BoxWireMeshND::to_wire_mesh() {
 }
 
 void BoxWireMeshND::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &BoxWireMeshND::set_dimension);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension", PROPERTY_HINT_RANGE, "0,30,1", PROPERTY_USAGE_EDITOR), "set_dimension", "get_dimension");
+
 	ClassDB::bind_method(D_METHOD("get_half_extents"), &BoxWireMeshND::get_half_extents);
 	ClassDB::bind_method(D_METHOD("set_half_extents", "half_extents"), &BoxWireMeshND::set_half_extents);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "half_extents", PROPERTY_HINT_NONE, "suffix:m", PROPERTY_USAGE_NONE), "set_half_extents", "get_half_extents");

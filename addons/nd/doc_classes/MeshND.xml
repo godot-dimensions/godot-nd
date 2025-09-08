@@ -42,6 +42,12 @@
 				[b]Note[/b]: This only looks at edge indices. It does not remove duplicate vertices, nor does it have access to the vertices array.
 			</description>
 		</method>
+		<method name="get_dimension">
+			<return type="int" />
+			<description>
+				Returns the dimension of the mesh. This is calculated as the length of the first vertex. Setting this will resize all vertices to the new dimension, either truncating them or padding them with zeros as necessary. For [CellMeshND], the amount of indices making up a simplex cell is usually equal to the dimension.
+			</description>
+		</method>
 		<method name="get_edge_indices">
 			<return type="PackedInt32Array" />
 			<description>

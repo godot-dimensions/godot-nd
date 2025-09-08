@@ -31,4 +31,5 @@ public:
 	virtual Vector<VectorN> get_vertices() override;
 	void set_vertices(const Vector<VectorN> &p_vertices);
 	void set_vertices_bind(const TypedArray<VectorN> &p_vertices);
+	void set_dimension(int p_dimension);
 };

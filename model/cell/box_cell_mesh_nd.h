@@ -35,10 +35,12 @@ public:
 	void set_polytope_cells(const bool p_polytope_cells);
 
 	virtual int get_cell_count() override;
-	virtual int get_indices_per_cell() const override;
+	virtual int get_indices_per_cell() override;
 	virtual PackedInt32Array get_cell_indices() override;
 	virtual PackedInt32Array get_edge_indices() override;
 	virtual Vector<VectorN> get_vertices() override;
+	virtual int get_dimension() override { return _size.size(); }
+	void set_dimension(int p_dimension);
 
 	static Ref<BoxCellMeshND> from_box_wire_mesh(const Ref<BoxWireMeshND> &p_wire_mesh);
 	Ref<BoxWireMeshND> to_box_wire_mesh() const;

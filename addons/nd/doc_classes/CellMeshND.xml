@@ -43,7 +43,7 @@
 				Gets the cell indices of the cell mesh. Each set of [method get_indices_per_cell] integers represents the indices of the vertices that make up a cell, for a total of [method get_cell_count] cells. The vertices can be obtained using [method MeshND.get_vertices]. Integers in this array should not exceed the length of the vertices array.
 			</description>
 		</method>
-		<method name="get_indices_per_cell" qualifiers="const">
+		<method name="get_indices_per_cell">
 			<return type="int" />
 			<description>
 				Gets the number of indices per cell. This is the number of vertices that make up a cell. For example, a triangle has 3 vertices, so the number of indices per cell is 3. The total number of indices in the [method get_cell_indices] array is equal to this value multiplied by [method get_cell_count].
@@ -56,9 +56,4 @@
 			</description>
 		</method>
 	</methods>
-	<members>
-		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
-			The dimension of the mesh. The amount of indices making up a simplex cell is usually equal to the dimension.
-		</member>
-	</members>
 </class>

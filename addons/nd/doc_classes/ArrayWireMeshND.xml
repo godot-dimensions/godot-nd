@@ -44,6 +44,9 @@
 		</method>
 	</methods>
 	<members>
+		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
+			The dimension of the mesh. This is calculated as the length of the first vertex. Setting this will resize all vertices to the new dimension, either truncating them or padding them with zeros as necessary.
+		</member>
 		<member name="edge_indices" type="PackedInt32Array" setter="set_edge_indices" getter="get_edge_indices" default="PackedInt32Array()">
 			The indices of the edges. Every 2 integers defines an edge. Each integer is an index to the [member vertices] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
 		</member>

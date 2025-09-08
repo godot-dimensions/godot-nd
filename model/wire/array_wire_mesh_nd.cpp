@@ -119,6 +119,16 @@ void ArrayWireMeshND::set_vertices_bind(const TypedArray<VectorN> &p_vertices) {
 	reset_mesh_data_validation();
 }
 
+void ArrayWireMeshND::set_dimension(int p_dimension) {
+	ERR_FAIL_COND_MSG(p_dimension < 0, "ArrayWireMeshND: Dimension must not be negative.");
+	ERR_FAIL_COND_MSG(p_dimension > 1000, "ArrayWireMeshND: Too many dimensions for wireframe mesh.");
+	for (int i = 0; i < _vertices.size(); i++) {
+		_vertices.set(i, VectorND::with_dimension(_vertices[i], p_dimension));
+	}
+	wire_mesh_clear_cache();
+	reset_mesh_data_validation();
+}
+
 void ArrayWireMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("append_edge_points", "point_a", "point_b", "deduplicate"), &ArrayWireMeshND::append_edge_points, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("append_edge_indices", "index_a", "index_b"), &ArrayWireMeshND::append_edge_indices);
@@ -127,8 +137,9 @@ void ArrayWireMeshND::_bind_methods() {
 
 	// Only bind the setters here because the getters are already bound in WireMeshND.
 	ClassDB::bind_method(D_METHOD("set_edge_indices", "edge_indices"), &ArrayWireMeshND::set_edge_indices);
-	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "edge_indices"), "set_edge_indices", "get_edge_indices");
-
 	ClassDB::bind_method(D_METHOD("set_vertices", "vertices"), &ArrayWireMeshND::set_vertices_bind);
+	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &ArrayWireMeshND::set_dimension);
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "edge_indices"), "set_edge_indices", "get_edge_indices");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "vertices", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_vertices", "get_vertices");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension", PROPERTY_HINT_RANGE, "0,1000,1", PROPERTY_USAGE_EDITOR), "set_dimension", "get_dimension");
 }

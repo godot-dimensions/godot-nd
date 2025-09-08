@@ -29,6 +29,8 @@ public:
 
 	virtual PackedInt32Array get_cell_indices() override;
 	virtual Vector<VectorN> get_vertices() override;
+	virtual int get_dimension() override { return _size.size(); }
+	void set_dimension(int p_dimension);
 
 	static Ref<OrthoplexCellMeshND> from_orthoplex_wire_mesh(const Ref<OrthoplexWireMeshND> &p_wire_mesh);
 	Ref<OrthoplexWireMeshND> to_orthoplex_wire_mesh() const;

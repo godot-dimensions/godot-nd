@@ -42,6 +42,7 @@ public:
 	TypedArray<VectorN> get_edge_positions_bind();
 	virtual Vector<VectorN> get_vertices();
 	TypedArray<VectorN> get_vertices_bind();
+	virtual int get_dimension();
 
 	GDVIRTUAL0R(PackedInt32Array, _get_edge_indices);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_vertices);

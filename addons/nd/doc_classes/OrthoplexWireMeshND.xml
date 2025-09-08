@@ -13,6 +13,9 @@
 		<link title="Wikipedia 16-cell / 4D Orthoplex">https://en.wikipedia.org/wiki/16-cell</link>
 	</tutorials>
 	<members>
+		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
+			The dimension of the orthoplex. This is calculated as the length of [member size]. Setting this will resize [member size] to the new dimension.
+		</member>
 		<member name="half_extents" type="PackedFloat64Array" setter="set_half_extents" getter="get_half_extents">
 			The half-extents of the orthoplex in meters, also known as just "extents". This is the "radius" of the orthoplex, the distance between each vertex and the center. This is a wrapper around [member size] for situations where you want to use the extents instead of size.
 		</member>

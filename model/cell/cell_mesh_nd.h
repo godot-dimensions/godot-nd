@@ -18,18 +18,14 @@ protected:
 	static void _bind_methods();
 	PackedInt32Array _edge_indices_cache;
 	Vector<VectorN> _edge_positions_cache;
-	int _dimension = 0;
 
 public:
-	int get_dimension() const { return _dimension; }
-	void set_dimension(const int p_dimension) { _dimension = p_dimension; }
-
 	void cell_mesh_clear_cache();
 	virtual void validate_material_for_mesh(const Ref<MaterialND> &p_material) override;
 	Ref<ArrayCellMeshND> to_array_cell_mesh();
 
 	virtual int get_cell_count();
-	virtual int get_indices_per_cell() const;
+	virtual int get_indices_per_cell();
 	virtual PackedInt32Array get_cell_indices();
 	virtual Vector<VectorN> get_cell_normals();
 	Vector<VectorN> get_cell_positions();

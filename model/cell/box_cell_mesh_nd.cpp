@@ -17,7 +17,6 @@ VectorN BoxCellMeshND::get_half_extents() const {
 
 void BoxCellMeshND::set_half_extents(const VectorN &p_half_extents) {
 	ERR_FAIL_COND_MSG(p_half_extents.size() > 10, "BoxCellMeshND: Too many dimensions for cell-based box.");
-	set_dimension(p_half_extents.size());
 	_size = VectorND::multiply_scalar(p_half_extents, 2.0);
 	_clear_caches();
 }
@@ -28,9 +27,14 @@ VectorN BoxCellMeshND::get_size() const {
 
 void BoxCellMeshND::set_size(const VectorN &p_size) {
 	ERR_FAIL_COND_MSG(p_size.size() > 10, "BoxCellMeshND: Too many dimensions for cell-based box.");
-	set_dimension(p_size.size());
 	_size = p_size;
 	_clear_caches();
+}
+
+void BoxCellMeshND::set_dimension(int p_dimension) {
+	ERR_FAIL_COND_MSG(p_dimension < 0, "BoxCellMeshND: Dimension must not be negative.");
+	ERR_FAIL_COND_MSG(p_dimension > 10, "BoxCellMeshND: Too many dimensions for cell-based box.");
+	set_size(VectorND::with_dimension(_size, p_dimension));
 }
 
 void BoxCellMeshND::set_polytope_cells(const bool p_polytope_cells) {
@@ -69,11 +73,11 @@ void BoxCellMeshND::_generate_cell_indices_lex(const int64_t p_dimension, Packed
 }
 
 int BoxCellMeshND::get_cell_count() {
-	return _factorial(_dimension);
+	return _factorial(get_dimension());
 }
 
-int BoxCellMeshND::get_indices_per_cell() const {
-	return _dimension + 1;
+int BoxCellMeshND::get_indices_per_cell() {
+	return get_dimension() + 1;
 }
 
 PackedInt32Array BoxCellMeshND::get_cell_indices() {
@@ -91,9 +95,9 @@ PackedInt32Array BoxCellMeshND::get_cell_indices() {
 }
 
 PackedInt32Array BoxCellMeshND::get_edge_indices() {
+	const int dimension = _size.size();
 	if (_edge_indices_cache.is_empty()) {
 		if (_polytope_cells) {
-			const uint64_t dimension = _size.size();
 			ERR_FAIL_COND_V_MSG(dimension > 30, _edge_indices_cache, "BoxCellMeshND: Too many dimensions for box edges.");
 			const uint64_t vertex_count = uint64_t(1) << dimension;
 			for (uint64_t i = 0; i < vertex_count; i++) {
@@ -106,7 +110,7 @@ PackedInt32Array BoxCellMeshND::get_edge_indices() {
 				}
 			}
 		} else {
-			_edge_indices_cache = calculate_edge_indices_from_cell_indices(get_cell_indices(), _dimension + 1, true);
+			_edge_indices_cache = calculate_edge_indices_from_cell_indices(get_cell_indices(), dimension + 1, true);
 		}
 	}
 	return _edge_indices_cache;
@@ -152,6 +156,9 @@ Ref<WireMeshND> BoxCellMeshND::to_wire_mesh() {
 }
 
 void BoxCellMeshND::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &BoxCellMeshND::set_dimension);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension", PROPERTY_HINT_RANGE, "0,10,1", PROPERTY_USAGE_EDITOR), "set_dimension", "get_dimension");
+
 	ClassDB::bind_method(D_METHOD("get_half_extents"), &BoxCellMeshND::get_half_extents);
 	ClassDB::bind_method(D_METHOD("set_half_extents", "half_extents"), &BoxCellMeshND::set_half_extents);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "half_extents", PROPERTY_HINT_NONE, "suffix:m", PROPERTY_USAGE_NONE), "set_half_extents", "get_half_extents");

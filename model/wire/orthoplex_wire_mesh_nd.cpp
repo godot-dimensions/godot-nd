@@ -25,6 +25,12 @@ void OrthoplexWireMeshND::set_size(const VectorN &p_size) {
 	}
 }
 
+void OrthoplexWireMeshND::set_dimension(int p_dimension) {
+	ERR_FAIL_COND_MSG(p_dimension < 0, "OrthoplexWireMeshND: Dimension must not be negative.");
+	ERR_FAIL_COND_MSG(p_dimension > 1000, "OrthoplexWireMeshND: Too many dimensions for orthoplex.");
+	set_size(VectorND::with_dimension(_size, p_dimension));
+}
+
 PackedInt32Array OrthoplexWireMeshND::get_edge_indices() {
 	if (_edge_indices_cache.is_empty()) {
 		const int dimension = _size.size();
@@ -77,6 +83,9 @@ Ref<WireMeshND> OrthoplexWireMeshND::to_wire_mesh() {
 }
 
 void OrthoplexWireMeshND::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &OrthoplexWireMeshND::set_dimension);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension", PROPERTY_HINT_RANGE, "0,1000,1", PROPERTY_USAGE_EDITOR), "set_dimension", "get_dimension");
+
 	ClassDB::bind_method(D_METHOD("get_half_extents"), &OrthoplexWireMeshND::get_half_extents);
 	ClassDB::bind_method(D_METHOD("set_half_extents", "half_extents"), &OrthoplexWireMeshND::set_half_extents);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "half_extents", PROPERTY_HINT_NONE, "suffix:m", PROPERTY_USAGE_NONE), "set_half_extents", "get_half_extents");
