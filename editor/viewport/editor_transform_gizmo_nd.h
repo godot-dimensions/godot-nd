@@ -81,6 +81,8 @@ private:
 	void _update_gizmo_transform();
 	void _update_gizmo_mesh_transform(const CameraND *p_camera);
 	Ref<RectND> _get_rect_bounds_of_selection(const Ref<TransformND> &p_inv_relative_to) const;
+	static String _get_transform_part_simple_action_name(const TransformPart p_part);
+	static VectorN _origin_axis_aligned_biplane_raycast(const VectorN &p_ray_origin, const VectorN &p_ray_direction, const VectorN &p_axis1, const VectorN &p_axis2);
 
 	// Highlighting functions, used when not transforming.
 	TransformPart _check_for_best_hit(const VectorN &p_local_ray_origin, const VectorN &p_local_ray_direction, int &r_primary_axis, int &r_secondary_axis) const;

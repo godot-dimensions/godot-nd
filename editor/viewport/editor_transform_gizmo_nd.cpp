@@ -340,7 +340,34 @@ Ref<RectND> EditorTransformGizmoND::_get_rect_bounds_of_selection(const Ref<Tran
 	return bounds;
 }
 
-VectorN _origin_axis_aligned_biplane_raycast(const VectorN &p_ray_origin, const VectorN &p_ray_direction, const VectorN &p_axis1, const VectorN &p_axis2) {
+String EditorTransformGizmoND::_get_transform_part_simple_action_name(const TransformPart p_part) {
+	switch (p_part) {
+		case TRANSFORM_NONE: {
+			return "Transform";
+		} break;
+		case TRANSFORM_MOVE_AXIS:
+		case TRANSFORM_MOVE_PLANE: {
+			return "Move";
+		} break;
+		case TRANSFORM_ROTATE: {
+			return "Rotate";
+		} break;
+		case TRANSFORM_SCALE_AXIS:
+		case TRANSFORM_SCALE_PLANE: {
+			return "Scale";
+		} break;
+		case TRANSFORM_STRETCH_POS:
+		case TRANSFORM_STRETCH_NEG: {
+			return "Stretch";
+		} break;
+		case TRANSFORM_MAX: {
+			return "Transform";
+		} break;
+	}
+	return "Transform";
+}
+
+VectorN EditorTransformGizmoND::_origin_axis_aligned_biplane_raycast(const VectorN &p_ray_origin, const VectorN &p_ray_direction, const VectorN &p_axis1, const VectorN &p_axis2) {
 	VectorN plane_normal = VectorND::slide(p_ray_direction, p_axis1);
 	plane_normal = VectorND::slide(plane_normal, p_axis2);
 	Ref<PlaneND> plane = PlaneND::from_normal_distance(VectorND::normalized(plane_normal), 0.0);
@@ -512,19 +539,14 @@ void EditorTransformGizmoND::_end_transformation() {
 		return;
 	}
 	// Create an undo/redo action for the transformation.
-	const bool is_move_only = _current_transformation == TRANSFORM_MOVE_AXIS || _current_transformation == TRANSFORM_MOVE_PLANE;
-	_undo_redo->create_action(is_move_only ? String("Move ND nodes with gizmo") : String("Transform ND nodes with gizmo"));
+	const String action = _get_transform_part_simple_action_name(_current_transformation);
+	_undo_redo->create_action(action + String(" 4D nodes with gizmo"));
 	const int size = _selected_top_nodes.size();
 	for (int i = 0; i < size; i++) {
 		NodeND *node_nd = Object::cast_to<NodeND>(_selected_top_nodes[i]);
 		if (node_nd != nullptr) {
-			if (is_move_only) {
-				_undo_redo->add_do_property(node_nd, StringName("global_position"), node_nd->get_global_position());
-				_undo_redo->add_undo_property(node_nd, StringName("global_position"), _selected_top_node_old_transforms[i]->get_origin());
-			} else {
-				_undo_redo->add_do_property(node_nd, StringName("global_transform"), node_nd->get_global_transform());
-				_undo_redo->add_undo_property(node_nd, StringName("global_transform"), _selected_top_node_old_transforms[i]);
-			}
+			_undo_redo->add_do_property(node_nd, StringName("global_transform"), node_nd->get_global_transform());
+			_undo_redo->add_undo_property(node_nd, StringName("global_transform"), _selected_top_node_old_transforms[i]);
 		}
 	}
 	_undo_redo->commit_action(false);
