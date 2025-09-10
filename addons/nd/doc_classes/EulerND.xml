@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="EulerND" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Represents a set of rotations in N-dimensional space using Euler angles.
+	</brief_description>
+	<description>
+		EulerND contains a set of rotations in N-dimensional space, represented using a triplet of rotation from index, rotation to index, and rotation angle, which is usually in radians, but may be stored in degrees or other units if desired. The rotations may be composed together to form a single rotation matrix in a [BasisND] or [TransformND].
+		The order of the rotations is significant, as they are applied in sequence from the first to the last. Therefore, unlike the Euler4D class in the 4D module, EulerND provides the user freedom to specify the order of rotations and which direction is positive. Users are recommended to use a consistent order and direction for all EulerND instances in a project to avoid confusion, but this is not enforced by the class. Consider using a superset of the rotations found in 2D, 3D, and 4D space as a starting point for defining a consistent order and direction for your project.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="decompose_simple_rotations_from_basis" qualifiers="static">
+			<return type="EulerND" />
+			<param index="0" name="basis" type="BasisND" />
+			<description>
+				Given a [BasisND] rotation matrix, attempt to decompose it into a series of perpendicular simple rotations, and return them as an [EulerND]. If the basis cannot be decomposed into simple rotations, those axes will be skipped. For example, if the X basis vector is rotated in the XY plane, it must not have any non-zero values in the Z, W, etc directions, and the Y axis must also be in the XY plane, or else the decomposition will not show any rotation for those axes.
+			</description>
+		</method>
+		<method name="decompose_simple_rotations_from_transform" qualifiers="static">
+			<return type="EulerND" />
+			<param index="0" name="transform" type="TransformND" />
+			<description>
+				Given a [TransformND] rotation matrix, attempt to decompose it into a series of perpendicular simple rotations, and return them as an [EulerND]. If the basis cannot be decomposed into simple rotations, those axes will be skipped. For example, if the X basis vector is rotated in the XY plane, it must not have any non-zero values in the Z, W, etc directions, and the Y axis must also be in the XY plane, or else the decomposition will not show any rotation for those axes.
+			</description>
+		</method>
+		<method name="deg_to_rad" qualifiers="const">
+			<return type="EulerND" />
+			<description>
+				Assuming this [EulerND] is in degrees, return a copy converted to radians.
+			</description>
+		</method>
+		<method name="get_dimension" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of dimensions this [EulerND] is set to work in. This is equal to the highest index used in any rotation, plus one. For example, if the highest index used is 3, this will return 4, indicating it works in 4D space (which has axis indices 0 to 3).
+			</description>
+		</method>
+		<method name="get_rotation_angle" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the angle of the rotation at the given [param index]. The angle is usually in radians, but may be in degrees or other units if desired.
+			</description>
+		</method>
+		<method name="get_rotation_from" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the "from" index of the rotation at the given [param index]. This is the axis index that the rotation moves from. For example, a rotation from index 0 to index 1 rotates in the XY plane from X to Y.
+			</description>
+		</method>
+		<method name="get_rotation_to" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the "to" index of the rotation at the given [param index]. This is the axis index that the rotation moves towards. For example, a rotation from index 0 to index 1 rotates in the XY plane from X to Y.
+			</description>
+		</method>
+		<method name="is_equal_approx" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="EulerND" />
+			<description>
+				Returns [code]true[/code] if this [EulerND] and [param other] are approximately equal, by comparing each rotation using [method @GlobalScope.is_equal_approx]. If the number of rotations differ, [code]false[/code] is returned. If a rotation's from index and to index are swapped, and the angles are negated, they are considered approximately equal by this function, even though the angle values on their own may not be.
+			</description>
+		</method>
+		<method name="is_equal_exact" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="other" type="EulerND" />
+			<description>
+				Returns [code]true[/code] if this [EulerND] and [param other] are exactly equal, by comparing each rotation using [code]==[/code]. If the number of rotations differ, [code]false[/code] is returned. If a rotation's from index and to index are swapped, and the angles are negated, they are NOT considered exactly equal. This performs an exact value comparison, so floating point rounding errors may cause this to return [code]false[/code] unexpectedly.
+			</description>
+		</method>
+		<method name="rad_to_deg" qualifiers="const">
+			<return type="EulerND" />
+			<description>
+				Assuming this [EulerND] is in radians, return a copy converted to degrees.
+			</description>
+		</method>
+		<method name="rotate_basis" qualifiers="const">
+			<return type="BasisND" />
+			<param index="0" name="basis" type="BasisND" />
+			<description>
+				Applies the rotations in this [EulerND] to the given [param basis] and returns the resulting rotated [BasisND].
+			</description>
+		</method>
+		<method name="rotate_point" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="point" type="PackedFloat64Array" />
+			<description>
+				Applies the rotations in this [EulerND] to the given [param point] VectorN ([PackedFloat64Array]) and returns the resulting rotated VectorN ([PackedFloat64Array]).
+			</description>
+		</method>
+		<method name="set_rotation_angle">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<param index="1" name="angle" type="float" />
+			<description>
+				Sets the angle of the rotation at the given [param index]. The angle is usually in radians, but may be in degrees or other units if desired.
+			</description>
+		</method>
+		<method name="set_rotation_from">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<param index="1" name="rot_from" type="int" />
+			<description>
+				Sets the "from" index of the rotation at the given [param index]. This is the axis index that the rotation moves from. For example, a rotation from index 0 to index 1 rotates in the XY plane from X to Y.
+			</description>
+		</method>
+		<method name="set_rotation_of_basis">
+			<return type="void" />
+			<param index="0" name="basis" type="BasisND" />
+			<description>
+				Sets the rotation of the given [BasisND] to a rotation composed from the Euler angle rotations in this [EulerND], preserving the existing absolute scale of the basis.
+			</description>
+		</method>
+		<method name="set_rotation_of_transform">
+			<return type="void" />
+			<param index="0" name="transform" type="TransformND" />
+			<description>
+				Sets the rotation of the given [TransformND] to a rotation composed from the Euler angle rotations in this [EulerND], preserving the existing absolute scale of the transform's basis, and leaving the origin unchanged.
+			</description>
+		</method>
+		<method name="set_rotation_to">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<param index="1" name="rot_to" type="int" />
+			<description>
+				Sets the "to" index of the rotation at the given [param index]. This is the axis index that the rotation moves towards. For example, a rotation from index 0 to index 1 rotates in the XY plane from X to Y.
+			</description>
+		</method>
+		<method name="snapped" qualifiers="const">
+			<return type="EulerND" />
+			<param index="0" name="step" type="float" />
+			<description>
+				Returns a new [EulerND] where each rotation angle is snapped to the nearest multiple of [param step]. For example, if a rotation angle is 1.3 and the step is 0.5, the snapped angle will be 1.5.
+			</description>
+		</method>
+		<method name="to_rotation_basis" qualifiers="const">
+			<return type="BasisND" />
+			<description>
+				Composes the rotations in this [EulerND] into a single [BasisND] rotation matrix and returns it.
+			</description>
+		</method>
+		<method name="to_rotation_transform" qualifiers="const">
+			<return type="TransformND" />
+			<description>
+				Composes the rotations in this [EulerND] into a single [TransformND] rotation matrix and returns it.
+			</description>
+		</method>
+		<method name="wrapped" qualifiers="const">
+			<return type="EulerND" />
+			<description>
+				Returns a copy of this [EulerND] with all angles wrapped on the range [code]-PI[/code] to [code]PI[/code]. Note: This is not guaranteed to fully simplify the rotation in the case of multiple non-perpendicular simple rotations overlapping each other to form a complex rotation.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="all_rotation_data" type="PackedFloat64Array" setter="set_all_rotation_data" getter="get_all_rotation_data" default="PackedFloat64Array()">
+			A flat array containing all rotation data in the order of [from index, to index, angle, from index, to index, angle, ...]. This is useful for quickly getting or setting all rotation data at once, and is used for serializing the [EulerND] in a compact format. The from and to indices are stored as floats, but MUST be non-negative whole numbers. The length of the array MUST be a multiple of 3, or an error will occur when setting this property.
+		</member>
+		<member name="rotation_angle_array" type="PackedFloat64Array" setter="set_rotation_angle_array" getter="get_rotation_angle_array">
+			The angles of all rotations stored in this [EulerND] as a [PackedFloat64Array]. The angles are usually in radians, but may be in degrees or other units if desired. This array always has the same length as [member rotation_count], which is the same as the length of [member rotation_from_array] and [member rotation_to_array].
+		</member>
+		<member name="rotation_count" type="int" setter="set_rotation_count" getter="get_rotation_count" default="0">
+			The number of rotations stored in this [EulerND]. This can be changed to add or remove rotations. New rotations will default to a from index of 0, a to index of 1, and an angle of [code]0.0[/code]. If the count is reduced, excess rotations will be removed from the end of the list.
+		</member>
+		<member name="rotation_from_array" type="PackedInt32Array" setter="set_rotation_from_array" getter="get_rotation_from_array">
+			The "from" indices of all rotations stored in this [EulerND] as a [PackedInt32Array]. These are the axis indices that each rotation moves from. This array always has the same length as [member rotation_count], which is the same as the length of [member rotation_angle_array] and [member rotation_to_array].
+		</member>
+		<member name="rotation_to_array" type="PackedInt32Array" setter="set_rotation_to_array" getter="get_rotation_to_array">
+			The "to" indices of all rotations stored in this [EulerND] as a [PackedInt32Array]. These are the axis indices that each rotation moves towards. This array always has the same length as [member rotation_count], which is the same as the length of [member rotation_angle_array] and [member rotation_from_array].
+		</member>
+	</members>
+	<signals>
+		<signal name="rotation_changed">
+			<description>
+				Emitted whenever any rotation is changed, added, or removed, meaning that any data in this class changed.
+			</description>
+		</signal>
+	</signals>
+</class>

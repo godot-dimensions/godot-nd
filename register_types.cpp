@@ -11,6 +11,7 @@
 #endif
 
 // General.
+#include "math/euler_nd.h"
 #include "math/geometry_nd.h"
 #include "math/math_nd.h"
 #include "math/plane_nd.h"
@@ -84,15 +85,17 @@ inline void remove_godot_singleton(const StringName &p_singleton_name) {
 
 void initialize_nd_module(ModuleInitializationLevel p_level) {
 	// Note: Classes MUST be registered in inheritance order.
-	// When the inheritance doesn't matter, alphabetical order is used.
+	// When the inheritance doesn't matter, dependency order is used, then alphabetical order.
 	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE) {
-		GDREGISTER_CLASS(GeometryND);
-		GDREGISTER_CLASS(MathND);
+		// Math.
+		GDREGISTER_CLASS(VectorND);
 		GDREGISTER_CLASS(PlaneND);
 		GDREGISTER_CLASS(RectND);
 		GDREGISTER_CLASS(BasisND);
 		GDREGISTER_CLASS(TransformND);
-		GDREGISTER_CLASS(VectorND);
+		GDREGISTER_CLASS(EulerND);
+		GDREGISTER_CLASS(MathND);
+		GDREGISTER_CLASS(GeometryND);
 		// Render.
 		GDREGISTER_VIRTUAL_CLASS(RenderingEngineND);
 		GDREGISTER_CLASS(RenderingServerND);

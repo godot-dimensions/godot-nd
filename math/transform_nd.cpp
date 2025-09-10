@@ -2,12 +2,6 @@
 
 #include "vector_nd.h"
 
-#if GDEXTENSION
-#include <godot_cpp/variant/typed_array.hpp>
-#elif GODOT_MODULE
-#include "core/variant/typed_array.h"
-#endif
-
 void TransformND::_make_basis_square_in_place(Vector<VectorN> &p_basis) {
 	const int64_t column_count = p_basis.size();
 	for (int64_t i = 0; i < column_count; i++) {

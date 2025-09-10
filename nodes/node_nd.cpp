@@ -8,6 +8,10 @@ Ref<TransformND> NodeND::get_transform() const {
 
 void NodeND::set_transform(const Ref<TransformND> &p_transform) {
 	_transform = p_transform;
+	if (_rotation_euler.is_valid()) {
+		_rotation_euler->set_from_decomposed_simple_rotations_from_transform(_transform);
+		notify_property_list_changed();
+	}
 }
 
 Ref<BasisND> NodeND::get_basis() const {
@@ -16,6 +20,10 @@ Ref<BasisND> NodeND::get_basis() const {
 
 void NodeND::set_basis(const Ref<BasisND> &p_basis) {
 	_transform->set_basis(p_basis);
+	if (_rotation_euler.is_valid()) {
+		_rotation_euler->set_from_decomposed_simple_rotations_from_basis(p_basis);
+		notify_property_list_changed();
+	}
 }
 
 Vector<VectorN> NodeND::get_all_basis_columns() const {
@@ -24,6 +32,10 @@ Vector<VectorN> NodeND::get_all_basis_columns() const {
 
 void NodeND::set_all_basis_columns(const Vector<VectorN> &p_columns) {
 	_transform->set_all_basis_columns(p_columns);
+	if (_rotation_euler.is_valid()) {
+		_rotation_euler->set_from_decomposed_simple_rotations(p_columns);
+		notify_property_list_changed();
+	}
 }
 
 TypedArray<VectorN> NodeND::get_all_basis_columns_bind() const {
@@ -32,6 +44,10 @@ TypedArray<VectorN> NodeND::get_all_basis_columns_bind() const {
 
 void NodeND::set_all_basis_columns_bind(const TypedArray<VectorN> &p_columns) {
 	_transform->set_all_basis_columns_bind(p_columns);
+	if (_rotation_euler.is_valid()) {
+		_rotation_euler->set_from_decomposed_simple_rotations(_transform->get_all_basis_columns());
+		notify_property_list_changed();
+	}
 }
 
 VectorN NodeND::get_position() const {
@@ -48,6 +64,66 @@ VectorN NodeND::get_scale_abs() const {
 
 void NodeND::set_scale_abs(const VectorN &p_scale) {
 	_transform->set_scale_abs(p_scale);
+}
+
+int NodeND::get_euler_rotation_count() const {
+	if (_rotation_euler.is_null()) {
+		return 0;
+	}
+	return _rotation_euler->get_rotation_count();
+}
+
+void NodeND::set_euler_rotation_count(const int p_rotation_count) {
+	if (_rotation_euler.is_null()) {
+		_rotation_euler.instantiate();
+		_rotation_euler->connect("rotation_changed", callable_mp(this, &NodeND::_update_transform_from_euler));
+	}
+	const int old_rotation_count = _rotation_euler->get_rotation_count();
+	// If going from 0 to something, initialize from current transform, but always use the amount the user requested.
+	if (old_rotation_count == 0 && p_rotation_count > 0) {
+		_rotation_euler->set_from_decomposed_simple_rotations_from_transform(_transform);
+	}
+	_rotation_euler->set_rotation_count(p_rotation_count);
+	notify_property_list_changed();
+}
+
+PackedFloat64Array NodeND::get_euler_rotation_data() const {
+	if (_rotation_euler.is_null()) {
+		return PackedFloat64Array();
+	}
+	return _rotation_euler->get_all_rotation_data();
+}
+
+void NodeND::set_euler_rotation_data(const PackedFloat64Array &p_data) {
+	if (_rotation_euler.is_null()) {
+		_rotation_euler.instantiate();
+		_rotation_euler->connect("rotation_changed", callable_mp(this, &NodeND::_update_transform_from_euler));
+	}
+	_rotation_euler->set_all_rotation_data(p_data);
+	if (p_data.size() > 0) {
+		_rotation_euler->set_rotation_of_transform(_transform);
+	}
+	notify_property_list_changed();
+}
+
+Ref<EulerND> NodeND::get_rotation_euler() const {
+	return _rotation_euler;
+}
+
+void NodeND::set_rotation_euler(const Ref<EulerND> &p_euler) {
+	_rotation_euler = p_euler;
+	_rotation_euler->set_rotation_of_transform(_transform);
+	notify_property_list_changed();
+}
+
+void NodeND::_update_transform_from_euler() {
+	if (_rotation_euler.is_null()) {
+		return;
+	}
+	if (_rotation_euler->get_rotation_count() == 0) {
+		return;
+	}
+	_rotation_euler->set_rotation_of_transform(_transform);
 }
 
 // Global transform getters and setters.
@@ -196,6 +272,12 @@ void NodeND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_position", "position"), &NodeND::set_position);
 	ClassDB::bind_method(D_METHOD("get_scale_abs"), &NodeND::get_scale_abs);
 	ClassDB::bind_method(D_METHOD("set_scale_abs", "scale"), &NodeND::set_scale_abs);
+	ClassDB::bind_method(D_METHOD("get_euler_rotation_count"), &NodeND::get_euler_rotation_count);
+	ClassDB::bind_method(D_METHOD("set_euler_rotation_count", "rotation_count"), &NodeND::set_euler_rotation_count);
+	ClassDB::bind_method(D_METHOD("get_euler_rotation_data"), &NodeND::get_euler_rotation_data);
+	ClassDB::bind_method(D_METHOD("set_euler_rotation_data", "data"), &NodeND::set_euler_rotation_data);
+	ClassDB::bind_method(D_METHOD("get_rotation_euler"), &NodeND::get_rotation_euler);
+	ClassDB::bind_method(D_METHOD("set_rotation_euler", "euler"), &NodeND::set_rotation_euler);
 	// Global transform getters and setters.
 	ClassDB::bind_method(D_METHOD("get_global_transform"), &NodeND::get_global_transform);
 	ClassDB::bind_method(D_METHOD("set_global_transform", "global_transform"), &NodeND::set_global_transform);
@@ -222,10 +304,13 @@ void NodeND::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "input_dimension", PROPERTY_HINT_RANGE, "0,100,1", PROPERTY_USAGE_EDITOR), "set_input_dimension", "get_input_dimension");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "output_dimension", PROPERTY_HINT_RANGE, "0,100,1", PROPERTY_USAGE_EDITOR), "set_output_dimension", "get_output_dimension");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "transform", PROPERTY_HINT_RESOURCE_TYPE, "TransformND", PROPERTY_USAGE_NONE), "set_transform", "get_transform");
-	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "position", PROPERTY_HINT_NONE, "suffix:m"), "set_position", "get_position");
-	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "basis", PROPERTY_HINT_RESOURCE_TYPE, "BasisND", PROPERTY_USAGE_NONE), "set_basis", "get_basis");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "basis_columns", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array", PROPERTY_USAGE_STORAGE), "set_all_basis_columns", "get_all_basis_columns");
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "position", PROPERTY_HINT_NONE, "suffix:m"), "set_position", "get_position");
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "euler_rotation_count", PROPERTY_HINT_RANGE, "0,100,1", PROPERTY_USAGE_EDITOR), "set_euler_rotation_count", "get_euler_rotation_count");
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "euler_rotation_data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_euler_rotation_data", "get_euler_rotation_data");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "rotation_euler", PROPERTY_HINT_RESOURCE_TYPE, "EulerND", PROPERTY_USAGE_NONE), "set_rotation_euler", "get_rotation_euler");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "global_transform", PROPERTY_HINT_RESOURCE_TYPE, "TransformND", PROPERTY_USAGE_NONE), "set_global_transform", "get_global_transform");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "global_position", PROPERTY_HINT_NONE, "suffix:m", PROPERTY_USAGE_NONE), "set_global_position", "get_global_position");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "visible"), "set_visible", "is_visible");
@@ -234,6 +319,63 @@ void NodeND::_bind_methods() {
 	BIND_ENUM_CONSTANT(DIMENSION_MODE_NON_SQUARE);
 
 	ADD_SIGNAL(MethodInfo("dimension_changed"));
+}
+
+bool NodeND::_set(const StringName &p_name, const Variant &p_value) {
+	if (_rotation_euler.is_null()) {
+		return false;
+	}
+	int index;
+	String property;
+	bool looks_like_rotation_property = EulerND::does_name_look_like_numbered_rotation_property(p_name, index, property);
+	if (!looks_like_rotation_property) {
+		return false;
+	}
+	ERR_FAIL_INDEX_V(index, _rotation_euler->get_rotation_count(), false);
+	if (property == "angle") {
+		ERR_FAIL_COND_V(p_value.get_type() != Variant::FLOAT && p_value.get_type() != Variant::INT, false);
+		_rotation_euler->set_rotation_angle(index, p_value);
+		return true;
+	} else if (property == "from") {
+		ERR_FAIL_COND_V(p_value.get_type() != Variant::INT, false);
+		_rotation_euler->set_rotation_from(index, p_value);
+		return true;
+	} else if (property == "to") {
+		ERR_FAIL_COND_V(p_value.get_type() != Variant::INT, false);
+		_rotation_euler->set_rotation_to(index, p_value);
+		return true;
+	}
+	return false;
+}
+
+bool NodeND::_get(const StringName &p_name, Variant &r_ret) const {
+	if (_rotation_euler.is_null()) {
+		return false;
+	}
+	int index;
+	String property;
+	bool looks_like_rotation_property = EulerND::does_name_look_like_numbered_rotation_property(p_name, index, property);
+	if (!looks_like_rotation_property) {
+		return false;
+	}
+	ERR_FAIL_INDEX_V(index, _rotation_euler->get_rotation_count(), false);
+	if (property == "angle") {
+		r_ret = _rotation_euler->get_rotation_angle(index);
+		return true;
+	} else if (property == "from") {
+		r_ret = _rotation_euler->get_rotation_from(index);
+		return true;
+	} else if (property == "to") {
+		r_ret = _rotation_euler->get_rotation_to(index);
+		return true;
+	}
+	return false;
+}
+
+void NodeND::_get_property_list(List<PropertyInfo> *p_list) const {
+	if (_rotation_euler.is_valid()) {
+		_rotation_euler->get_rotation_property_list(p_list);
+	}
 }
 
 void NodeND::_validate_property(PropertyInfo &p_property) const {
@@ -246,6 +388,11 @@ void NodeND::_validate_property(PropertyInfo &p_property) const {
 		}
 	} else {
 		if (p_property.name == StringName("dimension")) {
+			p_property.usage = PROPERTY_USAGE_NONE;
+		}
+	}
+	if (_rotation_euler.is_null() || _rotation_euler->get_rotation_count() == 0) {
+		if (p_property.name == StringName("euler_rotation_data")) {
 			p_property.usage = PROPERTY_USAGE_NONE;
 		}
 	}

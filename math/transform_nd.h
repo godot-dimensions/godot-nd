@@ -2,12 +2,6 @@
 
 #include "basis_nd.h"
 
-#if GDEXTENSION
-#include <godot_cpp/classes/ref_counted.hpp>
-#elif GODOT_MODULE
-#include "core/object/ref_counted.h"
-#endif
-
 class TransformND : public RefCounted {
 	GDCLASS(TransformND, RefCounted);
 

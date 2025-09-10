@@ -171,17 +171,17 @@
 		</method>
 		<method name="fill" qualifiers="static">
 			<return type="PackedFloat64Array" />
-			<param index="0" name="value" type="float" />
-			<param index="1" name="dimension" type="int" />
+			<param index="0" name="dimension" type="int" />
+			<param index="1" name="value" type="float" />
 			<description>
 				Returns a new VectorN ([PackedFloat64Array]) that is filled with the given [param value] for each component. The dimension of the vector is defined by [param dimension]. For example, [code]fill(1.0, 3)[/code] will return [code][1.0, 1.0, 1.0][/code].
 			</description>
 		</method>
 		<method name="fill_array" qualifiers="static">
 			<return type="PackedFloat64Array[]" />
-			<param index="0" name="value" type="float" />
+			<param index="0" name="dimension" type="int" />
 			<param index="1" name="vector_amount" type="int" />
-			<param index="2" name="dimension" type="int" />
+			<param index="2" name="value" type="float" />
 			<description>
 				Returns an array of VectorN ([PackedFloat64Array]) that are filled with the given [param value] for each component in every vector. The amount of vectors is defined by [param vector_amount], and the dimension of each vector is defined by [param dimension]. For example, [code]fill_array(1.0, 3, 2)[/code] will return [code][[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]][/code].
 			</description>
@@ -304,6 +304,13 @@
 			<param index="0" name="vector" type="PackedFloat64Array" />
 			<description>
 				Returns the index of the component with the smallest value in the input vector (most negative).
+			</description>
+		</method>
+		<method name="multiply_components_together" qualifiers="static">
+			<return type="float" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns the product of all components in the input vector multiplied together. For example, [code]multiply_components_together([2.0, 3.0, 4.0, 5.0])[/code] will calculate [code]2.0 * 3.0 * 4.0 * 5.0[/code] and return [code]120.0[/code].
 			</description>
 		</method>
 		<method name="multiply_scalar" qualifiers="static">

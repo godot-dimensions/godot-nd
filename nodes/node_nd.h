@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../math/euler_nd.h"
 #include "../math/rect_nd.h"
 #include "../math/transform_nd.h"
 
@@ -20,12 +21,18 @@ public:
 	};
 
 private:
+	Ref<EulerND> _rotation_euler;
 	Ref<TransformND> _transform;
 	DimensionMode _dimension_mode = DIMENSION_MODE_SQUARE;
 	bool _is_visible = true;
 
+	void _update_transform_from_euler();
+
 protected:
 	static void _bind_methods();
+	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _get(const StringName &p_name, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
 	void _validate_property(PropertyInfo &p_property) const;
 
 public:
@@ -43,6 +50,13 @@ public:
 	void set_position(const VectorN &p_position);
 	VectorN get_scale_abs() const;
 	void set_scale_abs(const VectorN &p_scale);
+
+	int get_euler_rotation_count() const;
+	void set_euler_rotation_count(const int p_rotation_count);
+	PackedFloat64Array get_euler_rotation_data() const;
+	void set_euler_rotation_data(const PackedFloat64Array &p_data);
+	Ref<EulerND> get_rotation_euler() const;
+	void set_rotation_euler(const Ref<EulerND> &p_euler);
 
 	// Global transform getters and setters.
 	Ref<TransformND> get_global_transform() const;

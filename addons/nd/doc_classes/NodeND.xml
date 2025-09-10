@@ -53,6 +53,12 @@
 		<member name="dimension_mode" type="int" setter="set_dimension_mode" getter="get_dimension_mode" enum="NodeND.DimensionMode" default="0">
 			Controls whether this node's transform exists within a single dimension or converts between dimensions. See [enum NodeND.DimensionMode] for more information.
 		</member>
+		<member name="euler_rotation_count" type="int" setter="set_euler_rotation_count" getter="get_euler_rotation_count" default="0">
+			The number of Euler rotations stored in this node's [Euler4D] rotation data. If [code]0[/code], the node may still be rotated, but the representation is not represented as Euler angles, only as basis vectors, such as stored in a [BasisND] or [TransformND].
+		</member>
+		<member name="euler_rotation_data" type="PackedFloat64Array" setter="set_euler_rotation_data" getter="get_euler_rotation_data">
+			The local rotation data of the node's [EulerND] rotation, stored as a flat [PackedFloat64Array]. Each rotation is stored as three consecutive values: the "from" axis index, the "to" axis index, and the angle in radians. The size of this array is always [code]euler_rotation_count * 3[/code]. This is a low-level property used for serialization, consider using [member rotation_euler] for high-level access with helper functions.
+		</member>
 		<member name="global_position" type="PackedFloat64Array" setter="set_global_position" getter="get_global_position">
 			The global position of the node. The size of this array depends on the output dimension after multiplying all ancestor transforms.
 		</member>
@@ -70,6 +76,9 @@
 		</member>
 		<member name="position" type="PackedFloat64Array" setter="set_position" getter="get_position" default="PackedFloat64Array()">
 			The local position of the node. The size of this array is the same as [member output_dimension] which is the same as the number of rows in [member basis_columns] (unless the basis is a jagged array).
+		</member>
+		<member name="rotation_euler" type="EulerND" setter="set_rotation_euler" getter="get_rotation_euler">
+			The local rotation data of the node's [EulerND] rotation, stored in a high-level [EulerND] resource with helper functions. See [EulerND] for more information.
 		</member>
 		<member name="scale_abs" type="PackedFloat64Array" setter="set_scale_abs" getter="get_scale_abs" default="PackedFloat64Array()">
 			The local absolute scale of the node. This is the length of each basis vector. The size of this array is the same as [member input_dimension] which is the same as the number of columns in [member basis_columns].

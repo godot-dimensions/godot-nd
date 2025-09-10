@@ -2,12 +2,6 @@
 
 #include "vector_nd.h"
 
-#if GDEXTENSION
-#include <godot_cpp/variant/typed_array.hpp>
-#elif GODOT_MODULE
-#include "core/variant/typed_array.h"
-#endif
-
 void BasisND::_make_basis_square_in_place(Vector<VectorN> &p_basis) {
 	const int64_t column_count = p_basis.size();
 	for (int64_t i = 0; i < column_count; i++) {
@@ -898,7 +892,8 @@ Ref<BasisND> BasisND::from_basis_columns(const Vector<VectorN> &p_columns) {
 Ref<BasisND> BasisND::from_rotation(const int p_rot_from, const int p_rot_to, const double p_rot_angle) {
 	Ref<BasisND> ret;
 	ret.instantiate();
-	ERR_FAIL_COND_V_MSG(p_rot_from < 0 || p_rot_to < 0 || p_rot_from == p_rot_to, ret, "Invalid rotation dimension indices.");
+	ERR_FAIL_COND_V_MSG(p_rot_from < 0 || p_rot_to < 0, ret, "Invalid rotation dimension indices: Indices must be non-negative integers.");
+	ERR_FAIL_COND_V_MSG(p_rot_from == p_rot_to, ret, "Invalid rotation dimension indices: Indices must be different.");
 	const int array_size = MAX(p_rot_from, p_rot_to) + 1;
 	// Allocate the columns.
 	Vector<VectorN> ret_columns;

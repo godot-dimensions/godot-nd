@@ -9,18 +9,20 @@ def configure(env):
 
 def get_doc_classes():
 	return [
-		# General.
+		# Math (in dependency order).
+		"VectorND",
 		"BasisND",
-		"CameraND",
-		"GeometryND",
-		"RenderingEngineND",
-		"RenderingServerND",
 		"MathND",
-		"NodeND",
 		"PlaneND",
 		"RectND",
 		"TransformND",
-		"VectorND",
+		"EulerND",
+		"GeometryND",
+		# General.
+		"CameraND",
+		"RenderingEngineND",
+		"RenderingServerND",
+		"NodeND",
 		# Mesh.
 		"ArrayCellMeshND",
 		"ArrayWireMeshND",
