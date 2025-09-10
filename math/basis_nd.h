@@ -69,6 +69,7 @@ public:
 	Ref<BasisND> inverse_transposed() const;
 
 	// Scale methods.
+	VectorN get_global_scale_abs() const;
 	VectorN get_scale_abs() const;
 	void set_scale_abs(const VectorN &p_scale);
 	double get_uniform_scale() const;

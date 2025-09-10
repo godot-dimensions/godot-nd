@@ -283,9 +283,15 @@ void EditorTransformGizmoND::_update_gizmo_transform() {
 		set_visible(false);
 	} else {
 		set_visible(true);
+		sum_transform = sum_transform->divide_scalar(double(transform_count));
+		if (!_is_use_local_rotation) {
+			sum_transform->set_basis(BasisND::from_scale(sum_transform->get_global_scale_abs()));
+		}
 		const int old_dimension = get_dimension();
-		set_transform(sum_transform->divide_scalar(double(transform_count)));
-		if (old_dimension != get_dimension()) {
+		const int new_dimension = sum_transform->get_dimension();
+		sum_transform->set_dimension(new_dimension); // Force to be a square matrix.
+		set_transform(sum_transform);
+		if (old_dimension != new_dimension) {
 			// The gizmo has changed dimensions, so we need to regenerate the meshes.
 			_regenerate_gizmo_meshes();
 			_editor_main_screen->update_dimension();
@@ -296,35 +302,28 @@ void EditorTransformGizmoND::_update_gizmo_transform() {
 void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_camera) {
 	// We want to keep the gizmo the same size on the screen regardless of the camera's position.
 	const Ref<TransformND> camera_transform = p_camera->get_global_transform();
-	Ref<TransformND> global_transform;
-	global_transform.instantiate();
-	if (_is_use_local_rotation) {
-		global_transform = get_transform()->normalized();
-	} else {
-		global_transform = TransformND::identity_basis(get_dimension());
-		global_transform->set_origin(get_transform()->get_origin());
-	}
+	const Ref<TransformND> gizmo_transform = get_transform();
+	const VectorN gizmo_scale_abs = gizmo_transform->get_scale_abs();
 	if (_is_stretch_enabled) {
-		const Ref<RectND> bounds = _get_rect_bounds_of_selection(global_transform->inverse());
+		const Ref<RectND> bounds = _get_rect_bounds_of_selection(gizmo_transform->inverse());
+		Ref<TransformND> global_transform = gizmo_transform->duplicate();
 		global_transform->translate_local(bounds->get_center());
+		global_transform->scale_local(VectorND::multiply_scalar(bounds->get_size(), 0.5f));
 		const VectorN bounds_size = bounds->get_size();
-		const bool zero_size = VectorND::is_zero_approx(bounds_size);
-		if (!zero_size) {
-			const VectorN scale = VectorND::multiply_scalar(bounds_size, 0.5);
-			global_transform->scale_local(VectorND::with_dimension(scale, global_transform->get_basis_column_count()));
-		}
-		_mesh_holder->set_visible(!zero_size);
-	} else {
-		double scale;
-		if (p_camera->get_projection_type() == CameraND::PROJECTION_ORTHOGRAPHIC) {
-			scale = p_camera->get_orthographic_size() * 0.4f;
-		} else {
-			scale = VectorND::distance_to(global_transform->get_origin(), camera_transform->get_origin()) * 0.4f;
-		}
-		global_transform->scale_uniform(scale);
-		_mesh_holder->set_visible(true);
+		const double determinant = VectorND::multiply_components_together(bounds_size);
+		set_visible(!Math::is_zero_approx(determinant));
+		_mesh_holder->set_global_transform(global_transform);
+		return;
 	}
-	_mesh_holder->set_global_transform(global_transform);
+	double scale;
+	if (p_camera->get_projection_type() == CameraND::PROJECTION_ORTHOGRAPHIC) {
+		scale = p_camera->get_orthographic_size() * 0.4;
+	} else {
+		scale = VectorND::distance_to(gizmo_transform->get_origin(), camera_transform->get_origin()) * 0.4;
+	}
+	const VectorN scale_vector = VectorND::fill(get_dimension(), scale);
+	const VectorN mesh_holder_scale = VectorND::divide_vector(scale_vector, gizmo_scale_abs);
+	_mesh_holder->set_basis(BasisND::from_scale(mesh_holder_scale));
 }
 
 Ref<RectND> EditorTransformGizmoND::_get_rect_bounds_of_selection(const Ref<TransformND> &p_inv_relative_to) const {
@@ -523,7 +522,8 @@ Variant EditorTransformGizmoND::_get_transform_raycast_value(const VectorN &p_lo
 }
 
 void EditorTransformGizmoND::_begin_transformation(const VectorN &p_local_ray_origin, const VectorN &p_local_ray_direction) {
-	_old_transform = _mesh_holder->get_global_transform();
+	_old_gizmo_transform = get_transform()->duplicate();
+	_old_mesh_holder_transform = _mesh_holder->get_transform()->duplicate();
 	_transform_reference_value = _get_transform_raycast_value(p_local_ray_origin, p_local_ray_direction);
 	_selected_top_node_old_transforms.resize(_selected_top_nodes.size());
 	for (int i = 0; i < _selected_top_nodes.size(); i++) {
@@ -551,7 +551,6 @@ void EditorTransformGizmoND::_end_transformation() {
 	}
 	_undo_redo->commit_action(false);
 	// Clear out the transformation data and mark the scene as unsaved.
-	_old_transform = Ref<TransformND>();
 	_transform_reference_value = Variant();
 	_current_transformation = TRANSFORM_NONE;
 	EditorInterface::get_singleton()->mark_scene_as_unsaved();
@@ -577,7 +576,7 @@ void EditorTransformGizmoND::_process_transform(const VectorN &p_local_ray_origi
 			ERR_FAIL_COND(casted_vec.size() <= _primary_axis);
 			const double scale_factor = casted_vec[_primary_axis] / VectorN(_transform_reference_value)[_primary_axis];
 			if (_keep_mode == KeepMode::CONFORMAL) {
-				const VectorN scale = VectorND::fill(scale_factor, get_dimension());
+				const VectorN scale = VectorND::fill(get_dimension(), scale_factor);
 				transform_change = TransformND::from_scale(scale);
 			} else {
 				transform_change->set_basis_element(_primary_axis, _primary_axis, scale_factor);
@@ -594,7 +593,7 @@ void EditorTransformGizmoND::_process_transform(const VectorN &p_local_ray_origi
 		case TRANSFORM_STRETCH_POS: {
 			const double stretch = VectorN(casted)[_primary_axis] * 0.5f;
 			if (_keep_mode == KeepMode::CONFORMAL) {
-				const VectorN scale = VectorND::fill(stretch + 0.5f, get_dimension());
+				const VectorN scale = VectorND::fill(get_dimension(), stretch + 0.5f);
 				transform_change = TransformND::from_scale(scale);
 			} else {
 				transform_change->set_basis_element(_primary_axis, _primary_axis, stretch + 0.5f);
@@ -604,7 +603,7 @@ void EditorTransformGizmoND::_process_transform(const VectorN &p_local_ray_origi
 		case TRANSFORM_STRETCH_NEG: {
 			const double stretch = VectorN(casted)[_primary_axis] * 0.5f;
 			if (_keep_mode == KeepMode::CONFORMAL) {
-				const VectorN scale = VectorND::fill(-stretch + 0.5f, get_dimension());
+				const VectorN scale = VectorND::fill(get_dimension(), -stretch + 0.5f);
 				transform_change = TransformND::from_scale(scale);
 			} else {
 				transform_change->set_basis_element(_primary_axis, _primary_axis, -stretch + 0.5f);
@@ -615,11 +614,14 @@ void EditorTransformGizmoND::_process_transform(const VectorN &p_local_ray_origi
 			ERR_FAIL_MSG("Invalid transformation.");
 		} break;
 	}
-	Ref<TransformND> new_transform = _old_transform->compose_square(transform_change);
+	// The above position changes happen relative to the visual gizmo mesh holder, but
+	// we want them relative to the gizmo itself. Scale/rotation should not be adjusted.
+	transform_change->set_origin(_old_mesh_holder_transform->xform(transform_change->get_origin()));
+	Ref<TransformND> new_transform = _old_gizmo_transform->compose_square(transform_change);
 	set_transform(new_transform);
 	// We want the global diff so we can apply it from the left on the global transform of all selected nodes.
 	// Without this, the transforms would be relative to each node (ex: moving on X moves on each node's X axis).
-	transform_change = _old_transform->transform_to(new_transform);
+	transform_change = _old_gizmo_transform->transform_to(new_transform);
 	for (int i = 0; i < _selected_top_nodes.size(); i++) {
 		NodeND *node_nd = Object::cast_to<NodeND>(_selected_top_nodes[i]);
 		if (node_nd != nullptr) {
@@ -768,21 +770,23 @@ bool EditorTransformGizmoND::gizmo_mouse_input(const Ref<InputEventMouse> &p_mou
 	const VectorN ray_origin = p_camera->viewport_to_world_ray_origin(mouse_position);
 	const VectorN ray_direction = p_camera->viewport_to_world_ray_direction(mouse_position);
 	if (_current_transformation == TRANSFORM_NONE) {
-		_old_transform = _mesh_holder->get_global_transform();
+		_old_gizmo_transform = get_transform()->duplicate();
+		_old_mesh_holder_transform = _mesh_holder->get_transform()->duplicate();
 	}
-	if (_old_transform->get_basis_column_count() == 0) {
+	if (_old_gizmo_transform->get_basis_column_count() == 0) {
 		// 0D, so nothing to do.
 		set_visible(false);
 		return false;
 	}
-	if (Math::is_zero_approx(_old_transform->determinant())) {
+	if (Math::is_zero_approx(_old_gizmo_transform->determinant())) {
 		// Something's wrong with our transform. Let's try to fix it.
-		set_transform(get_transform()->orthonormalized());
-		_mesh_holder->set_transform(_mesh_holder->get_transform()->orthonormalized());
-		_old_transform = _mesh_holder->get_global_transform();
-		ERR_FAIL_COND_V_MSG(Math::is_zero_approx(_old_transform->determinant()), false, "EditorTransformGizmoND: Gizmo transform is not valid.");
+		_old_gizmo_transform = get_transform()->orthonormalized();
+		_old_mesh_holder_transform = _mesh_holder->get_transform()->orthonormalized();
+		set_transform(_old_gizmo_transform);
+		_mesh_holder->set_transform(_old_mesh_holder_transform);
+		ERR_FAIL_COND_V_MSG(Math::is_zero_approx(_old_gizmo_transform->determinant()), false, "EditorTransformGizmoND: Gizmo transform is not valid.");
 	}
-	const Ref<TransformND> global_to_local = _old_transform->inverse();
+	const Ref<TransformND> global_to_local = _old_gizmo_transform->compose_square(_old_mesh_holder_transform)->inverse();
 	const VectorN local_ray_origin = global_to_local->xform(ray_origin);
 	const VectorN local_ray_direction = global_to_local->xform_basis(ray_direction);
 	return gizmo_mouse_raycast(p_mouse_event, local_ray_origin, local_ray_direction);

@@ -616,6 +616,16 @@ Ref<TransformND> TransformND::inverse_transposed() const {
 
 // Scale methods.
 
+VectorN TransformND::get_global_scale_abs() const {
+	const int row_count = get_basis_row_count();
+	VectorN scale;
+	scale.resize(row_count);
+	for (int i = 0; i < row_count; i++) {
+		scale.set(i, VectorND::length(get_basis_row(i)));
+	}
+	return scale;
+}
+
 VectorN TransformND::get_scale_abs() const {
 	const int column_count = _columns.size();
 	VectorN scale;
@@ -1123,7 +1133,7 @@ Ref<TransformND> TransformND::identity_basis(const int p_dimension) {
 
 Ref<TransformND> TransformND::identity_transform(const int p_dimension) {
 	Ref<TransformND> ret = identity_basis(p_dimension);
-	ret->set_origin(VectorND::fill(0.0, p_dimension));
+	ret->set_origin(VectorND::zero(p_dimension));
 	return ret;
 }
 

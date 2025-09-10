@@ -55,7 +55,8 @@ private:
 	int _primary_axis = -1;
 	int _secondary_axis = -1;
 
-	Ref<TransformND> _old_transform;
+	Ref<TransformND> _old_gizmo_transform;
+	Ref<TransformND> _old_mesh_holder_transform;
 	Variant _transform_reference_value = Variant();
 	TypedArray<Node> _selected_top_nodes;
 	Vector<Ref<TransformND>> _selected_top_node_old_transforms;

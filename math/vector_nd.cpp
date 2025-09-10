@@ -338,7 +338,7 @@ VectorN VectorND::duplicate(const VectorN &p_vector) {
 	return duplicate_vector;
 }
 
-VectorN VectorND::fill(const double p_value, const int64_t p_dimension) {
+VectorN VectorND::fill(const int64_t p_dimension, const double p_value) {
 	VectorN filled_vector;
 	filled_vector.resize(p_dimension);
 	for (int64_t i = 0; i < p_dimension; i++) {
@@ -347,7 +347,7 @@ VectorN VectorND::fill(const double p_value, const int64_t p_dimension) {
 	return filled_vector;
 }
 
-Vector<VectorN> VectorND::fill_array(const double p_value, const int64_t p_vector_amount, const int64_t p_dimension) {
+Vector<VectorN> VectorND::fill_array(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value) {
 	Vector<VectorN> filled_array;
 	filled_array.resize(p_vector_amount);
 	const VectorN filled_vector = fill(p_value, p_dimension);
@@ -357,8 +357,8 @@ Vector<VectorN> VectorND::fill_array(const double p_value, const int64_t p_vecto
 	return filled_array;
 }
 
-TypedArray<VectorN> VectorND::fill_array_bind(const double p_value, const int64_t p_vector_amount, const int64_t p_dimension) {
-	Vector<VectorN> filled_array = VectorND::fill_array(p_value, p_vector_amount, p_dimension);
+TypedArray<VectorN> VectorND::fill_array_bind(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value) {
+	Vector<VectorN> filled_array = VectorND::fill_array(p_dimension, p_vector_amount, p_value);
 	TypedArray<VectorN> filled_array_variant;
 	filled_array_variant.resize(p_vector_amount);
 	for (int64_t i = 0; i < p_vector_amount; i++) {
@@ -510,6 +510,15 @@ int64_t VectorND::min_axis_index(const VectorN &p_vector) {
 	return min_index;
 }
 
+double VectorND::multiply_components_together(const VectorN &p_vector) {
+	const int64_t dimension = p_vector.size();
+	double product = 1.0;
+	for (int64_t i = 0; i < dimension; i++) {
+		product *= p_vector[i];
+	}
+	return product;
+}
+
 VectorN VectorND::multiply_vector(const VectorN &p_a, const VectorN &p_b, const bool p_expand) {
 	const int64_t dimension = p_expand ? MAX(p_a.size(), p_b.size()) : MIN(p_a.size(), p_b.size());
 	VectorN product;
@@ -598,9 +607,9 @@ VectorN VectorND::perpendicular(const Vector<VectorN> &p_input_vectors) {
 		WARN_PRINT("VectorND.perpendicular: Calculating a perpendicular vector in " + itos(dimension) + "-dimensional space will be very slow.");
 	}
 	// Allocate the result vector and a matrix to perform the intermediate calculations.
-	VectorN result = VectorND::fill(0.0, dimension);
+	VectorN result = VectorND::zero(dimension);
 	const int64_t sub_size = count; // == dimension - 1
-	Vector<VectorN> sub_matrix = VectorND::fill_array(0.0, sub_size, sub_size);
+	Vector<VectorN> sub_matrix = VectorND::fill_array(sub_size, sub_size, 0.0);
 	// Flip the entire result if dimension is even.
 	const bool global_parity = (dimension % 2 == 0);
 	// This algorithm was found by ChatGPT and manually tweaked. It is likely suboptimal.
@@ -944,8 +953,8 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("dot", "a", "b"), &VectorND::dot);
 	ClassDB::bind_static_method("VectorND", D_METHOD("drop_first_dimensions", "vector", "dimensions"), &VectorND::drop_first_dimensions);
 	ClassDB::bind_static_method("VectorND", D_METHOD("duplicate", "vector"), &VectorND::duplicate);
-	ClassDB::bind_static_method("VectorND", D_METHOD("fill", "value", "dimension"), &VectorND::fill);
-	ClassDB::bind_static_method("VectorND", D_METHOD("fill_array", "value", "vector_amount", "dimension"), &VectorND::fill_array_bind);
+	ClassDB::bind_static_method("VectorND", D_METHOD("fill", "dimension", "value"), &VectorND::fill);
+	ClassDB::bind_static_method("VectorND", D_METHOD("fill_array", "dimension", "vector_amount", "value"), &VectorND::fill_array_bind);
 	ClassDB::bind_static_method("VectorND", D_METHOD("floor", "vector"), &VectorND::floor);
 	ClassDB::bind_static_method("VectorND", D_METHOD("inverse", "vector"), &VectorND::inverse);
 	ClassDB::bind_static_method("VectorND", D_METHOD("is_equal_approx", "a", "b"), &VectorND::is_equal_approx);
@@ -959,6 +968,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("max_absolute_axis_index", "vector"), &VectorND::max_absolute_axis_index);
 	ClassDB::bind_static_method("VectorND", D_METHOD("max_axis_index", "vector"), &VectorND::max_axis_index);
 	ClassDB::bind_static_method("VectorND", D_METHOD("min_axis_index", "vector"), &VectorND::min_axis_index);
+	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_components_together", "vector"), &VectorND::multiply_components_together);
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_vector", "a", "b", "expand"), &VectorND::multiply_vector, DEFVAL(false));
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_scalar", "vector", "scalar"), &VectorND::multiply_scalar);
 	ClassDB::bind_static_method("VectorND", D_METHOD("negate", "vector"), &VectorND::negate);

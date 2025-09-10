@@ -522,6 +522,16 @@ Ref<BasisND> BasisND::inverse_transposed() const {
 
 // Scale methods.
 
+VectorN BasisND::get_global_scale_abs() const {
+	const int row_count = get_row_count();
+	VectorN scale;
+	scale.resize(row_count);
+	for (int i = 0; i < row_count; i++) {
+		scale.set(i, VectorND::length(get_row(i)));
+	}
+	return scale;
+}
+
 VectorN BasisND::get_scale_abs() const {
 	const int column_count = _columns.size();
 	VectorN scale;
