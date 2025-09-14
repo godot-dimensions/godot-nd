@@ -283,7 +283,13 @@ void EulerND::set_rotation_of_basis(const Ref<BasisND> &p_basis) {
 
 void EulerND::set_rotation_of_transform(const Ref<TransformND> &p_transform) {
 	Ref<BasisND> new_basis = to_rotation_basis();
-	new_basis->scale_local(p_transform->get_scale_abs());
+	const int input_dim = p_transform->get_basis_dimension();
+	if (input_dim > new_basis->get_dimension()) {
+		new_basis->set_dimension(input_dim);
+	}
+	if (input_dim != 0) {
+		new_basis->scale_local(p_transform->get_scale_abs());
+	}
 	p_transform->set_basis(new_basis);
 }
 
