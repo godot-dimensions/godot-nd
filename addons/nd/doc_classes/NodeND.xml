@@ -47,6 +47,9 @@
 			node.basis_columns = b
 			[/codeblock]
 		</member>
+		<member name="basis_flat_array" type="PackedFloat64Array" setter="set_basis_flat_array" getter="get_basis_flat_array">
+			The basis matrix of this node as a flat array in column-major order. Missing elements are filled with identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest). When setting this property, the size of the array MUST be the same as the current basis dimensions of this [NodeND]'s [TransformND], since this cannot be used to set the dimensions. Use [member dimension] if changing the dimensions is needed.
+		</member>
 		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
 			The dimension of the node's transform. Setting this will set [member input_dimension] and [member output_dimension] to the same value.
 		</member>

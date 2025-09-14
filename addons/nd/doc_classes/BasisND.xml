@@ -420,6 +420,9 @@
 		</method>
 	</methods>
 	<members>
+		<member name="flat_array" type="PackedFloat64Array" setter="set_flat_array" getter="get_flat_array">
+			The basis matrix as a flat array in column-major order. Missing elements are filled with identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest). When setting this property, the size of the array MUST be the same as the current dimensions of this [BasisND], since this cannot be used to set the dimensions of the basis. Use [method set_dimension] or [method with_dimension] if changing the dimensions is needed.
+		</member>
 		<member name="scale_abs" type="PackedFloat64Array" setter="set_scale_abs" getter="get_scale_abs" default="PackedFloat64Array()">
 			The absolute scale, which is the length of each basis column. This does not account for flips/reflections, and is intended to be used with positive values only. Setting this with negative values will flip the basis vectors, but the scale will be positive again when reading this property back.
 		</member>

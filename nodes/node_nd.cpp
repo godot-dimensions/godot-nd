@@ -50,6 +50,18 @@ void NodeND::set_all_basis_columns_bind(const TypedArray<VectorN> &p_columns) {
 	}
 }
 
+VectorN NodeND::get_basis_flat_array() const {
+	return _transform->get_basis_flat_array();
+}
+
+void NodeND::set_basis_flat_array(const VectorN &p_array) {
+	_transform->set_basis_flat_array(p_array);
+	if (_rotation_euler.is_valid()) {
+		_rotation_euler->set_from_decomposed_simple_rotations(_transform->get_all_basis_columns());
+		notify_property_list_changed();
+	}
+}
+
 VectorN NodeND::get_position() const {
 	return _transform->get_origin();
 }
@@ -268,6 +280,8 @@ void NodeND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_basis", "basis"), &NodeND::set_basis);
 	ClassDB::bind_method(D_METHOD("get_all_basis_columns"), &NodeND::get_all_basis_columns_bind);
 	ClassDB::bind_method(D_METHOD("set_all_basis_columns", "columns"), &NodeND::set_all_basis_columns_bind);
+	ClassDB::bind_method(D_METHOD("get_basis_flat_array"), &NodeND::get_basis_flat_array);
+	ClassDB::bind_method(D_METHOD("set_basis_flat_array", "array"), &NodeND::set_basis_flat_array);
 	ClassDB::bind_method(D_METHOD("get_position"), &NodeND::get_position);
 	ClassDB::bind_method(D_METHOD("set_position", "position"), &NodeND::set_position);
 	ClassDB::bind_method(D_METHOD("get_scale_abs"), &NodeND::get_scale_abs);
@@ -306,6 +320,7 @@ void NodeND::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "transform", PROPERTY_HINT_RESOURCE_TYPE, "TransformND", PROPERTY_USAGE_NONE), "set_transform", "get_transform");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "basis", PROPERTY_HINT_RESOURCE_TYPE, "BasisND", PROPERTY_USAGE_NONE), "set_basis", "get_basis");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "basis_columns", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array", PROPERTY_USAGE_STORAGE), "set_all_basis_columns", "get_all_basis_columns");
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "basis_flat_array", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "set_basis_flat_array", "get_basis_flat_array");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "position", PROPERTY_HINT_NONE, "suffix:m"), "set_position", "get_position");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "euler_rotation_count", PROPERTY_HINT_RANGE, "0,100,1", PROPERTY_USAGE_EDITOR), "set_euler_rotation_count", "get_euler_rotation_count");

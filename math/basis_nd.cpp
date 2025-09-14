@@ -20,7 +20,7 @@ void BasisND::_make_basis_square_in_place(Vector<VectorN> &p_basis) {
 	}
 }
 
-// Trivial getters and setters.
+// Getters and setters.
 
 Vector<VectorN> BasisND::get_all_columns() const {
 	return _columns;
@@ -43,6 +43,34 @@ void BasisND::set_all_columns_bind(const TypedArray<VectorN> &p_columns) {
 	_columns.resize(p_columns.size());
 	for (int i = 0; i < p_columns.size(); i++) {
 		_columns.set(i, p_columns[i]);
+	}
+}
+
+VectorN BasisND::get_flat_array() const {
+	VectorN flat;
+	const int column_count = _columns.size();
+	const int row_count = get_row_count();
+	flat.resize(column_count * row_count);
+	for (int col_index = 0; col_index < column_count; col_index++) {
+		const VectorN &filled_column = get_column(col_index);
+		for (int row_index = 0; row_index < row_count; row_index++) {
+			flat.set(col_index * row_count + row_index, filled_column[row_index]);
+		}
+	}
+	return flat;
+}
+
+void BasisND::set_flat_array(const VectorN &p_array) {
+	const int column_count = _columns.size();
+	const int row_count = get_row_count();
+	ERR_FAIL_COND_MSG(p_array.size() != column_count * row_count, "Input array size (" + itos(p_array.size()) + ") does not match the expected size (" + itos(column_count) + String(U" \u00D7 ") + itos(row_count) + " = " + itos(column_count * row_count) + ").");
+	for (int col_index = 0; col_index < column_count; col_index++) {
+		VectorN column;
+		column.resize(row_count);
+		for (int row_index = 0; row_index < row_count; row_index++) {
+			column.set(row_index, p_array[col_index * row_count + row_index]);
+		}
+		_columns.set(col_index, column);
 	}
 }
 
@@ -993,9 +1021,11 @@ Ref<BasisND> BasisND::identity(const int p_dimension) {
 }
 
 void BasisND::_bind_methods() {
-	// Trivial getters and setters.
+	// Getters and setters.
 	ClassDB::bind_method(D_METHOD("get_all_columns"), &BasisND::get_all_columns_bind);
 	ClassDB::bind_method(D_METHOD("set_all_columns", "columns"), &BasisND::set_all_columns_bind);
+	ClassDB::bind_method(D_METHOD("get_flat_array"), &BasisND::get_flat_array);
+	ClassDB::bind_method(D_METHOD("set_flat_array", "array"), &BasisND::set_flat_array);
 	ClassDB::bind_method(D_METHOD("get_column_raw", "index"), &BasisND::get_column_raw);
 	ClassDB::bind_method(D_METHOD("get_column", "index"), &BasisND::get_column);
 	ClassDB::bind_method(D_METHOD("set_column", "index", "column"), &BasisND::set_column);
@@ -1066,4 +1096,5 @@ void BasisND::_bind_methods() {
 	ClassDB::bind_static_method("BasisND", D_METHOD("identity", "dimension"), &BasisND::identity);
 	// Properties.
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "scale_abs", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_scale_abs", "get_scale_abs");
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "flat_array", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "set_flat_array", "get_flat_array");
 }

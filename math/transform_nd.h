@@ -16,7 +16,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	// Trivial getters and setters.
+	// Getters and setters.
 	Ref<BasisND> get_basis() const;
 	void set_basis(const Ref<BasisND> &p_basis);
 
@@ -25,6 +25,9 @@ public:
 
 	TypedArray<VectorN> get_all_basis_columns_bind() const;
 	void set_all_basis_columns_bind(const TypedArray<VectorN> &p_columns);
+
+	VectorN get_basis_flat_array() const;
+	void set_basis_flat_array(const VectorN &p_array);
 
 	VectorN get_basis_column_raw(const int p_index) const;
 	VectorN get_basis_column(const int p_index) const;

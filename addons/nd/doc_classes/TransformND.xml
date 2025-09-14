@@ -550,6 +550,9 @@
 			transform.basis_columns = b
 			[/codeblock]
 		</member>
+		<member name="basis_flat_array" type="PackedFloat64Array" setter="set_basis_flat_array" getter="get_basis_flat_array">
+			The basis matrix of this transform as a flat array in column-major order. Missing elements are filled with identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest). When setting this property, the size of the array MUST be the same as the current basis dimensions of this [TransformND], since this cannot be used to set the dimensions. Use [method set_dimension] or [method with_dimension] if changing the dimensions is needed.
+		</member>
 		<member name="origin" type="PackedFloat64Array" setter="set_origin" getter="get_origin" default="PackedFloat64Array()">
 			The origin vector of the transform. This represents the position or translation relative to the parent space.
 		</member>

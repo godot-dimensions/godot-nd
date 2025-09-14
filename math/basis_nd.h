@@ -23,12 +23,15 @@ protected:
 	static void _bind_methods();
 
 public:
-	// Trivial getters and setters.
+	// Getters and setters.
 	Vector<VectorN> get_all_columns() const;
 	void set_all_columns(const Vector<VectorN> &p_columns);
 
 	TypedArray<VectorN> get_all_columns_bind() const;
 	void set_all_columns_bind(const TypedArray<VectorN> &p_columns);
+
+	VectorN get_flat_array() const;
+	void set_flat_array(const VectorN &p_array);
 
 	VectorN get_column_raw(const int p_index) const;
 	VectorN get_column(const int p_index) const;

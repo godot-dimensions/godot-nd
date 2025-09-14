@@ -45,6 +45,8 @@ public:
 	void set_all_basis_columns(const Vector<VectorN> &p_columns);
 	TypedArray<VectorN> get_all_basis_columns_bind() const;
 	void set_all_basis_columns_bind(const TypedArray<VectorN> &p_columns);
+	VectorN get_basis_flat_array() const;
+	void set_basis_flat_array(const VectorN &p_array);
 
 	VectorN get_position() const;
 	void set_position(const VectorN &p_position);
