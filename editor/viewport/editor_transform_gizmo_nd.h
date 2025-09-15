@@ -44,6 +44,7 @@ private:
 	};
 
 	NodeND *_mesh_holder = nullptr;
+	Vector<NodeND *> _mesh_keep_conformal;
 	Vector<MeshInstanceND *> _meshes[TRANSFORM_MAX];
 	EditorMainScreenND *_editor_main_screen = nullptr;
 	EditorUndoRedoManager *_undo_redo = nullptr;
@@ -71,7 +72,7 @@ private:
 	bool _is_use_local_rotation = false;
 
 	// Setup functions.
-	MeshInstanceND *_make_mesh_instance(const StringName &p_name, const Ref<ArrayWireMeshND> &p_mesh, const Ref<WireMaterialND> &p_material);
+	MeshInstanceND *_make_mesh_instance(const StringName &p_name, const Ref<ArrayWireMeshND> &p_mesh, const Ref<WireMaterialND> &p_material, NodeND *p_parent);
 	void _generate_gizmo_meshes();
 	void _regenerate_gizmo_meshes();
 

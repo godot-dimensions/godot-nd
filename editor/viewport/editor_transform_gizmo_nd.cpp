@@ -67,15 +67,15 @@ Ref<WireMaterialND> _make_rotation_ring_material_nd(const Color &p_first_color, 
 	PackedColorArray colors;
 	for (int i = 0; i < ROTATION_RING_SEGMENTS_ND; i++) {
 		if (i < ROTATION_RING_SEGMENTS_ND / 8) {
-			colors.push_back(p_first_color);
+			colors.push_back(p_second_color);
 		} else if (i < ROTATION_RING_SEGMENTS_ND * 3 / 8) {
-			colors.push_back(p_second_color);
+			colors.push_back(p_first_color);
 		} else if (i < ROTATION_RING_SEGMENTS_ND * 5 / 8) {
-			colors.push_back(p_first_color);
-		} else if (i < ROTATION_RING_SEGMENTS_ND * 7 / 8) {
 			colors.push_back(p_second_color);
-		} else {
+		} else if (i < ROTATION_RING_SEGMENTS_ND * 7 / 8) {
 			colors.push_back(p_first_color);
+		} else {
+			colors.push_back(p_second_color);
 		}
 	}
 	mat->set_albedo_color_array(colors);
@@ -133,13 +133,13 @@ Ref<ArrayWireMeshND> _make_plane_wire_mesh_nd() {
 	return mesh;
 }
 
-MeshInstanceND *EditorTransformGizmoND::_make_mesh_instance(const StringName &p_name, const Ref<ArrayWireMeshND> &p_mesh, const Ref<WireMaterialND> &p_material) {
+MeshInstanceND *EditorTransformGizmoND::_make_mesh_instance(const StringName &p_name, const Ref<ArrayWireMeshND> &p_mesh, const Ref<WireMaterialND> &p_material, NodeND *p_parent) {
 	MeshInstanceND *mesh_instance = memnew(MeshInstanceND);
 	mesh_instance->set_name(p_name);
 	mesh_instance->set_mesh(p_mesh);
 	mesh_instance->set_material_override(p_material);
 	mesh_instance->set_meta(StringName("original_material"), p_material);
-	_mesh_holder->add_child(mesh_instance);
+	p_parent->add_child(mesh_instance);
 	return mesh_instance;
 }
 
@@ -166,6 +166,18 @@ int _plane_index_in_triangular_number(const int p_i, const int p_j, const int p_
 
 void EditorTransformGizmoND::_generate_gizmo_meshes() {
 	const int dimension = get_dimension();
+	// Create the keep-conformal holders if needed.
+	const int old_keep_conformal_size = _mesh_keep_conformal.size();
+	if (old_keep_conformal_size < dimension) {
+		_mesh_keep_conformal.resize(dimension);
+		for (int i = old_keep_conformal_size; i < dimension; i++) {
+			NodeND *node = memnew(NodeND);
+			node->set_name(StringName(String("KeepConformal") + String::num_int64(i)));
+			_mesh_holder->add_child(node);
+			_mesh_keep_conformal.set(i, node);
+		}
+	}
+	// Create the axis colors wire materials.
 	Vector<Ref<WireMaterialND>> axis_materials;
 	axis_materials.resize(dimension);
 	for (int i = 0; i < dimension; i++) {
@@ -178,7 +190,7 @@ void EditorTransformGizmoND::_generate_gizmo_meshes() {
 	move_arrow_meshes.resize(dimension);
 	for (int i = 0; i < dimension; i++) {
 		const StringName name = StringName("MoveArrow" + String::num_int64(i));
-		MeshInstanceND *mesh_instance = _make_mesh_instance(name, move_arrow_mesh, axis_materials[i]);
+		MeshInstanceND *mesh_instance = _make_mesh_instance(name, move_arrow_mesh, axis_materials[i], _mesh_keep_conformal[i]);
 		if (i != 0) {
 			mesh_instance->set_transform(TransformND::from_swap_rotation(0, i));
 		}
@@ -192,7 +204,7 @@ void EditorTransformGizmoND::_generate_gizmo_meshes() {
 		for (int j = i + 1; j < dimension; j++) {
 			const StringName name = StringName("Plane" + String::num_int64(i) + "_" + String::num_int64(j));
 			Ref<WireMaterialND> plane_material = _make_plane_material_nd(axis_materials[i]->get_albedo_color(), axis_materials[j]->get_albedo_color());
-			MeshInstanceND *mesh_instance = _make_mesh_instance(name, plane_mesh, plane_material);
+			MeshInstanceND *mesh_instance = _make_mesh_instance(name, plane_mesh, plane_material, _mesh_holder);
 			Ref<TransformND> mesh_transform = _realign_xy_to_axes(i, j);
 			VectorN mesh_pos = VectorND::value_on_axis_with_dimension(PLANE_OFFSET_ND, i, dimension);
 			mesh_pos.set(j, PLANE_OFFSET_ND);
@@ -209,7 +221,7 @@ void EditorTransformGizmoND::_generate_gizmo_meshes() {
 		for (int j = i + 1; j < dimension; j++) {
 			const StringName name = StringName("RotationRing" + String::num_int64(i) + "_" + String::num_int64(j));
 			Ref<WireMaterialND> rotation_ring_material = _make_rotation_ring_material_nd(axis_materials[i]->get_albedo_color(), axis_materials[j]->get_albedo_color());
-			MeshInstanceND *mesh_instance = _make_mesh_instance(name, rotation_ring_mesh, rotation_ring_material);
+			MeshInstanceND *mesh_instance = _make_mesh_instance(name, rotation_ring_mesh, rotation_ring_material, _mesh_holder);
 			Ref<TransformND> mesh_rot = _realign_xy_to_axes(i, j);
 			mesh_instance->set_transform(mesh_rot);
 			rotation_ring_meshes.set(_plane_index_in_triangular_number(i, j, dimension), mesh_instance);
@@ -226,7 +238,7 @@ void EditorTransformGizmoND::_generate_gizmo_meshes() {
 		const StringName name = StringName("StretchNeg" + String::num_int64(i));
 		Ref<WireMaterialND> neg_mat = axis_materials[i]->duplicate();
 		neg_mat->set_albedo_color(neg_mat->get_albedo_color().lerp(Color(0.0, 0.0, 0.0), 0.5));
-		MeshInstanceND *mesh_instance = _make_mesh_instance(name, move_arrow_mesh, neg_mat);
+		MeshInstanceND *mesh_instance = _make_mesh_instance(name, move_arrow_mesh, neg_mat, _mesh_holder);
 		if (i == 0) {
 			mesh_instance->set_transform(TransformND::from_scale(VectorN{ -1.0 }));
 		} else {
@@ -244,7 +256,7 @@ void EditorTransformGizmoND::_regenerate_gizmo_meshes() {
 		Vector<MeshInstanceND *> &mesh_instances = _meshes[i];
 		for (int j = 0; j < mesh_instances.size(); j++) {
 			if (mesh_instances[j]->get_parent() != nullptr) {
-				_mesh_holder->remove_child(mesh_instances[j]);
+				mesh_instances[j]->get_parent()->remove_child(mesh_instances[j]);
 				mesh_instances[j]->queue_free();
 			}
 		}
@@ -284,7 +296,13 @@ void EditorTransformGizmoND::_update_gizmo_transform() {
 	} else {
 		set_visible(true);
 		sum_transform = sum_transform->divide_scalar(double(transform_count));
-		if (!_is_use_local_rotation) {
+		if (_is_use_local_rotation) {
+			// Scale/shear/skew can mess with the rotation gizmo, so get rid of it.
+			Vector<MeshInstanceND *> _rotation_meshes = _meshes[TRANSFORM_ROTATE];
+			if (_rotation_meshes.size() > 0 && _rotation_meshes[0] != nullptr && _rotation_meshes[0]->is_visible()) {
+				sum_transform = sum_transform->orthonormalized();
+			}
+		} else {
 			sum_transform->set_basis(BasisND::from_scale(sum_transform->get_global_scale_abs()));
 		}
 		const int old_dimension = get_dimension();
@@ -306,6 +324,10 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 	const VectorN gizmo_scale_abs = gizmo_transform->get_scale_abs();
 	if (_is_stretch_enabled) {
 		const Ref<RectND> bounds = _get_rect_bounds_of_selection(gizmo_transform->inverse());
+		if (bounds->get_dimension() == 0) {
+			set_visible(false);
+			return;
+		}
 		Ref<TransformND> global_transform = gizmo_transform->duplicate();
 		global_transform->translate_local(bounds->get_center());
 		global_transform->scale_local(VectorND::multiply_scalar(bounds->get_size(), 0.5f));
@@ -322,8 +344,29 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 		scale = VectorND::distance_to(gizmo_transform->get_origin(), camera_transform->get_origin()) * 0.4;
 	}
 	const VectorN scale_vector = VectorND::fill(get_dimension(), scale);
-	const VectorN mesh_holder_scale = VectorND::divide_vector(scale_vector, gizmo_scale_abs);
-	_mesh_holder->set_basis(BasisND::from_scale(mesh_holder_scale));
+	if (_is_use_local_rotation) {
+		const VectorN mesh_holder_scale = VectorND::divide_vector(scale_vector, gizmo_scale_abs);
+		_mesh_holder->set_basis(BasisND::from_scale(mesh_holder_scale));
+	} else {
+		_mesh_holder->set_global_basis(BasisND::from_scale(scale_vector));
+	}
+	// Now that the main mesh holder has the correct transform, conformalize the keep-conformal holders.
+	// While the mesh holder affects mouse input, this adjustment is purely a visual effect.
+	const int dimension = get_dimension();
+	for (int i = 0; i < dimension; i++) {
+		_mesh_keep_conformal[i]->set_transform(TransformND::identity_transform(dimension));
+		Ref<BasisND> basis = _mesh_keep_conformal[i]->get_global_basis();
+		const double scale = VectorND::length(basis->get_column(i));
+		basis->set_column(i, VectorND::normalized(basis->get_column(i)));
+		// Gram-Schmidt process, prioritizing the axis with index i.
+		for (int j = 0; j < dimension; j++) {
+			if (j != i) {
+				basis->set_column(j, VectorND::normalized(VectorND::slide(basis->get_column(j), basis->get_column(i))));
+			}
+		}
+		basis->scale_uniform(scale);
+		_mesh_keep_conformal[i]->set_global_basis(basis);
+	}
 }
 
 Ref<RectND> EditorTransformGizmoND::_get_rect_bounds_of_selection(const Ref<TransformND> &p_inv_relative_to) const {
@@ -754,7 +797,7 @@ void EditorTransformGizmoND::set_gizmo_mode(const GizmoMode p_mode) {
 	for (int i = 0; i < stretch_neg_meshes.size(); i++) {
 		stretch_neg_meshes[i]->set_visible(_is_stretch_enabled);
 	}
-	set_visible(true);
+	_update_gizmo_transform();
 }
 
 bool EditorTransformGizmoND::gizmo_mouse_input(const Ref<InputEventMouse> &p_mouse_event, const CameraND *p_camera) {

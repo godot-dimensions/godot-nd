@@ -141,7 +141,7 @@ void NodeND::_update_transform_from_euler() {
 // Global transform getters and setters.
 
 Ref<TransformND> NodeND::get_global_transform() const {
-	NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
+	const NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
 	if (node_nd_parent) {
 		return node_nd_parent->get_global_transform()->compose_square(_transform);
 	} else {
@@ -155,6 +155,26 @@ void NodeND::set_global_transform(const Ref<TransformND> &p_transform) {
 		set_transform(node_nd_parent->get_global_transform()->inverse()->compose_square(p_transform));
 	} else {
 		set_transform(p_transform);
+	}
+}
+
+Ref<BasisND> NodeND::get_global_basis() const {
+	const Ref<BasisND> self_basis = _transform->get_basis();
+	const NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
+	if (node_nd_parent) {
+		return node_nd_parent->get_global_basis()->compose_square(self_basis);
+	} else {
+		return self_basis;
+	}
+}
+
+void NodeND::set_global_basis(const Ref<BasisND> &p_basis) {
+	const NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
+	if (node_nd_parent) {
+		Ref<BasisND> local_basis = node_nd_parent->get_global_basis()->inverse()->compose_square(p_basis);
+		set_basis(local_basis);
+	} else {
+		set_basis(p_basis);
 	}
 }
 

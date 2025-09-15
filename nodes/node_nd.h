@@ -63,6 +63,8 @@ public:
 	// Global transform getters and setters.
 	Ref<TransformND> get_global_transform() const;
 	void set_global_transform(const Ref<TransformND> &p_transform);
+	Ref<BasisND> get_global_basis() const;
+	void set_global_basis(const Ref<BasisND> &p_basis);
 
 	Ref<TransformND> get_global_transform_expand() const;
 	Ref<TransformND> get_global_transform_shrink() const;
