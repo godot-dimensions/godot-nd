@@ -167,6 +167,7 @@ Ref<ArrayCellMeshND> OFFDocumentND::import_generate_array_cell_mesh_nd() {
 	cell_mesh.instantiate();
 	cell_mesh->set_dimension(_dimension);
 	cell_mesh->set_vertices(_vertices);
+	ERR_FAIL_COND_V_MSG(_cell_face_indices.is_empty(), cell_mesh, "OFFDocumentND: This OFF document does not contain any cells, so it cannot be converted to a cell mesh. Perhaps this is a vertex-only OFF file, or a 0D or 1D OFF file?");
 	const Vector<Vector<PackedInt32Array>> cell_vertex_indices = _calculate_cell_vertex_indices();
 	const Vector<Vector<PackedInt32Array>> simplex_vertex_indices = _calculate_simplex_vertex_indices(cell_vertex_indices);
 	const int64_t simplex_vertex_indices_size = simplex_vertex_indices.size();
@@ -207,7 +208,17 @@ Ref<ArrayWireMeshND> OFFDocumentND::import_generate_wire_mesh_nd(const bool p_de
 	Ref<ArrayWireMeshND> wire_mesh;
 	wire_mesh.instantiate();
 	wire_mesh->set_vertices(_vertices);
-	ERR_FAIL_COND_V_MSG(_cell_face_indices.is_empty(), wire_mesh, "OFFDocumentND: Cannot generate wire mesh from OFF document with no cell face indices.");
+	if (_cell_face_indices.is_empty()) {
+		if (_vertices.size() == 2) {
+			// Special case: OFF file with just two vertices and one implicit edge (such as a 1D OFF file).
+			wire_mesh->append_edge_indices(0, 1);
+			return wire_mesh;
+		}
+		if (_dimension < 2) {
+			return wire_mesh;
+		}
+		ERR_FAIL_V_MSG(wire_mesh, "OFFDocumentND: Cannot generate wire mesh from OFF document with no cell face indices.");
+	}
 	Ref<WireMaterialND> wire_material;
 	if (_has_any_cell_colors) {
 		wire_material.instantiate();
@@ -292,6 +303,7 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 	int current_cell_index = 0;
 	int current_vertex_index = 0;
 	int vertex_count = 0;
+	int min_items_per_line = 3;
 	bool can_warn = true;
 	const PackedStringArray lines = p_raw_text.split("\n", false);
 	for (const String &line : lines) {
@@ -299,21 +311,21 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 			continue;
 		}
 		if (line.contains("OFF")) {
+			// "OFF" by itself is 3D OFF.
 			if (line == "OFF") {
 				off_document->_dimension = 3;
 			} else {
-				const int dimension = line.to_int();
-				if (dimension > 0) {
-					off_document->_dimension = dimension;
-				} else {
-					return off_document;
+				const int declared_dimension = line.to_int();
+				off_document->_dimension = declared_dimension;
+				if (declared_dimension < 3) {
+					min_items_per_line = declared_dimension;
 				}
 			}
 			continue;
 		}
 		PackedStringArray items = line.split(" ", false);
 		const int item_count = items.size();
-		if (item_count < 3) {
+		if (item_count < min_items_per_line) {
 			if (can_warn) {
 				can_warn = false;
 				WARN_PRINT("Warning: OFF file " + p_path + " contains invalid line: '" + line + "'. Skipping this line and attempting to read the rest of the file anyway.");
@@ -324,10 +336,16 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 			case OFFDocumentNDReadState::READ_SIZE: {
 				vertex_count = items[0].to_int();
 				off_document->_vertices.resize(vertex_count);
-				// OFF stores sizes in the order 0D, 2D, 1D, 3D, 4D, ... :(
-				if (item_count > 2) {
+				if (item_count == 2) {
+					// Special case: 2D OFF file with only vertices and components.
+					cell_counts.resize(1);
+					cell_counts.set(0, items[1].to_int());
+					off_document->_cell_face_indices.resize(1);
+					off_document->_cell_colors.resize(1);
+				} else if (item_count > 2) {
+					// OFF stores sizes in the order 0D, 2D, 1D, 3D, 4D, ... :(
 					off_document->_edge_count = items[2].to_int();
-					// Change the order to 0D, 2D, 2D, 3D, 4D, ... :)
+					// Copy 2D to slot index 2 to change the order to 0D, 2D, 2D, 3D, 4D, ... :)
 					items.set(2, items[1]);
 					const int cell_counts_count = item_count - 2;
 					cell_counts.resize(cell_counts_count);
