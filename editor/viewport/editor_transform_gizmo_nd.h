@@ -2,6 +2,8 @@
 
 #include "editor_viewport_nd_defines.h"
 
+#include "editor_transform_snap_settings_nd.h"
+
 #include "../../math/rect_nd.h"
 #include "../../model/mesh_instance_nd.h"
 
@@ -47,6 +49,7 @@ private:
 	Vector<NodeND *> _mesh_keep_conformal;
 	Vector<MeshInstanceND *> _meshes[TRANSFORM_MAX];
 	EditorMainScreenND *_editor_main_screen = nullptr;
+	EditorTransformSnapSettingsND *_snap_settings = nullptr;
 	EditorUndoRedoManager *_undo_redo = nullptr;
 
 	KeepMode _keep_mode = KeepMode::FREEFORM;
@@ -77,6 +80,7 @@ private:
 	void _regenerate_gizmo_meshes();
 
 	// Misc internal functions.
+	bool _gizmo_mouse_raycast(const Ref<InputEventMouse> &p_mouse_event, const CameraND *p_camera, const VectorN &p_ray_origin, const VectorN &p_ray_direction);
 	void _on_rendering_server_pre_render(CameraND *p_camera, Viewport *p_viewport, RenderingEngineND *p_rendering_engine);
 	void _on_editor_inspector_property_edited(const String &p_prop);
 	void _on_undo_redo_version_changed();
@@ -102,16 +106,17 @@ protected:
 	static void _bind_methods() {}
 
 public:
+	EditorTransformSnapSettingsND *get_snap_settings() const { return _snap_settings; }
 	void selected_nodes_changed(const TypedArray<Node> &p_top_nodes);
 	void set_axis_colors(const PackedColorArray &p_axis_colors);
 	void set_keep_mode(const KeepMode p_mode);
 	void set_gizmo_mode(const GizmoMode p_mode);
 	void set_gizmo_dimension(const int p_dimension);
 	bool gizmo_mouse_input(const Ref<InputEventMouse> &p_mouse_event, const CameraND *p_camera);
-	bool gizmo_mouse_raycast(const Ref<InputEventMouse> &p_mouse_event, const VectorN &p_ray_origin, const VectorN &p_ray_direction);
 
 	bool get_use_local_rotation() const;
 	void set_use_local_rotation(const bool p_use_local_transform);
 
 	void setup(EditorMainScreenND *p_editor_main_screen, EditorUndoRedoManager *p_undo_redo_manager);
+	~EditorTransformGizmoND();
 };

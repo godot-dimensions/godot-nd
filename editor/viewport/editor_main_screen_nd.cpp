@@ -119,6 +119,8 @@ void EditorMainScreenND::_on_transform_settings_menu_id_pressed(const int p_id) 
 			_nd_editor_config_file->set_value("transform", "keep_mode", (int)keep_mode);
 		}
 		_nd_editor_config_file->save(_nd_editor_config_file_path);
+	} else if (p_id == TRANSFORM_SETTING_CONFIGURE_SNAP) {
+		_snap_settings_dialog->popup_centered(Size2(400, 450) * EDSCALE);
 	}
 }
 
@@ -261,6 +263,9 @@ void EditorMainScreenND::_notification(int p_what) {
 		} break;
 #if GODOT_MODULE || (GODOT_VERSION_MAJOR > 4 || (GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR >= 4))
 		case NOTIFICATION_EXIT_TREE: {
+			if (_snap_settings_inspector != nullptr) {
+				_snap_settings_inspector->edit(nullptr);
+			}
 			if (_camera_settings_inspector != nullptr) {
 				_camera_settings_inspector->edit(nullptr);
 			}
@@ -398,6 +403,7 @@ void EditorMainScreenND::setup(EditorUndoRedoManager *p_undo_redo_manager) {
 	// All viewports share one gizmo and origin marker.
 	_transform_gizmo_nd = memnew(EditorTransformGizmoND);
 	add_child(_transform_gizmo_nd);
+	_transform_gizmo_nd->setup(this, p_undo_redo_manager);
 
 	_origin_marker = memnew(MarkerND);
 	_origin_marker->set_name(StringName("OriginMarkerND"));
@@ -428,7 +434,28 @@ void EditorMainScreenND::setup(EditorUndoRedoManager *p_undo_redo_manager) {
 	transform_settings_menu_popup->add_radio_check_item(TTR("Keep Conformal (uniform scale)"), TRANSFORM_SETTING_KEEP_CONFORMAL);
 	transform_settings_menu_popup->add_radio_check_item(TTR("Keep Orthonormal (no scale)"), TRANSFORM_SETTING_KEEP_ORTHONORMAL);
 	transform_settings_menu_popup->set_item_checked((int)EditorTransformGizmoND::KeepMode::FREEFORM, true);
+	transform_settings_menu_popup->add_separator();
+	transform_settings_menu_popup->add_item(TTR("Configure Snap..."), TRANSFORM_SETTING_CONFIGURE_SNAP);
 	transform_settings_menu_popup->connect(StringName("id_pressed"), callable_mp(this, &EditorMainScreenND::_on_transform_settings_menu_id_pressed));
+
+#if GODOT_MODULE || (GODOT_VERSION_MAJOR > 4 || (GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR >= 4))
+	// Set up the snap settings dialog as long as this is Godot >= 4.4.
+	EditorTransformSnapSettingsND *snap_settings = _transform_gizmo_nd->get_snap_settings();
+	snap_settings->setup(_nd_editor_config_file, _nd_editor_config_file_path);
+	_snap_settings_dialog = memnew(ConfirmationDialog);
+	_snap_settings_dialog->set_name(StringName("SnapSettingsDialog"));
+	_snap_settings_dialog->set_title(TTR("Transform Gizmo Snap Settings"));
+	_snap_settings_inspector = memnew(EditorInspector);
+	_snap_settings_inspector->set_name(StringName("SnapSettingsInspector"));
+	_snap_settings_inspector->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+	_snap_settings_inspector->set_custom_minimum_size(Size2(400, 200) * EDSCALE);
+	_snap_settings_inspector->edit(snap_settings);
+	_snap_settings_dialog->add_child(_snap_settings_inspector);
+	add_child(_snap_settings_dialog);
+#else
+	transform_settings_menu_popup->set_item_disabled(TRANSFORM_SETTING_CONFIGURE_SNAP, true);
+	transform_settings_menu_popup->set_item_tooltip(TRANSFORM_SETTING_CONFIGURE_SNAP, TTR("Snap settings requires compiling with a minimum Godot version of 4.4, but this was compiled for Godot " + itos(GODOT_VERSION_MAJOR) + "." + itos(GODOT_VERSION_MINOR) + "."));
+#endif
 
 	// Set up the Layout menu in the toolbar.
 	_layout_menu = memnew(MenuButton);
@@ -502,9 +529,6 @@ void EditorMainScreenND::setup(EditorUndoRedoManager *p_undo_redo_manager) {
 	_toolbar_hbox->add_child(_dimensions_label);
 
 	EditorInterface::get_singleton()->get_selection()->connect(StringName("selection_changed"), callable_mp(this, &EditorMainScreenND::_on_selection_changed));
-
-	// Set up things with the arguments (not constructor things).
-	_transform_gizmo_nd->setup(this, p_undo_redo_manager);
 
 	_apply_nd_editor_settings();
 }

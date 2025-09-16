@@ -295,6 +295,7 @@ void EditorTransformGizmoND::_update_gizmo_transform() {
 		set_visible(false);
 	} else {
 		set_visible(true);
+		sum_transform->set_dimension(sum_transform->get_dimension()); // Make sure the matrix is square.
 		sum_transform = sum_transform->divide_scalar(double(transform_count));
 		if (_is_use_local_rotation) {
 			// Scale/shear/skew can mess with the rotation gizmo, so get rid of it.
@@ -583,7 +584,7 @@ void EditorTransformGizmoND::_end_transformation() {
 	}
 	// Create an undo/redo action for the transformation.
 	const String action = _get_transform_part_simple_action_name(_current_transformation);
-	_undo_redo->create_action(action + String(" 4D nodes with gizmo"));
+	_undo_redo->create_action(action + String(" ND nodes with gizmo"));
 	const int size = _selected_top_nodes.size();
 	for (int i = 0; i < size; i++) {
 		NodeND *node_nd = Object::cast_to<NodeND>(_selected_top_nodes[i]);
@@ -660,7 +661,12 @@ void EditorTransformGizmoND::_process_transform(const VectorN &p_local_ray_origi
 	// The above position changes happen relative to the visual gizmo mesh holder, but
 	// we want them relative to the gizmo itself. Scale/rotation should not be adjusted.
 	transform_change->set_origin(_old_mesh_holder_transform->xform(transform_change->get_origin()));
-	Ref<TransformND> new_transform = _old_gizmo_transform->compose_square(transform_change);
+	transform_change->set_dimension(transform_change->get_dimension()); // Make sure the matrix is square.
+	Ref<TransformND> new_transform = _snap_settings->snap_transform_change(_old_gizmo_transform, transform_change);
+	// Special case: Only in move mode, ignore any snapping that happened to the basis.
+	if (_current_transformation == TRANSFORM_MOVE_AXIS || _current_transformation == TRANSFORM_MOVE_PLANE) {
+		new_transform->set_basis(_old_gizmo_transform->get_basis());
+	}
 	set_transform(new_transform);
 	// We want the global diff so we can apply it from the left on the global transform of all selected nodes.
 	// Without this, the transforms would be relative to each node (ex: moving on X moves on each node's X axis).
@@ -669,6 +675,11 @@ void EditorTransformGizmoND::_process_transform(const VectorN &p_local_ray_origi
 		NodeND *node_nd = Object::cast_to<NodeND>(_selected_top_nodes[i]);
 		if (node_nd != nullptr) {
 			node_nd->set_global_transform(transform_change->compose_square(_selected_top_node_old_transforms[i]));
+			if (_snap_settings->get_snap_final_values()) {
+				node_nd->set_transform(_snap_settings->snap_single_transform(node_nd->get_transform()));
+			}
+			// Note: The keep mode takes priority over snapping, so we apply it after snapping.
+			// In most cases these won't conflict, but in an edge case where they do, keep mode wins.
 			switch (_keep_mode) {
 				case KeepMode::FREEFORM: {
 					// Do nothing.
@@ -832,10 +843,10 @@ bool EditorTransformGizmoND::gizmo_mouse_input(const Ref<InputEventMouse> &p_mou
 	const Ref<TransformND> global_to_local = _old_gizmo_transform->compose_square(_old_mesh_holder_transform)->inverse();
 	const VectorN local_ray_origin = global_to_local->xform(ray_origin);
 	const VectorN local_ray_direction = global_to_local->xform_basis(ray_direction);
-	return gizmo_mouse_raycast(p_mouse_event, local_ray_origin, local_ray_direction);
+	return _gizmo_mouse_raycast(p_mouse_event, p_camera, local_ray_origin, local_ray_direction);
 }
 
-bool EditorTransformGizmoND::gizmo_mouse_raycast(const Ref<InputEventMouse> &p_mouse_event, const VectorN &p_local_ray_origin, const VectorN &p_local_ray_direction) {
+bool EditorTransformGizmoND::_gizmo_mouse_raycast(const Ref<InputEventMouse> &p_mouse_event, const CameraND *p_camera, const VectorN &p_local_ray_origin, const VectorN &p_local_ray_direction) {
 	Ref<InputEventMouseButton> mouse_button = p_mouse_event;
 	if (mouse_button.is_valid()) {
 		if (mouse_button->get_button_index() != MOUSE_BUTTON_LEFT) {
@@ -850,6 +861,8 @@ bool EditorTransformGizmoND::gizmo_mouse_raycast(const Ref<InputEventMouse> &p_m
 				_primary_axis = new_primary_axis;
 				_secondary_axis = new_secondary_axis;
 				_begin_transformation(p_local_ray_origin, p_local_ray_direction);
+				const double dist = VectorND::distance_to(_old_gizmo_transform->get_origin(), p_camera->get_global_position());
+				_snap_settings->set_camera_distance(dist);
 			}
 		} else if (!mouse_button->is_pressed() && _current_transformation != TRANSFORM_NONE) {
 			// If we are transforming something and the user releases the click, end the transformation.
@@ -901,6 +914,7 @@ void EditorTransformGizmoND::setup(EditorMainScreenND *p_editor_main_screen, Edi
 	_mesh_holder = memnew(NodeND);
 	_mesh_holder->set_name(StringName("GizmoMeshHolderND"));
 	add_child(_mesh_holder);
+	_snap_settings = memnew(EditorTransformSnapSettingsND);
 	RenderingServerND::get_singleton()->connect(StringName("pre_render"), callable_mp(this, &EditorTransformGizmoND::_on_rendering_server_pre_render));
 	EditorInterface::get_singleton()->get_inspector()->connect(StringName("property_edited"), callable_mp(this, &EditorTransformGizmoND::_on_editor_inspector_property_edited));
 
@@ -908,4 +922,10 @@ void EditorTransformGizmoND::setup(EditorMainScreenND *p_editor_main_screen, Edi
 	_editor_main_screen = p_editor_main_screen;
 	_undo_redo = p_undo_redo_manager;
 	p_undo_redo_manager->connect(StringName("version_changed"), callable_mp(this, &EditorTransformGizmoND::_on_undo_redo_version_changed));
+}
+
+EditorTransformGizmoND::~EditorTransformGizmoND() {
+	if (_snap_settings != nullptr) {
+		memdelete(_snap_settings);
+	}
 }

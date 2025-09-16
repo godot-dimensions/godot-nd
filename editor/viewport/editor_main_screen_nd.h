@@ -56,6 +56,7 @@ public:
 		TRANSFORM_SETTING_KEEP_CONFORMAL, // 2
 		TRANSFORM_SETTING_KEEP_ORTHONORMAL, // 3
 		TRANSFORM_SETTING_KEEP_MAX, // 4
+		TRANSFORM_SETTING_CONFIGURE_SNAP = TRANSFORM_SETTING_KEEP_MAX, // Still 4
 	};
 
 	enum LayoutItem {
@@ -80,6 +81,8 @@ private:
 	MenuButton *_layout_menu = nullptr;
 	MenuButton *_view_menu = nullptr;
 	PopupMenu *_rendering_engine_menu_popup = nullptr;
+	ConfirmationDialog *_snap_settings_dialog = nullptr;
+	EditorInspector *_snap_settings_inspector = nullptr;
 	ConfirmationDialog *_camera_settings_dialog = nullptr;
 	EditorInspector *_camera_settings_inspector = nullptr;
 	EditorCameraSettingsND *_camera_settings = nullptr;
