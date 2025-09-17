@@ -95,7 +95,7 @@ PackedInt32Array BoxCellMeshND::get_cell_indices() {
 }
 
 PackedInt32Array BoxCellMeshND::get_edge_indices() {
-	const int dimension = _size.size();
+	const uint64_t dimension = _size.size();
 	if (_edge_indices_cache.is_empty()) {
 		if (_polytope_cells) {
 			ERR_FAIL_COND_V_MSG(dimension > 30, _edge_indices_cache, "BoxCellMeshND: Too many dimensions for box edges.");
