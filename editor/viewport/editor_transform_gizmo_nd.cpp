@@ -338,13 +338,13 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 		_mesh_holder->set_global_transform(global_transform);
 		return;
 	}
-	double scale;
+	double scale_dist_number;
 	if (p_camera->get_projection_type() == CameraND::PROJECTION_ORTHOGRAPHIC) {
-		scale = p_camera->get_orthographic_size() * 0.4;
+		scale_dist_number = p_camera->get_orthographic_size() * 0.4;
 	} else {
-		scale = VectorND::distance_to(gizmo_transform->get_origin(), camera_transform->get_origin()) * 0.4;
+		scale_dist_number = VectorND::distance_to(gizmo_transform->get_origin(), camera_transform->get_origin()) * 0.4;
 	}
-	const VectorN scale_vector = VectorND::fill(get_dimension(), scale);
+	const VectorN scale_vector = VectorND::fill(get_dimension(), scale_dist_number);
 	if (_is_use_local_rotation) {
 		const VectorN mesh_holder_scale = VectorND::divide_vector(scale_vector, gizmo_scale_abs);
 		_mesh_holder->set_basis(BasisND::from_scale(mesh_holder_scale));
@@ -357,7 +357,7 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 	for (int i = 0; i < dimension; i++) {
 		_mesh_keep_conformal[i]->set_transform(TransformND::identity_transform(dimension));
 		Ref<BasisND> basis = _mesh_keep_conformal[i]->get_global_basis();
-		const double scale = VectorND::length(basis->get_column(i));
+		const double basis_i_scale = VectorND::length(basis->get_column(i));
 		basis->set_column(i, VectorND::normalized(basis->get_column(i)));
 		// Gram-Schmidt process, prioritizing the axis with index i.
 		for (int j = 0; j < dimension; j++) {
@@ -365,7 +365,7 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 				basis->set_column(j, VectorND::normalized(VectorND::slide(basis->get_column(j), basis->get_column(i))));
 			}
 		}
-		basis->scale_uniform(scale);
+		basis->scale_uniform(basis_i_scale);
 		_mesh_keep_conformal[i]->set_global_basis(basis);
 	}
 }
