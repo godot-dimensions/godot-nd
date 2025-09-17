@@ -265,6 +265,7 @@ Ref<BasisND> EulerND::to_rotation_basis() const {
 
 Ref<TransformND> EulerND::to_rotation_transform() const {
 	Ref<TransformND> transform;
+	transform.instantiate();
 	transform->set_basis(to_rotation_basis());
 	return transform;
 }
