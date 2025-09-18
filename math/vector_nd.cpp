@@ -350,7 +350,7 @@ VectorN VectorND::fill(const int64_t p_dimension, const double p_value) {
 Vector<VectorN> VectorND::fill_array(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value) {
 	Vector<VectorN> filled_array;
 	filled_array.resize(p_vector_amount);
-	const VectorN filled_vector = fill(p_value, p_dimension);
+	const VectorN filled_vector = fill(p_dimension, p_value);
 	for (int64_t i = 0; i < p_vector_amount; i++) {
 		filled_array.set(i, filled_vector);
 	}
@@ -925,6 +925,18 @@ String VectorND::to_string(const VectorN &p_vector) {
 		}
 	}
 	str += ")";
+	return str;
+}
+
+String VectorND::to_string(const Vector<VectorN> &p_vectors) {
+	String str = "[";
+	for (int64_t i = 0; i < p_vectors.size(); i++) {
+		str += VectorND::to_string(p_vectors[i]);
+		if (i < p_vectors.size() - 1) {
+			str += ", ";
+		}
+	}
+	str += "]";
 	return str;
 }
 
