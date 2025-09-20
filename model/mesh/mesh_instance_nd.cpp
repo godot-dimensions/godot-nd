@@ -1,6 +1,6 @@
 #include "mesh_instance_nd.h"
 
-#include "../render/rendering_server_nd.h"
+#include "../../render/rendering_server_nd.h"
 
 void MeshInstanceND::_notification(int p_what) {
 	switch (p_what) {

@@ -23,22 +23,22 @@
 #include "nodes/node_nd.h"
 
 // Virtual classes.
-#include "model/cell/cell_mesh_nd.h"
-#include "model/material_nd.h"
-#include "model/mesh_nd.h"
-#include "model/wire/wire_mesh_nd.h"
+#include "model/mesh/cell/cell_mesh_nd.h"
+#include "model/mesh/material_nd.h"
+#include "model/mesh/mesh_nd.h"
+#include "model/mesh/wire/wire_mesh_nd.h"
 
 // Model.
-#include "model/cell/array_cell_mesh_nd.h"
-#include "model/cell/box_cell_mesh_nd.h"
-#include "model/cell/cell_material_nd.h"
-#include "model/cell/orthoplex_cell_mesh_nd.h"
-#include "model/mesh_instance_nd.h"
+#include "model/mesh/cell/array_cell_mesh_nd.h"
+#include "model/mesh/cell/box_cell_mesh_nd.h"
+#include "model/mesh/cell/cell_material_nd.h"
+#include "model/mesh/cell/orthoplex_cell_mesh_nd.h"
+#include "model/mesh/mesh_instance_nd.h"
+#include "model/mesh/wire/array_wire_mesh_nd.h"
+#include "model/mesh/wire/box_wire_mesh_nd.h"
+#include "model/mesh/wire/orthoplex_wire_mesh_nd.h"
+#include "model/mesh/wire/wire_material_nd.h"
 #include "model/off/off_document_nd.h"
-#include "model/wire/array_wire_mesh_nd.h"
-#include "model/wire/box_wire_mesh_nd.h"
-#include "model/wire/orthoplex_wire_mesh_nd.h"
-#include "model/wire/wire_material_nd.h"
 
 // Render.
 #include "render/rendering_engine_nd.h"

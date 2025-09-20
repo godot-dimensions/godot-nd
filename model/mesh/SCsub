@@ -6,6 +6,5 @@ Import("env_modules")
 env_nd = env_modules.Clone()
 
 env_nd.add_source_files(env.modules_sources, "*.cpp")
-env_nd.add_source_files(env.modules_sources, "off/*.cpp")
-
-SConscript("mesh/SCsub")
+env_nd.add_source_files(env.modules_sources, "cell/*.cpp")
+env_nd.add_source_files(env.modules_sources, "wire/*.cpp")

@@ -1,8 +1,8 @@
 #include "off_document_nd.h"
 
-#include "../cell/cell_material_nd.h"
-#include "../mesh_instance_nd.h"
-#include "../wire/wire_material_nd.h"
+#include "../mesh/cell/cell_material_nd.h"
+#include "../mesh/mesh_instance_nd.h"
+#include "../mesh/wire/wire_material_nd.h"
 
 #if GDEXTENSION
 #include <godot_cpp/classes/file_access.hpp>

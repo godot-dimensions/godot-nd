@@ -1,8 +1,8 @@
 #include "marker_nd.h"
 
 #include "../math/vector_nd.h"
-#include "../model/wire/array_wire_mesh_nd.h"
-#include "../model/wire/wire_material_nd.h"
+#include "../model/mesh/wire/array_wire_mesh_nd.h"
+#include "../model/mesh/wire/wire_material_nd.h"
 
 #if GDEXTENSION
 #include <godot_cpp/classes/engine.hpp>

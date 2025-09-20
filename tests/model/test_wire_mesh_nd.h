@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../model/wire/array_wire_mesh_nd.h"
-#include "../../model/wire/box_wire_mesh_nd.h"
-#include "../../model/wire/orthoplex_wire_mesh_nd.h"
+#include "../../model/mesh/wire/array_wire_mesh_nd.h"
+#include "../../model/mesh/wire/box_wire_mesh_nd.h"
+#include "../../model/mesh/wire/orthoplex_wire_mesh_nd.h"
 #include "tests/test_macros.h"
 
 namespace TestWireMeshND {

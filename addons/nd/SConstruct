@@ -10,9 +10,10 @@ env.Append(
         "./,src/,../../",
         "../../math",
         "../../model",
-        "../../model/cell",
+        "../../model/mesh",
+        "../../model/mesh/cell",
+        "../../model/mesh/wire",
         "../../model/off",
-        "../../model/wire",
         "../../nodes",
         "../../render",
         "../../render/wireframe_canvas",
@@ -25,9 +26,10 @@ sources = (
     + Glob("../../*.cpp")
     + Glob("../../math/*.cpp")
     + Glob("../../model/*.cpp")
-    + Glob("../../model/cell/*.cpp")
+    + Glob("../../model/mesh/*.cpp")
+    + Glob("../../model/mesh/cell/*.cpp")
+    + Glob("../../model/mesh/wire/*.cpp")
     + Glob("../../model/off/*.cpp")
-    + Glob("../../model/wire/*.cpp")
     + Glob("../../nodes/*.cpp")
     + Glob("../../render/*.cpp")
     + Glob("../../render/wireframe_canvas/*.cpp")

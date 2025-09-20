@@ -2,8 +2,8 @@
 
 #include "../../godot_nd_defines.h"
 
-#include "../cell/array_cell_mesh_nd.h"
-#include "../wire/array_wire_mesh_nd.h"
+#include "../mesh/cell/array_cell_mesh_nd.h"
+#include "../mesh/wire/array_wire_mesh_nd.h"
 
 #if GDEXTENSION
 #include <godot_cpp/classes/mesh.hpp>

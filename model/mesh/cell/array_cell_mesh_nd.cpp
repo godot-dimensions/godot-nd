@@ -1,6 +1,6 @@
 #include "array_cell_mesh_nd.h"
 
-#include "../../math/vector_nd.h"
+#include "../../../math/vector_nd.h"
 #include "cell_material_nd.h"
 
 void ArrayCellMeshND::_clear_cache() {

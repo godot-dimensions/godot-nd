@@ -1,7 +1,7 @@
 #include "cell_mesh_nd.h"
 
-#include "../../math/plane_nd.h"
-#include "../../math/vector_nd.h"
+#include "../../../math/plane_nd.h"
+#include "../../../math/vector_nd.h"
 #include "array_cell_mesh_nd.h"
 #include "cell_material_nd.h"
 

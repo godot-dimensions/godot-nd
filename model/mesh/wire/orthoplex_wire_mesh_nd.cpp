@@ -1,6 +1,6 @@
 #include "orthoplex_wire_mesh_nd.h"
 
-#include "../../math/vector_nd.h"
+#include "../../../math/vector_nd.h"
 
 VectorN OrthoplexWireMeshND::get_half_extents() const {
 	return VectorND::multiply_scalar(_size, 0.5);

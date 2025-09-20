@@ -5,7 +5,7 @@
 #include "editor_transform_snap_settings_nd.h"
 
 #include "../../math/rect_nd.h"
-#include "../../model/mesh_instance_nd.h"
+#include "../../model/mesh/mesh_instance_nd.h"
 
 class CameraND;
 class RenderingEngineND;

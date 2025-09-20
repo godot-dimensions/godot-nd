@@ -1,7 +1,7 @@
 #include "wireframe_canvas_rendering_engine_nd.h"
 
 #include "../../math/vector_nd.h"
-#include "../../model/wire/wire_material_nd.h"
+#include "../../model/mesh/wire/wire_material_nd.h"
 #include "wireframe_render_canvas_nd.h"
 
 Color _get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<MeshND> &p_mesh, int p_edge_index) {

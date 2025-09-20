@@ -1,6 +1,6 @@
 #include "array_wire_mesh_nd.h"
 
-#include "../../math/vector_nd.h"
+#include "../../../math/vector_nd.h"
 
 bool ArrayWireMeshND::validate_mesh_data() {
 	const int64_t edge_indices_count = _edge_indices.size();

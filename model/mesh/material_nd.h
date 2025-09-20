@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../godot_nd_defines.h"
+#include "../../godot_nd_defines.h"
 
 #if GDEXTENSION
 #include <godot_cpp/classes/resource.hpp>

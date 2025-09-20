@@ -1,6 +1,6 @@
 #include "orthoplex_cell_mesh_nd.h"
 
-#include "../../math/vector_nd.h"
+#include "../../../math/vector_nd.h"
 #include "../wire/orthoplex_wire_mesh_nd.h"
 
 void OrthoplexCellMeshND::_clear_caches() {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../model/mesh_instance_nd.h"
+#include "../model/mesh/mesh_instance_nd.h"
 
 #if GDEXTENSION
 #define GDEXTMOD_GET_CONFIGURATION_WARNINGS _get_configuration_warnings

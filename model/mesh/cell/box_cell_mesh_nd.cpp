@@ -1,6 +1,6 @@
 #include "box_cell_mesh_nd.h"
 
-#include "../../math/vector_nd.h"
+#include "../../../math/vector_nd.h"
 #include "../wire/box_wire_mesh_nd.h"
 
 #include <algorithm>

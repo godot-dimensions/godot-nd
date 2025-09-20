@@ -1,6 +1,6 @@
 #include "box_wire_mesh_nd.h"
 
-#include "../../math/vector_nd.h"
+#include "../../../math/vector_nd.h"
 #include "array_wire_mesh_nd.h"
 
 VectorN BoxWireMeshND::get_half_extents() const {
