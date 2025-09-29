@@ -194,6 +194,28 @@ double VectorND::angle_to(const VectorN &p_from, const VectorN &p_to) {
 	return Math::acos(VectorND::dot(p_from, p_to) / (VectorND::length(p_from) * VectorND::length(p_to)));
 }
 
+VectorN VectorND::average(const Vector<VectorN> &p_vectors) {
+	if (p_vectors.is_empty()) {
+		return VectorN();
+	}
+	VectorN sum;
+	for (const VectorN &v : p_vectors) {
+		VectorND::add_in_place(v, sum);
+	}
+	return VectorND::divide_scalar(sum, (real_t)p_vectors.size());
+}
+
+VectorN VectorND::average_bind(const TypedArray<VectorN> &p_vectors) {
+	if (p_vectors.is_empty()) {
+		return VectorN();
+	}
+	VectorN sum;
+	for (int64_t i = 0; i < p_vectors.size(); i++) {
+		VectorND::add_in_place(VectorN(p_vectors[i]), sum);
+	}
+	return VectorND::divide_scalar(sum, (real_t)p_vectors.size());
+}
+
 VectorN VectorND::bounce(const VectorN &p_vector, const VectorN &p_normal) {
 	const int64_t dimension = MAX(p_vector.size(), p_normal.size());
 	const double dot_product = VectorND::dot(p_vector, p_normal);
@@ -951,6 +973,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("add", "a", "b"), &VectorND::add);
 	ClassDB::bind_static_method("VectorND", D_METHOD("add_scalar", "vector", "scalar"), &VectorND::add_scalar);
 	ClassDB::bind_static_method("VectorND", D_METHOD("angle_to", "from", "to"), &VectorND::angle_to);
+	ClassDB::bind_static_method("VectorND", D_METHOD("average", "vectors"), &VectorND::average_bind);
 	ClassDB::bind_static_method("VectorND", D_METHOD("bounce", "vector", "normal"), &VectorND::bounce);
 	ClassDB::bind_static_method("VectorND", D_METHOD("bounce_ratio", "vector", "normal", "bounce_ratio"), &VectorND::bounce_ratio);
 	ClassDB::bind_static_method("VectorND", D_METHOD("ceil", "vector"), &VectorND::ceil);

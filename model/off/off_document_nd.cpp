@@ -33,10 +33,10 @@ void OFFDocumentND::_count_unique_edges_from_faces() {
 	}
 }
 
-int OFFDocumentND::_find_or_insert_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
-	const int vertex_count = _vertices.size();
+int64_t OFFDocumentND::_find_or_insert_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
+	const int64_t vertex_count = _vertices.size();
 	if (p_deduplicate_vertices) {
-		for (int vertex_number = 0; vertex_number < vertex_count; vertex_number++) {
+		for (int64_t vertex_number = 0; vertex_number < vertex_count; vertex_number++) {
 			if (_vertices[vertex_number] == p_vertex) {
 				return vertex_number;
 			}

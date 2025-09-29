@@ -27,8 +27,12 @@ public:
 	virtual int get_cell_count();
 	virtual int get_indices_per_cell();
 	virtual PackedInt32Array get_cell_indices();
-	virtual Vector<VectorN> get_cell_normals();
+	virtual Vector<VectorN> get_cell_face_normals();
+	virtual Vector<VectorN> get_cell_vertex_normals();
 	Vector<VectorN> get_cell_positions();
+	TypedArray<VectorN> get_cell_face_normals_bind();
+	TypedArray<VectorN> get_cell_vertex_normals_bind();
+	TypedArray<VectorN> get_cell_positions_bind();
 
 	static Vector<PackedInt32Array> decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_cell_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_cell_normals);
 
@@ -37,4 +41,6 @@ public:
 	virtual Vector<VectorN> get_edge_positions() override;
 
 	GDVIRTUAL0R(PackedInt32Array, _get_cell_indices);
+	GDVIRTUAL0R(TypedArray<VectorN>, _get_cell_face_normals);
+	GDVIRTUAL0R(TypedArray<VectorN>, _get_cell_vertex_normals);
 };

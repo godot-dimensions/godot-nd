@@ -128,7 +128,8 @@ Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 	array_mesh.instantiate();
 	array_mesh->set_vertices(get_vertices());
 	array_mesh->set_cell_indices(get_cell_indices());
-	array_mesh->set_cell_normals(get_cell_normals());
+	array_mesh->set_cell_face_normals(get_cell_face_normals());
+	array_mesh->set_cell_vertex_normals(get_cell_vertex_normals());
 	array_mesh->set_material(get_material());
 	return array_mesh;
 }
@@ -163,10 +164,69 @@ Vector<VectorN> CellMeshND::get_cell_positions() {
 	return _cell_positions_cache;
 }
 
-Vector<VectorN> CellMeshND::get_cell_normals() {
-	Vector<VectorN> normals;
-	ERR_FAIL_V_MSG(normals, "CellMeshND: Cell normals not implemented.");
-	return normals;
+Vector<VectorN> CellMeshND::get_cell_face_normals() {
+	TypedArray<VectorN> face_normals_bind;
+	GDVIRTUAL_CALL(_get_cell_face_normals, face_normals_bind);
+	Vector<VectorN> face_normals;
+	face_normals.resize(face_normals_bind.size());
+	for (int i = 0; i < face_normals_bind.size(); i++) {
+		const VectorN &cell_face_normal = face_normals_bind[i];
+		face_normals.set(i, cell_face_normal);
+	}
+	return face_normals;
+}
+
+Vector<VectorN> CellMeshND::get_cell_vertex_normals() {
+	TypedArray<VectorN> vertex_normals_bind;
+	GDVIRTUAL_CALL(_get_cell_vertex_normals, vertex_normals_bind);
+	Vector<VectorN> vertex_normals;
+	vertex_normals.resize(vertex_normals_bind.size());
+	for (int i = 0; i < vertex_normals_bind.size(); i++) {
+		const VectorN &cell_vertex_normal = vertex_normals_bind[i];
+		vertex_normals.set(i, cell_vertex_normal);
+	}
+	return vertex_normals;
+}
+
+TypedArray<VectorN> CellMeshND::get_cell_face_normals_bind() {
+	TypedArray<VectorN> face_normals_bind;
+	GDVIRTUAL_CALL(_get_cell_face_normals, face_normals_bind);
+	if (!face_normals_bind.is_empty()) {
+		return face_normals_bind;
+	}
+	const Vector<VectorN> face_normals = get_cell_face_normals();
+	face_normals_bind.resize(face_normals.size());
+	for (int i = 0; i < face_normals.size(); i++) {
+		const VectorN &cell_face_normal = face_normals[i];
+		face_normals_bind[i] = cell_face_normal;
+	}
+	return face_normals_bind;
+}
+
+TypedArray<VectorN> CellMeshND::get_cell_vertex_normals_bind() {
+	TypedArray<VectorN> vertex_normals_bind;
+	GDVIRTUAL_CALL(_get_cell_vertex_normals, vertex_normals_bind);
+	if (!vertex_normals_bind.is_empty()) {
+		return vertex_normals_bind;
+	}
+	const Vector<VectorN> vertex_normals = get_cell_vertex_normals();
+	vertex_normals_bind.resize(vertex_normals.size());
+	for (int i = 0; i < vertex_normals.size(); i++) {
+		const VectorN &cell_vertex_normal = vertex_normals[i];
+		vertex_normals_bind[i] = cell_vertex_normal;
+	}
+	return vertex_normals_bind;
+}
+
+TypedArray<VectorN> CellMeshND::get_cell_positions_bind() {
+	TypedArray<VectorN> cell_positions_bind;
+	const Vector<VectorN> cell_positions = get_cell_positions();
+	cell_positions_bind.resize(cell_positions.size());
+	for (int i = 0; i < cell_positions.size(); i++) {
+		const VectorN &cell_position = cell_positions[i];
+		cell_positions_bind[i] = cell_position;
+	}
+	return cell_positions_bind;
 }
 
 // Recursive function that decomposes a polytope cell into simplexes.
@@ -268,6 +328,10 @@ void CellMeshND::_bind_methods() {
 
 	ClassDB::bind_static_method("CellMeshND", D_METHOD("calculate_edge_indices_from_cell_indices", "cell_indices", "dimension", "deduplicate"), &CellMeshND::calculate_edge_indices_from_cell_indices);
 	ClassDB::bind_method(D_METHOD("get_cell_indices"), &CellMeshND::get_cell_indices);
+	ClassDB::bind_method(D_METHOD("get_cell_face_normals"), &CellMeshND::get_cell_face_normals_bind);
+	ClassDB::bind_method(D_METHOD("get_cell_vertex_normals"), &CellMeshND::get_cell_vertex_normals_bind);
 
 	GDVIRTUAL_BIND(_get_cell_indices);
+	GDVIRTUAL_BIND(_get_cell_face_normals);
+	GDVIRTUAL_BIND(_get_cell_vertex_normals);
 }

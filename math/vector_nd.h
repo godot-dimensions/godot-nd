@@ -56,6 +56,8 @@ public:
 	static void add_in_place(const VectorN &p_a, VectorN &r_result);
 	static VectorN add_scalar(const VectorN &p_vector, const double p_scalar);
 	static double angle_to(const VectorN &p_from, const VectorN &p_to);
+	static VectorN average(const Vector<VectorN> &p_vectors);
+	static VectorN average_bind(const TypedArray<VectorN> &p_vectors);
 	static VectorN bounce(const VectorN &p_vector, const VectorN &p_normal);
 	static VectorN bounce_ratio(const VectorN &p_vector, const VectorN &p_normal, const double p_bounce_ratio);
 	static VectorN ceil(const VectorN &p_vector);

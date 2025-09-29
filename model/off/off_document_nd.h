@@ -29,7 +29,7 @@ class OFFDocumentND : public Resource {
 	static String _cell_dimension_index_to_off_comment(const int p_dimension);
 
 	void _count_unique_edges_from_faces();
-	int _find_or_insert_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
+	int64_t _find_or_insert_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
 	Vector<Vector<PackedInt32Array>> _calculate_cell_vertex_indices();
 	Vector<Vector<PackedInt32Array>> _calculate_simplex_vertex_indices(const Vector<Vector<PackedInt32Array>> &p_cell_vertex_indices);
 
