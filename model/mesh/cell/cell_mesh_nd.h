@@ -23,12 +23,14 @@ public:
 	void cell_mesh_clear_cache();
 	virtual void validate_material_for_mesh(const Ref<MaterialND> &p_material) override;
 	Ref<ArrayCellMeshND> to_array_cell_mesh();
+	virtual Ref<CellMeshND> to_cell_mesh();
 
 	virtual int get_simplex_cell_count();
 	virtual int get_indices_per_simplex_cell();
 	virtual PackedInt32Array get_simplex_cell_indices();
 	virtual Vector<VectorN> get_simplex_cell_boundary_normals();
 	virtual Vector<VectorN> get_simplex_cell_vertex_normals();
+	virtual Vector<VectorM> get_simplex_cell_texture_map();
 	Vector<VectorN> get_simplex_cell_positions();
 	TypedArray<VectorN> get_simplex_cell_boundary_normals_bind();
 	TypedArray<VectorN> get_simplex_cell_vertex_normals_bind();
@@ -43,4 +45,5 @@ public:
 	GDVIRTUAL0R(PackedInt32Array, _get_simplex_cell_indices);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_simplex_cell_boundary_normals);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_simplex_cell_vertex_normals);
+	GDVIRTUAL0R(TypedArray<VectorM>, _get_simplex_cell_texture_map);
 };

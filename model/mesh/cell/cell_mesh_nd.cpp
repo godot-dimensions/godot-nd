@@ -134,6 +134,10 @@ Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 	return array_mesh;
 }
 
+Ref<CellMeshND> CellMeshND::to_cell_mesh() {
+	return to_array_cell_mesh();
+}
+
 int CellMeshND::get_simplex_cell_count() {
 	const int dimension = get_dimension();
 	ERR_FAIL_COND_V_MSG(dimension < 1, -1, "CellMeshND: Mesh is empty or 0-dimensional, cannot determine simplex cell count.");

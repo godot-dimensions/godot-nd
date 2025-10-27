@@ -27,6 +27,7 @@
 #include "model/mesh/cell/cell_mesh_nd.h"
 #include "model/mesh/material_nd.h"
 #include "model/mesh/mesh_nd.h"
+#include "model/mesh/poly/poly_mesh_nd.h"
 #include "model/mesh/wire/wire_mesh_nd.h"
 
 // Model.
@@ -35,6 +36,9 @@
 #include "model/mesh/cell/cell_material_nd.h"
 #include "model/mesh/cell/orthoplex_cell_mesh_nd.h"
 #include "model/mesh/mesh_instance_nd.h"
+#include "model/mesh/poly/array_poly_mesh_nd.h"
+#include "model/mesh/poly/box_poly_mesh_nd.h"
+#include "model/mesh/poly/orthoplex_poly_mesh_nd.h"
 #include "model/mesh/wire/array_wire_mesh_nd.h"
 #include "model/mesh/wire/box_wire_mesh_nd.h"
 #include "model/mesh/wire/orthoplex_wire_mesh_nd.h"
@@ -102,15 +106,19 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(MaterialND);
 		GDREGISTER_CLASS(MeshND);
 		GDREGISTER_CLASS(CellMeshND);
+		GDREGISTER_CLASS(PolyMeshND);
 		GDREGISTER_CLASS(WireMeshND);
 		// Model.
 		GDREGISTER_CLASS(ArrayCellMeshND);
+		GDREGISTER_CLASS(ArrayPolyMeshND);
 		GDREGISTER_CLASS(ArrayWireMeshND);
 		GDREGISTER_CLASS(BoxCellMeshND);
+		GDREGISTER_CLASS(BoxPolyMeshND);
 		GDREGISTER_CLASS(BoxWireMeshND);
 		GDREGISTER_CLASS(MeshInstanceND);
 		GDREGISTER_CLASS(OFFDocumentND);
 		GDREGISTER_CLASS(OrthoplexCellMeshND);
+		GDREGISTER_CLASS(OrthoplexPolyMeshND);
 		GDREGISTER_CLASS(OrthoplexWireMeshND);
 		GDREGISTER_CLASS(CellMaterialND);
 		GDREGISTER_CLASS(WireMaterialND);

@@ -101,4 +101,7 @@ using namespace godot;
 #define _NO_DISCARD_ [[nodiscard]]
 #endif // _NO_DISCARD_
 
-#define VectorN PackedFloat64Array
+#define VectorM PackedFloat64Array // Semantic hint for N-1 dimensional vectors.
+#define VectorN PackedFloat64Array // Semantic hint for N dimensional vectors.
+#define VectorMi PackedInt32Array // Semantic hint for N-1 dimensional integer vectors.
+#define VectorNi PackedInt32Array // Semantic hint for N dimensional integer vectors.

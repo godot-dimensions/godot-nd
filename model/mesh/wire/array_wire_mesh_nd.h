@@ -6,7 +6,7 @@
 class ArrayWireMeshND : public WireMeshND {
 	GDCLASS(ArrayWireMeshND, WireMeshND);
 
-	PackedInt32Array _edge_indices;
+	PackedInt32Array _edge_vertex_indices;
 	Vector<VectorN> _vertices;
 
 protected:

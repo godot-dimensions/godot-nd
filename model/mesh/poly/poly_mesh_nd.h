@@ -1,0 +1,83 @@
+#pragma once
+
+#include "../cell/cell_material_nd.h"
+#include "../cell/cell_mesh_nd.h"
+
+#if GDEXTENSION
+#include <godot_cpp/classes/array_mesh.hpp>
+#include <godot_cpp/templates/hash_set.hpp>
+#elif GODOT_MODULE
+class ArrayMesh;
+#endif
+
+class ArrayPolyMeshND;
+
+class PolyMeshND : public CellMeshND {
+	GDCLASS(PolyMeshND, CellMeshND);
+
+	PackedInt32Array _simplex_cell_indices_cache;
+	PackedInt32Array _simplex_cell_indices_source_poly_cells;
+	Vector<VectorN> _simplex_cell_vertices_cache; // Superset of the polytope cell vertices.
+	Vector<VectorN> _simplex_cell_normals_cache;
+	Vector<VectorM> _simplex_cell_uvw_texture_map_cache;
+	bool _is_poly_mesh_data_valid = false;
+
+	static int64_t _append_vertex_internal(Vector<VectorN> &r_vertices, const VectorN &p_vertex, const bool p_deduplicate);
+	static int32_t _compare_triangulation_alignment(const PackedInt32Array &p_a, const PackedInt32Array &p_b);
+	static inline bool _do_edges_have_common_vertex(const int32_t p_edge1_a, const int32_t p_edge1_b, const int32_t p_edge2_a, const int32_t p_edge2_b) {
+		return (p_edge1_a == p_edge2_a) || (p_edge1_a == p_edge2_b) || (p_edge1_b == p_edge2_a) || (p_edge1_b == p_edge2_b);
+	}
+
+	static PackedInt32Array _get_canonical_span_vertex_index_sequence(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const int64_t p_indices_dim_index, const int64_t p_which_cell);
+	static PackedInt32Array _get_cell_face_4_vertex_index_sequence(const PackedInt32Array &p_all_edge_indices, const PackedInt32Array &p_face1_edge_indices, const PackedInt32Array &p_face2_edge_indices);
+	static PackedInt32Array _get_face_edge_3_vertex_index_sequence(const int32_t p_edge1_a, const int32_t p_edge1_b, const int32_t p_edge2_a, const int32_t p_edge2_b);
+	static PackedInt32Array _get_edges_of_cell(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const int64_t p_cell_dim_index, const int64_t p_which_cell);
+	static PackedInt32Array _get_vertex_indices_of_cell(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const int64_t p_cell_dim_index, const int64_t p_which_cell, const bool p_start_with_canonical_span);
+	static PackedInt32Array _get_vertex_indices_of_face(const PackedInt32Array &p_all_edge_indices, const PackedInt32Array &p_face_edge_indices);
+	static PackedInt32Array _triangulate_face_vertex_indices(const PackedInt32Array &p_face_vertex_indices, const int32_t p_pivot_attempt);
+	void _decompose_boundary_cells_into_simplexes(const bool p_force_align_triangulations);
+
+protected:
+	// A decent margin under MeshND::MAX_VERTICES to avoid overflows.
+	static constexpr int64_t MAX_POLY_VERTICES = MeshND::MAX_VERTICES * 3 / 4;
+
+	static void _bind_methods();
+	bool is_poly_mesh_data_valid();
+	void reset_poly_mesh_data_validation();
+	virtual bool validate_mesh_data() override;
+	virtual bool _validate_poly_mesh_data_only();
+
+	// Protected helper functions used by both PolyMeshND and ArrayPolyMeshND.
+	Vector<PackedInt32Array> _get_vertex_indices_of_boundary_cells(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const bool p_start_with_canonical_span);
+	Vector<VectorN> _compute_boundary_normals_based_on_cell_orientation(const Vector<PackedInt32Array> &p_boundary_cell_vertex_indices, const bool p_keep_existing);
+
+public:
+	Vector<PackedInt32Array> get_all_face_vertex_indices();
+	TypedArray<PackedInt32Array> get_all_face_vertex_indices_bind();
+	TypedArray<PackedInt32Array> get_all_cell_vertex_indices_bind(const bool p_start_with_canonical_span);
+	void poly_mesh_clear_cache(const bool p_normals_only = false);
+	Ref<ArrayPolyMeshND> to_array_poly_mesh();
+
+	virtual Vector<Vector<PackedInt32Array>> get_poly_cell_indices();
+	virtual Vector<VectorN> get_poly_cell_vertices();
+	virtual Vector<VectorN> get_poly_cell_boundary_normals();
+	virtual Vector<Vector<VectorN>> get_poly_cell_vertex_normals();
+	virtual Vector<Vector<VectorM>> get_poly_cell_texture_map();
+	virtual HashSet<int32_t> get_seam_indices() const { return HashSet<int32_t>(); }
+	TypedArray<Array> get_poly_cell_indices_bind();
+	TypedArray<VectorN> get_poly_cell_vertices_bind();
+	TypedArray<VectorN> get_poly_cell_boundary_normals_bind();
+	TypedArray<Array> get_poly_cell_vertex_normals_bind();
+	TypedArray<Array> get_poly_cell_texture_map_bind();
+
+	virtual PackedInt32Array get_simplex_cell_indices() override;
+	virtual Vector<VectorN> get_simplex_cell_boundary_normals() override;
+	virtual Vector<VectorM> get_simplex_cell_texture_map() override;
+	virtual Vector<VectorN> get_vertices() override;
+
+	GDVIRTUAL0R(TypedArray<Array>, _get_poly_cell_indices);
+	GDVIRTUAL0R(TypedArray<VectorN>, _get_poly_cell_vertices);
+	GDVIRTUAL0R(TypedArray<VectorN>, _get_poly_cell_boundary_normals);
+	GDVIRTUAL0R(TypedArray<Array>, _get_poly_cell_vertex_normals);
+	GDVIRTUAL0R(TypedArray<Array>, _get_poly_cell_texture_map);
+};

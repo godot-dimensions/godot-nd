@@ -22,6 +22,8 @@ public:
 	static uint8_t double_to_float8(const double p_double);
 	static uint16_t double_to_float16(const double p_double);
 
+	static int32_t find_common_int32(const PackedInt32Array &p_a, const PackedInt32Array &p_b, int64_t &r_a_index, int64_t &r_b_index);
+
 	static MathND *get_singleton() { return singleton; }
 	MathND() { singleton = this; }
 	~MathND() { singleton = nullptr; }
