@@ -120,8 +120,9 @@ public:
 	static Vector2 to_2d(const VectorN &p_vector);
 	static Vector3 to_3d(const VectorN &p_vector);
 	static Vector4 to_4d(const VectorN &p_vector);
-	static String to_string(const VectorN &p_vector);
-	static String to_string(const Vector<VectorN> &p_vectors);
+	static String vec_to_string(const VectorN &p_vector);
+	static String arr_to_string(const Vector<VectorN> &p_vectors);
+	static String arr_to_string_bind(const TypedArray<VectorN> &p_vectors);
 
 	static VectorND *get_singleton() { return singleton; }
 	VectorND() { singleton = this; }

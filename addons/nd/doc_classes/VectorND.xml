@@ -40,6 +40,13 @@
 				Returns the angle in radians between two N-dimensional vectors. The dimensions of the vectors do not need to match.
 			</description>
 		</method>
+		<method name="arr_to_string" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="vectors" type="PackedFloat64Array[]" />
+			<description>
+				Converts an array of VectorN (array of [PackedFloat64Array]) to a string representation, with the outer brackets denoting the array and inner parenthesis denoting each vector. For example, [code][(1.0, 2.0), (3.0, 4.0)][/code].
+			</description>
+		</method>
 		<method name="average" qualifiers="static">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="vectors" type="PackedFloat64Array[]" />
@@ -473,6 +480,13 @@
 			<param index="1" name="axis" type="int" />
 			<description>
 				Returns a new VectorN ([PackedFloat64Array]) that has the value of [param value] on the given [param axis] index, and [code]0.0[/code] on all axes with lower indices.
+			</description>
+		</method>
+		<method name="vec_to_string" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Converts the given VectorN ([PackedFloat64Array]) to a string representation. For example, [code][1.0, 2.0, 3.0][/code] will be converted to [code]"(1.0, 2.0, 3.0)"[/code].
 			</description>
 		</method>
 		<method name="with_dimension" qualifiers="static">

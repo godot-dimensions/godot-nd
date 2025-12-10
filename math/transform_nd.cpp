@@ -968,12 +968,12 @@ String TransformND::to_string() {
 	const int column_count = _columns.size();
 	for (int i = 0; i < column_count; i++) {
 		const VectorN &column = _columns[i];
-		ret += String::num_int64(i) + ":" + VectorND::to_string(column);
+		ret += String::num_int64(i) + ":" + VectorND::vec_to_string(column);
 		if (i < column_count - 1) {
 			ret += ", ";
 		}
 	}
-	ret += "], O" + VectorND::to_string(_origin) + ")";
+	ret += "], O" + VectorND::vec_to_string(_origin) + ")";
 	return ret;
 }
 

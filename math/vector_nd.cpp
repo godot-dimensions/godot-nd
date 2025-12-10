@@ -938,7 +938,7 @@ Vector4 VectorND::to_4d(const VectorN &p_vector) {
 	return Vector4();
 }
 
-String VectorND::to_string(const VectorN &p_vector) {
+String VectorND::vec_to_string(const VectorN &p_vector) {
 	String str = "(";
 	for (int64_t i = 0; i < p_vector.size(); i++) {
 		str += String::num(p_vector[i]);
@@ -950,10 +950,22 @@ String VectorND::to_string(const VectorN &p_vector) {
 	return str;
 }
 
-String VectorND::to_string(const Vector<VectorN> &p_vectors) {
+String VectorND::arr_to_string(const Vector<VectorN> &p_vectors) {
 	String str = "[";
 	for (int64_t i = 0; i < p_vectors.size(); i++) {
-		str += VectorND::to_string(p_vectors[i]);
+		str += VectorND::vec_to_string(p_vectors[i]);
+		if (i < p_vectors.size() - 1) {
+			str += ", ";
+		}
+	}
+	str += "]";
+	return str;
+}
+
+String VectorND::arr_to_string_bind(const TypedArray<VectorN> &p_vectors) {
+	String str = "[";
+	for (int64_t i = 0; i < p_vectors.size(); i++) {
+		str += VectorND::vec_to_string(PackedFloat64Array(p_vectors[i]));
 		if (i < p_vectors.size() - 1) {
 			str += ", ";
 		}
@@ -1031,4 +1043,6 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("to_2d", "vector"), &VectorND::to_2d);
 	ClassDB::bind_static_method("VectorND", D_METHOD("to_3d", "vector"), &VectorND::to_3d);
 	ClassDB::bind_static_method("VectorND", D_METHOD("to_4d", "vector"), &VectorND::to_4d);
+	ClassDB::bind_static_method("VectorND", D_METHOD("vec_to_string", "vector"), &VectorND::vec_to_string);
+	ClassDB::bind_static_method("VectorND", D_METHOD("arr_to_string", "vectors"), &VectorND::arr_to_string_bind);
 }
