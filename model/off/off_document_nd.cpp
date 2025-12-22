@@ -305,6 +305,10 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 	int vertex_count = 0;
 	int min_items_per_line = 3;
 	bool can_warn = true;
+	if (p_raw_text.contains("\r")) {
+		WARN_PRINT("OFF import: Warning: OFF file " + p_path + " contains carriage return characters (\\r). Remove them to silence this warning.");
+		can_warn = false;
+	}
 	const PackedStringArray lines = p_raw_text.split("\n", false);
 	for (const String &line : lines) {
 		if (line.is_empty() || line.begins_with("#")) {
@@ -312,7 +316,7 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 		}
 		if (line.contains("OFF")) {
 			// "OFF" by itself is 3D OFF.
-			if (line == "OFF") {
+			if (line == "OFF" || !is_digit(line[0])) {
 				off_document->_dimension = 3;
 			} else {
 				const int declared_dimension = line.to_int();
