@@ -27,7 +27,7 @@ public:
 	VectorN get_size() const;
 	void set_size(const VectorN &p_size);
 
-	virtual PackedInt32Array get_cell_indices() override;
+	virtual PackedInt32Array get_simplex_cell_indices() override;
 	virtual Vector<VectorN> get_vertices() override;
 	virtual int get_dimension() override { return _size.size(); }
 	void set_dimension(int p_dimension);

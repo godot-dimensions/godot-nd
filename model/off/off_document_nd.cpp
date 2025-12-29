@@ -192,7 +192,7 @@ Ref<ArrayCellMeshND> OFFDocumentND::import_generate_array_cell_mesh_nd() {
 			}
 		}
 	}
-	cell_mesh->set_cell_indices(packed_cell_indices);
+	cell_mesh->set_simplex_cell_indices(packed_cell_indices);
 	if (_has_any_cell_colors) {
 		Ref<CellMaterialND> cell_material;
 		cell_material.instantiate();

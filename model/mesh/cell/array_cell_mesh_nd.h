@@ -6,9 +6,9 @@
 class ArrayCellMeshND : public CellMeshND {
 	GDCLASS(ArrayCellMeshND, CellMeshND);
 
-	PackedInt32Array _cell_indices;
-	Vector<VectorN> _cell_face_normals;
-	Vector<VectorN> _cell_vertex_normals;
+	PackedInt32Array _simplex_cell_indices;
+	Vector<VectorN> _simplex_cell_face_normals;
+	Vector<VectorN> _simplex_cell_vertex_normals;
 	Vector<VectorN> _vertices;
 
 	void _clear_cache();
@@ -23,16 +23,16 @@ public:
 
 	void merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<TransformND> &p_transform);
 
-	virtual PackedInt32Array get_cell_indices() override;
-	void set_cell_indices(const PackedInt32Array &p_cell_indices);
+	virtual PackedInt32Array get_simplex_cell_indices() override;
+	void set_simplex_cell_indices(const PackedInt32Array &p_simplex_cell_indices);
 
-	virtual Vector<VectorN> get_cell_face_normals() override;
-	void set_cell_face_normals(const Vector<VectorN> &p_cell_face_normals);
-	void set_cell_face_normals_bind(const TypedArray<VectorN> &p_cell_face_normals);
+	virtual Vector<VectorN> get_simplex_cell_face_normals() override;
+	void set_cell_face_normals(const Vector<VectorN> &p_simplex_cell_face_normals);
+	void set_simplex_cell_face_normals_bind(const TypedArray<VectorN> &p_simplex_cell_face_normals);
 
-	virtual Vector<VectorN> get_cell_vertex_normals() override;
-	void set_cell_vertex_normals(const Vector<VectorN> &p_cell_vertex_normals);
-	void set_cell_vertex_normals_bind(const TypedArray<VectorN> &p_cell_vertex_normals);
+	virtual Vector<VectorN> get_simplex_cell_vertex_normals() override;
+	void set_simplex_cell_vertex_normals(const Vector<VectorN> &p_simplex_cell_vertex_normals);
+	void set_simplex_cell_vertex_normals_bind(const TypedArray<VectorN> &p_simplex_cell_vertex_normals);
 
 	virtual Vector<VectorN> get_vertices() override;
 	void set_vertices(const Vector<VectorN> &p_vertices);

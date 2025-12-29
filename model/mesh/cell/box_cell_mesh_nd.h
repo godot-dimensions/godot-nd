@@ -34,9 +34,9 @@ public:
 	bool get_polytope_cells() const { return _polytope_cells; }
 	void set_polytope_cells(const bool p_polytope_cells);
 
-	virtual int get_cell_count() override;
-	virtual int get_indices_per_cell() override;
-	virtual PackedInt32Array get_cell_indices() override;
+	virtual int get_simplex_cell_count() override;
+	virtual int get_indices_per_simplex_cell() override;
+	virtual PackedInt32Array get_simplex_cell_indices() override;
 	virtual PackedInt32Array get_edge_indices() override;
 	virtual Vector<VectorN> get_vertices() override;
 	virtual int get_dimension() override { return _size.size(); }

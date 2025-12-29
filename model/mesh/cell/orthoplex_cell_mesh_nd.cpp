@@ -35,7 +35,7 @@ void OrthoplexCellMeshND::set_dimension(int p_dimension) {
 	set_size(VectorND::with_dimension(_size, p_dimension));
 }
 
-PackedInt32Array OrthoplexCellMeshND::get_cell_indices() {
+PackedInt32Array OrthoplexCellMeshND::get_simplex_cell_indices() {
 	if (_cell_indices_cache.is_empty()) {
 		const uint64_t dimension = _size.size();
 		ERR_FAIL_COND_V_MSG(dimension > 30, _cell_indices_cache, "OrthoplexCellMeshND: Too many dimensions for orthoplex cells.");

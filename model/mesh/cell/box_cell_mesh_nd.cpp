@@ -72,15 +72,15 @@ void BoxCellMeshND::_generate_cell_indices_lex(const int64_t p_dimension, Packed
 	} while (std::next_permutation(bits, bits + p_dimension));
 }
 
-int BoxCellMeshND::get_cell_count() {
+int BoxCellMeshND::get_simplex_cell_count() {
 	return _factorial(get_dimension());
 }
 
-int BoxCellMeshND::get_indices_per_cell() {
+int BoxCellMeshND::get_indices_per_simplex_cell() {
 	return get_dimension() + 1;
 }
 
-PackedInt32Array BoxCellMeshND::get_cell_indices() {
+PackedInt32Array BoxCellMeshND::get_simplex_cell_indices() {
 	if (_cell_indices_cache.is_empty()) {
 		const int64_t dimension = _size.size();
 		if (dimension == 0) {
@@ -88,7 +88,7 @@ PackedInt32Array BoxCellMeshND::get_cell_indices() {
 		}
 		ERR_FAIL_COND_V_MSG(dimension > 10, _cell_indices_cache, "BoxCellMeshND: Too many dimensions for box cells.");
 		// Note: This algorithm completely fills the middle of the box.
-		_cell_indices_cache.resize(get_cell_count() * get_indices_per_cell());
+		_cell_indices_cache.resize(get_simplex_cell_count() * get_indices_per_simplex_cell());
 		_generate_cell_indices_lex(dimension, _cell_indices_cache);
 	}
 	return _cell_indices_cache;
@@ -110,7 +110,7 @@ PackedInt32Array BoxCellMeshND::get_edge_indices() {
 				}
 			}
 		} else {
-			_edge_indices_cache = calculate_edge_indices_from_cell_indices(get_cell_indices(), dimension + 1, true);
+			_edge_indices_cache = calculate_edge_indices_from_simplex_cell_indices(get_simplex_cell_indices(), dimension + 1, true);
 		}
 	}
 	return _edge_indices_cache;

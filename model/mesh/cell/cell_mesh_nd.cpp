@@ -46,18 +46,18 @@ Vector<PackedInt32Array> CellMeshND::_generate_combinations(const PackedInt32Arr
 }
 
 // Find unique opposing faces of the cell that are not coplanar with the pivot.
-Vector<PackedInt32Array> CellMeshND::_determine_opposing_faces(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_cell_indices_without_pivot, const int p_dimension, const int p_pivot_index, const Vector<VectorN> &p_cell_normals, Vector<VectorN> &r_out_normals) {
-	Vector<PackedInt32Array> combinations = _generate_combinations(p_cell_indices_without_pivot, p_dimension);
+Vector<PackedInt32Array> CellMeshND::_determine_opposing_faces(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_poly_cell_indices_without_pivot, const int p_dimension, const int p_pivot_index, const Vector<VectorN> &p_poly_cell_normals, Vector<VectorN> &r_out_normals) {
+	Vector<PackedInt32Array> combinations = _generate_combinations(p_poly_cell_indices_without_pivot, p_dimension);
 	const VectorN pivot_vertex = p_vertices[p_pivot_index];
 	Vector<PackedInt32Array> opposing_faces;
 	for (const PackedInt32Array &combination : combinations) {
 		Vector<VectorN> plane_points;
-		plane_points.resize(combination.size() + p_cell_normals.size());
+		plane_points.resize(combination.size() + p_poly_cell_normals.size());
 		for (int64_t i = 0; i < combination.size(); i++) {
 			plane_points.set(i, p_vertices[combination[i]]);
 		}
-		for (int64_t i = 0; i < p_cell_normals.size(); i++) {
-			plane_points.set(i + combination.size(), VectorND::add(plane_points[0], p_cell_normals[i]));
+		for (int64_t i = 0; i < p_poly_cell_normals.size(); i++) {
+			plane_points.set(i + combination.size(), VectorND::add(plane_points[0], p_poly_cell_normals[i]));
 		}
 		const Ref<PlaneND> plane = PlaneND::from_points(plane_points);
 		if (plane.is_null()) {
@@ -70,16 +70,16 @@ Vector<PackedInt32Array> CellMeshND::_determine_opposing_faces(const Vector<Vect
 		const int pivot_sign = pivot_distance > 0.0 ? 1 : -1;
 		bool cont = false;
 		PackedInt32Array face = combination;
-		for (int64_t i = 0; i < p_cell_indices_without_pivot.size(); i++) {
+		for (int64_t i = 0; i < p_poly_cell_indices_without_pivot.size(); i++) {
 			// Skip any indices that are already in the combination.
-			if (combination.has(p_cell_indices_without_pivot[i])) {
+			if (combination.has(p_poly_cell_indices_without_pivot[i])) {
 				continue;
 			}
-			const VectorN vertex = p_vertices[p_cell_indices_without_pivot[i]];
+			const VectorN vertex = p_vertices[p_poly_cell_indices_without_pivot[i]];
 			const double vertex_distance = plane->distance_to(vertex);
 			// Any vertex that is coplanar with this simplex is part of a larger face.
 			if (Math::is_zero_approx(vertex_distance)) {
-				face.append(p_cell_indices_without_pivot[i]);
+				face.append(p_poly_cell_indices_without_pivot[i]);
 				continue;
 			}
 			const int vertex_sign = vertex_distance > 0.0 ? 1 : -1;
@@ -112,7 +112,7 @@ void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 	const int dimension = get_dimension();
 	const MaterialND::ColorSourceFlagsND albedo_source = p_material->get_albedo_source_flags();
 	if (albedo_source & MaterialND::COLOR_SOURCE_FLAG_PER_CELL) {
-		const PackedInt32Array cell_indices = get_cell_indices();
+		const PackedInt32Array cell_indices = get_simplex_cell_indices();
 		PackedColorArray color_array = p_material->get_albedo_color_array();
 		const int64_t vertices_per_cell = dimension + 1;
 		const int64_t cell_count = cell_indices.size() / vertices_per_cell;
@@ -127,33 +127,33 @@ Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 	Ref<ArrayCellMeshND> array_mesh;
 	array_mesh.instantiate();
 	array_mesh->set_vertices(get_vertices());
-	array_mesh->set_cell_indices(get_cell_indices());
-	array_mesh->set_cell_face_normals(get_cell_face_normals());
-	array_mesh->set_cell_vertex_normals(get_cell_vertex_normals());
+	array_mesh->set_simplex_cell_indices(get_simplex_cell_indices());
+	array_mesh->set_cell_face_normals(get_simplex_cell_face_normals());
+	array_mesh->set_simplex_cell_vertex_normals(get_simplex_cell_vertex_normals());
 	array_mesh->set_material(get_material());
 	return array_mesh;
 }
 
-int CellMeshND::get_cell_count() {
+int CellMeshND::get_simplex_cell_count() {
 	const int dimension = get_dimension();
-	const PackedInt32Array cell_indices = get_cell_indices();
+	const PackedInt32Array cell_indices = get_simplex_cell_indices();
 	ERR_FAIL_COND_V_MSG(cell_indices.size() % dimension != 0, -1, "CellMeshND: Cell indices size must be a multiple of the dimension.");
 	return cell_indices.size() / dimension;
 }
 
-int CellMeshND::get_indices_per_cell() {
+int CellMeshND::get_indices_per_simplex_cell() {
 	return get_dimension();
 }
 
-PackedInt32Array CellMeshND::get_cell_indices() {
+PackedInt32Array CellMeshND::get_simplex_cell_indices() {
 	PackedInt32Array indices;
-	GDVIRTUAL_CALL(_get_cell_indices, indices);
+	GDVIRTUAL_CALL(_get_simplex_cell_indices, indices);
 	return indices;
 }
 
-Vector<VectorN> CellMeshND::get_cell_positions() {
+Vector<VectorN> CellMeshND::get_simplex_cell_positions() {
 	if (_cell_positions_cache.is_empty()) {
-		const PackedInt32Array cell_indices = get_cell_indices();
+		const PackedInt32Array cell_indices = get_simplex_cell_indices();
 		const Vector<VectorN> vertices = get_vertices();
 		const int32_t vertices_count = vertices.size();
 		for (const int cell_index : cell_indices) {
@@ -164,9 +164,9 @@ Vector<VectorN> CellMeshND::get_cell_positions() {
 	return _cell_positions_cache;
 }
 
-Vector<VectorN> CellMeshND::get_cell_face_normals() {
+Vector<VectorN> CellMeshND::get_simplex_cell_face_normals() {
 	TypedArray<VectorN> face_normals_bind;
-	GDVIRTUAL_CALL(_get_cell_face_normals, face_normals_bind);
+	GDVIRTUAL_CALL(_get_simplex_cell_face_normals, face_normals_bind);
 	Vector<VectorN> face_normals;
 	face_normals.resize(face_normals_bind.size());
 	for (int i = 0; i < face_normals_bind.size(); i++) {
@@ -176,9 +176,9 @@ Vector<VectorN> CellMeshND::get_cell_face_normals() {
 	return face_normals;
 }
 
-Vector<VectorN> CellMeshND::get_cell_vertex_normals() {
+Vector<VectorN> CellMeshND::get_simplex_cell_vertex_normals() {
 	TypedArray<VectorN> vertex_normals_bind;
-	GDVIRTUAL_CALL(_get_cell_vertex_normals, vertex_normals_bind);
+	GDVIRTUAL_CALL(_get_simplex_cell_vertex_normals, vertex_normals_bind);
 	Vector<VectorN> vertex_normals;
 	vertex_normals.resize(vertex_normals_bind.size());
 	for (int i = 0; i < vertex_normals_bind.size(); i++) {
@@ -188,13 +188,13 @@ Vector<VectorN> CellMeshND::get_cell_vertex_normals() {
 	return vertex_normals;
 }
 
-TypedArray<VectorN> CellMeshND::get_cell_face_normals_bind() {
+TypedArray<VectorN> CellMeshND::get_simplex_cell_face_normals_bind() {
 	TypedArray<VectorN> face_normals_bind;
-	GDVIRTUAL_CALL(_get_cell_face_normals, face_normals_bind);
+	GDVIRTUAL_CALL(_get_simplex_cell_face_normals, face_normals_bind);
 	if (!face_normals_bind.is_empty()) {
 		return face_normals_bind;
 	}
-	const Vector<VectorN> face_normals = get_cell_face_normals();
+	const Vector<VectorN> face_normals = get_simplex_cell_face_normals();
 	face_normals_bind.resize(face_normals.size());
 	for (int i = 0; i < face_normals.size(); i++) {
 		const VectorN &cell_face_normal = face_normals[i];
@@ -203,13 +203,13 @@ TypedArray<VectorN> CellMeshND::get_cell_face_normals_bind() {
 	return face_normals_bind;
 }
 
-TypedArray<VectorN> CellMeshND::get_cell_vertex_normals_bind() {
+TypedArray<VectorN> CellMeshND::get_simplex_cell_vertex_normals_bind() {
 	TypedArray<VectorN> vertex_normals_bind;
-	GDVIRTUAL_CALL(_get_cell_vertex_normals, vertex_normals_bind);
+	GDVIRTUAL_CALL(_get_simplex_cell_vertex_normals, vertex_normals_bind);
 	if (!vertex_normals_bind.is_empty()) {
 		return vertex_normals_bind;
 	}
-	const Vector<VectorN> vertex_normals = get_cell_vertex_normals();
+	const Vector<VectorN> vertex_normals = get_simplex_cell_vertex_normals();
 	vertex_normals_bind.resize(vertex_normals.size());
 	for (int i = 0; i < vertex_normals.size(); i++) {
 		const VectorN &cell_vertex_normal = vertex_normals[i];
@@ -218,9 +218,9 @@ TypedArray<VectorN> CellMeshND::get_cell_vertex_normals_bind() {
 	return vertex_normals_bind;
 }
 
-TypedArray<VectorN> CellMeshND::get_cell_positions_bind() {
+TypedArray<VectorN> CellMeshND::get_simplex_cell_positions_bind() {
 	TypedArray<VectorN> cell_positions_bind;
-	const Vector<VectorN> cell_positions = get_cell_positions();
+	const Vector<VectorN> cell_positions = get_simplex_cell_positions();
 	cell_positions_bind.resize(cell_positions.size());
 	for (int i = 0; i < cell_positions.size(); i++) {
 		const VectorN &cell_position = cell_positions[i];
@@ -238,22 +238,22 @@ TypedArray<VectorN> CellMeshND::get_cell_positions_bind() {
 // 3. For each face, recursively call this function with the face as the new cell.
 // 4. Each of the returned simplexes will have the pivot index prepended to it.
 // This function has atrocious time complexity, so avoid using it on large cells or at runtime.
-Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_cell_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_cell_normals) {
+Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_poly_cell_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_poly_cell_normals) {
 	Vector<PackedInt32Array> simplexes;
-	if (p_cell_indices.size() < 2) {
+	if (p_poly_cell_indices.size() < 2) {
 		return simplexes; // No simplexes can be formed.
 	}
-	PackedInt32Array without_pivot = p_cell_indices;
+	PackedInt32Array without_pivot = p_poly_cell_indices;
 	int pivot_item;
-	if (p_cell_indices[0] == p_last_pivot) {
-		pivot_item = p_cell_indices[1];
+	if (p_poly_cell_indices[0] == p_last_pivot) {
+		pivot_item = p_poly_cell_indices[1];
 		without_pivot.remove_at(1);
 	} else {
-		pivot_item = p_cell_indices[0];
+		pivot_item = p_poly_cell_indices[0];
 		without_pivot.remove_at(0);
 	}
 	Vector<VectorN> out_normals;
-	Vector<PackedInt32Array> opposing_faces = _determine_opposing_faces(p_vertices, without_pivot, p_dimension, pivot_item, p_cell_normals, out_normals);
+	Vector<PackedInt32Array> opposing_faces = _determine_opposing_faces(p_vertices, without_pivot, p_dimension, pivot_item, p_poly_cell_normals, out_normals);
 	for (int i = 0; i < opposing_faces.size(); i++) {
 		PackedInt32Array face = opposing_faces[i];
 		if (face.size() == p_dimension) {
@@ -263,7 +263,7 @@ Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(cons
 			continue;
 		}
 		// This face is not a simplex, so we need to recurse.
-		Vector<VectorN> face_normals = p_cell_normals;
+		Vector<VectorN> face_normals = p_poly_cell_normals;
 		face_normals.append(out_normals[i]);
 		Vector<PackedInt32Array> lower_simplexes = decompose_polytope_cell_into_simplexes(p_vertices, face, p_dimension - 1, pivot_item, face_normals);
 		for (PackedInt32Array &lower_simplex : lower_simplexes) {
@@ -274,11 +274,11 @@ Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(cons
 	return simplexes;
 }
 
-PackedInt32Array CellMeshND::calculate_edge_indices_from_cell_indices(const PackedInt32Array &p_cell_indices, const int p_dimension, const bool p_deduplicate) {
+PackedInt32Array CellMeshND::calculate_edge_indices_from_simplex_cell_indices(const PackedInt32Array &p_simplex_cell_indices, const int p_dimension, const bool p_deduplicate) {
 	PackedInt32Array edge_indices;
 	ERR_FAIL_COND_V_MSG(p_dimension < 1, edge_indices, "CellMeshND: Dimension must be greater than 0.");
-	ERR_FAIL_COND_V_MSG(p_cell_indices.size() % p_dimension != 0, edge_indices, "CellMeshND: Cell indices size must be a multiple of the dimension.");
-	const int cell_count = p_cell_indices.size() / p_dimension;
+	ERR_FAIL_COND_V_MSG(p_simplex_cell_indices.size() % p_dimension != 0, edge_indices, "CellMeshND: Simplex cell indices size must be a multiple of the dimension.");
+	const int cell_count = p_simplex_cell_indices.size() / p_dimension;
 	// The number of edges is the triangular number of the dimension per cell.
 	const int edge_index_count = cell_count * (p_dimension * (p_dimension - 1));
 	edge_indices.resize(edge_index_count);
@@ -287,8 +287,8 @@ PackedInt32Array CellMeshND::calculate_edge_indices_from_cell_indices(const Pack
 		const int cell_start = cell_index * p_dimension;
 		for (int i = 0; i < p_dimension; i++) {
 			for (int j = i + 1; j < p_dimension; j++) {
-				edge_indices.set(edge_index++, p_cell_indices[cell_start + i]);
-				edge_indices.set(edge_index++, p_cell_indices[cell_start + j]);
+				edge_indices.set(edge_index++, p_simplex_cell_indices[cell_start + i]);
+				edge_indices.set(edge_index++, p_simplex_cell_indices[cell_start + j]);
 			}
 		}
 	}
@@ -302,7 +302,7 @@ PackedInt32Array CellMeshND::calculate_edge_indices_from_cell_indices(const Pack
 PackedInt32Array CellMeshND::get_edge_indices() {
 	const int dimension = get_dimension();
 	if (_edge_indices_cache.is_empty()) {
-		_edge_indices_cache = calculate_edge_indices_from_cell_indices(get_cell_indices(), dimension, true);
+		_edge_indices_cache = calculate_edge_indices_from_simplex_cell_indices(get_simplex_cell_indices(), dimension, true);
 	}
 	return _edge_indices_cache;
 }
@@ -322,16 +322,16 @@ Vector<VectorN> CellMeshND::get_edge_positions() {
 
 void CellMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("cell_mesh_clear_cache"), &CellMeshND::cell_mesh_clear_cache);
-	ClassDB::bind_method(D_METHOD("get_cell_count"), &CellMeshND::get_cell_count);
-	ClassDB::bind_method(D_METHOD("get_indices_per_cell"), &CellMeshND::get_indices_per_cell);
+	ClassDB::bind_method(D_METHOD("get_simplex_cell_count"), &CellMeshND::get_simplex_cell_count);
+	ClassDB::bind_method(D_METHOD("get_indices_per_simplex_cell"), &CellMeshND::get_indices_per_simplex_cell);
 	ClassDB::bind_method(D_METHOD("to_array_cell_mesh"), &CellMeshND::to_array_cell_mesh);
 
-	ClassDB::bind_static_method("CellMeshND", D_METHOD("calculate_edge_indices_from_cell_indices", "cell_indices", "dimension", "deduplicate"), &CellMeshND::calculate_edge_indices_from_cell_indices);
-	ClassDB::bind_method(D_METHOD("get_cell_indices"), &CellMeshND::get_cell_indices);
-	ClassDB::bind_method(D_METHOD("get_cell_face_normals"), &CellMeshND::get_cell_face_normals_bind);
-	ClassDB::bind_method(D_METHOD("get_cell_vertex_normals"), &CellMeshND::get_cell_vertex_normals_bind);
+	ClassDB::bind_static_method("CellMeshND", D_METHOD("calculate_edge_indices_from_simplex_cell_indices", "simplex_cell_indices", "dimension", "deduplicate"), &CellMeshND::calculate_edge_indices_from_simplex_cell_indices);
+	ClassDB::bind_method(D_METHOD("get_simplex_cell_indices"), &CellMeshND::get_simplex_cell_indices);
+	ClassDB::bind_method(D_METHOD("get_simplex_cell_face_normals"), &CellMeshND::get_simplex_cell_face_normals_bind);
+	ClassDB::bind_method(D_METHOD("get_simplex_cell_vertex_normals"), &CellMeshND::get_simplex_cell_vertex_normals_bind);
 
-	GDVIRTUAL_BIND(_get_cell_indices);
-	GDVIRTUAL_BIND(_get_cell_face_normals);
-	GDVIRTUAL_BIND(_get_cell_vertex_normals);
+	GDVIRTUAL_BIND(_get_simplex_cell_indices);
+	GDVIRTUAL_BIND(_get_simplex_cell_face_normals);
+	GDVIRTUAL_BIND(_get_simplex_cell_vertex_normals);
 }
