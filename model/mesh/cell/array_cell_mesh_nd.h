@@ -7,7 +7,7 @@ class ArrayCellMeshND : public CellMeshND {
 	GDCLASS(ArrayCellMeshND, CellMeshND);
 
 	PackedInt32Array _simplex_cell_indices;
-	Vector<VectorN> _simplex_cell_face_normals;
+	Vector<VectorN> _simplex_cell_boundary_normals;
 	Vector<VectorN> _simplex_cell_vertex_normals;
 	Vector<VectorN> _vertices;
 
@@ -26,9 +26,9 @@ public:
 	virtual PackedInt32Array get_simplex_cell_indices() override;
 	void set_simplex_cell_indices(const PackedInt32Array &p_simplex_cell_indices);
 
-	virtual Vector<VectorN> get_simplex_cell_face_normals() override;
-	void set_cell_face_normals(const Vector<VectorN> &p_simplex_cell_face_normals);
-	void set_simplex_cell_face_normals_bind(const TypedArray<VectorN> &p_simplex_cell_face_normals);
+	virtual Vector<VectorN> get_simplex_cell_boundary_normals() override;
+	void set_cell_boundary_normals(const Vector<VectorN> &p_simplex_cell_boundary_normals);
+	void set_simplex_cell_boundary_normals_bind(const TypedArray<VectorN> &p_simplex_cell_boundary_normals);
 
 	virtual Vector<VectorN> get_simplex_cell_vertex_normals() override;
 	void set_simplex_cell_vertex_normals(const Vector<VectorN> &p_simplex_cell_vertex_normals);

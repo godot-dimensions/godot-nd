@@ -27,10 +27,10 @@ public:
 	virtual int get_simplex_cell_count();
 	virtual int get_indices_per_simplex_cell();
 	virtual PackedInt32Array get_simplex_cell_indices();
-	virtual Vector<VectorN> get_simplex_cell_face_normals();
+	virtual Vector<VectorN> get_simplex_cell_boundary_normals();
 	virtual Vector<VectorN> get_simplex_cell_vertex_normals();
 	Vector<VectorN> get_simplex_cell_positions();
-	TypedArray<VectorN> get_simplex_cell_face_normals_bind();
+	TypedArray<VectorN> get_simplex_cell_boundary_normals_bind();
 	TypedArray<VectorN> get_simplex_cell_vertex_normals_bind();
 	TypedArray<VectorN> get_simplex_cell_positions_bind();
 
@@ -41,6 +41,6 @@ public:
 	virtual Vector<VectorN> get_edge_positions() override;
 
 	GDVIRTUAL0R(PackedInt32Array, _get_simplex_cell_indices);
-	GDVIRTUAL0R(TypedArray<VectorN>, _get_simplex_cell_face_normals);
+	GDVIRTUAL0R(TypedArray<VectorN>, _get_simplex_cell_boundary_normals);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_simplex_cell_vertex_normals);
 };

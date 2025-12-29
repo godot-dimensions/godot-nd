@@ -10,10 +10,10 @@
 	<tutorials>
 	</tutorials>
 	<methods>
-		<method name="_get_simplex_cell_face_normals" qualifiers="virtual">
+		<method name="_get_simplex_cell_boundary_normals" qualifiers="virtual">
 			<return type="PackedFloat64Array[]" />
 			<description>
-				Callback method that should return the face normals of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_cell_face_normals] for details of the returned data.
+				Callback method that should return the boundary normals of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_cell_boundary_normals] for details of the returned data.
 			</description>
 		</method>
 		<method name="_get_simplex_cell_indices" qualifiers="virtual">
@@ -49,16 +49,16 @@
 				Gets the number of indices per cell. This is the number of vertices that make up a cell. For example, a triangle has 3 vertices, so the number of indices per cell is 3. The total number of indices in the [method get_cell_indices] array is equal to this value multiplied by [method get_cell_count].
 			</description>
 		</method>
+		<method name="get_simplex_cell_boundary_normals">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Gets the boundary normals of the simplex cells. Normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be one-fourth as long as the [method get_cell_indices] array, or empty for no normals, or else the mesh is invalid.
+			</description>
+		</method>
 		<method name="get_simplex_cell_count">
 			<return type="int" />
 			<description>
 				Gets the number of simplex cells in the cell mesh. Each simplex cell has [method get_indices_per_cell] vertex indices. Multiplying these together gives the length of the [method get_cell_indices] array.
-			</description>
-		</method>
-		<method name="get_simplex_cell_face_normals">
-			<return type="PackedFloat64Array[]" />
-			<description>
-				Gets the face normals of the simplex cells. Normals define which side of the cell is the front side, and therefore should be drawn. Face normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be one-fourth as long as the [method get_cell_indices] array, or empty for no normals, or else the mesh is invalid.
 			</description>
 		</method>
 		<method name="get_simplex_cell_indices">

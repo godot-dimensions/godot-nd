@@ -128,7 +128,7 @@ Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 	array_mesh.instantiate();
 	array_mesh->set_vertices(get_vertices());
 	array_mesh->set_simplex_cell_indices(get_simplex_cell_indices());
-	array_mesh->set_cell_face_normals(get_simplex_cell_face_normals());
+	array_mesh->set_cell_boundary_normals(get_simplex_cell_boundary_normals());
 	array_mesh->set_simplex_cell_vertex_normals(get_simplex_cell_vertex_normals());
 	array_mesh->set_material(get_material());
 	return array_mesh;
@@ -164,16 +164,16 @@ Vector<VectorN> CellMeshND::get_simplex_cell_positions() {
 	return _cell_positions_cache;
 }
 
-Vector<VectorN> CellMeshND::get_simplex_cell_face_normals() {
-	TypedArray<VectorN> face_normals_bind;
-	GDVIRTUAL_CALL(_get_simplex_cell_face_normals, face_normals_bind);
-	Vector<VectorN> face_normals;
-	face_normals.resize(face_normals_bind.size());
-	for (int i = 0; i < face_normals_bind.size(); i++) {
-		const VectorN &cell_face_normal = face_normals_bind[i];
-		face_normals.set(i, cell_face_normal);
+Vector<VectorN> CellMeshND::get_simplex_cell_boundary_normals() {
+	TypedArray<VectorN> boundary_normals_bind;
+	GDVIRTUAL_CALL(_get_simplex_cell_boundary_normals, boundary_normals_bind);
+	Vector<VectorN> boundary_normals;
+	boundary_normals.resize(boundary_normals_bind.size());
+	for (int i = 0; i < boundary_normals_bind.size(); i++) {
+		const VectorN cell_face_normal = boundary_normals_bind[i];
+		boundary_normals.set(i, cell_face_normal);
 	}
-	return face_normals;
+	return boundary_normals;
 }
 
 Vector<VectorN> CellMeshND::get_simplex_cell_vertex_normals() {
@@ -182,25 +182,25 @@ Vector<VectorN> CellMeshND::get_simplex_cell_vertex_normals() {
 	Vector<VectorN> vertex_normals;
 	vertex_normals.resize(vertex_normals_bind.size());
 	for (int i = 0; i < vertex_normals_bind.size(); i++) {
-		const VectorN &cell_vertex_normal = vertex_normals_bind[i];
+		const VectorN cell_vertex_normal = vertex_normals_bind[i];
 		vertex_normals.set(i, cell_vertex_normal);
 	}
 	return vertex_normals;
 }
 
-TypedArray<VectorN> CellMeshND::get_simplex_cell_face_normals_bind() {
-	TypedArray<VectorN> face_normals_bind;
-	GDVIRTUAL_CALL(_get_simplex_cell_face_normals, face_normals_bind);
-	if (!face_normals_bind.is_empty()) {
-		return face_normals_bind;
+TypedArray<VectorN> CellMeshND::get_simplex_cell_boundary_normals_bind() {
+	TypedArray<VectorN> boundary_normals_bind;
+	GDVIRTUAL_CALL(_get_simplex_cell_boundary_normals, boundary_normals_bind);
+	if (!boundary_normals_bind.is_empty()) {
+		return boundary_normals_bind;
 	}
-	const Vector<VectorN> face_normals = get_simplex_cell_face_normals();
-	face_normals_bind.resize(face_normals.size());
-	for (int i = 0; i < face_normals.size(); i++) {
-		const VectorN &cell_face_normal = face_normals[i];
-		face_normals_bind[i] = cell_face_normal;
+	const Vector<VectorN> boundary_normals = get_simplex_cell_boundary_normals();
+	boundary_normals_bind.resize(boundary_normals.size());
+	for (int i = 0; i < boundary_normals.size(); i++) {
+		const VectorN &cell_face_normal = boundary_normals[i];
+		boundary_normals_bind[i] = cell_face_normal;
 	}
-	return face_normals_bind;
+	return boundary_normals_bind;
 }
 
 TypedArray<VectorN> CellMeshND::get_simplex_cell_vertex_normals_bind() {
@@ -263,9 +263,9 @@ Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(cons
 			continue;
 		}
 		// This face is not a simplex, so we need to recurse.
-		Vector<VectorN> face_normals = p_poly_cell_normals;
-		face_normals.append(out_normals[i]);
-		Vector<PackedInt32Array> lower_simplexes = decompose_polytope_cell_into_simplexes(p_vertices, face, p_dimension - 1, pivot_item, face_normals);
+		Vector<VectorN> boundary_normals = p_poly_cell_normals;
+		boundary_normals.append(out_normals[i]);
+		Vector<PackedInt32Array> lower_simplexes = decompose_polytope_cell_into_simplexes(p_vertices, face, p_dimension - 1, pivot_item, boundary_normals);
 		for (PackedInt32Array &lower_simplex : lower_simplexes) {
 			lower_simplex.insert(0, pivot_item);
 			simplexes.append(lower_simplex);
@@ -328,10 +328,10 @@ void CellMeshND::_bind_methods() {
 
 	ClassDB::bind_static_method("CellMeshND", D_METHOD("calculate_edge_indices_from_simplex_cell_indices", "simplex_cell_indices", "dimension", "deduplicate"), &CellMeshND::calculate_edge_indices_from_simplex_cell_indices);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_indices"), &CellMeshND::get_simplex_cell_indices);
-	ClassDB::bind_method(D_METHOD("get_simplex_cell_face_normals"), &CellMeshND::get_simplex_cell_face_normals_bind);
+	ClassDB::bind_method(D_METHOD("get_simplex_cell_boundary_normals"), &CellMeshND::get_simplex_cell_boundary_normals_bind);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_vertex_normals"), &CellMeshND::get_simplex_cell_vertex_normals_bind);
 
 	GDVIRTUAL_BIND(_get_simplex_cell_indices);
-	GDVIRTUAL_BIND(_get_simplex_cell_face_normals);
+	GDVIRTUAL_BIND(_get_simplex_cell_boundary_normals);
 	GDVIRTUAL_BIND(_get_simplex_cell_vertex_normals);
 }
