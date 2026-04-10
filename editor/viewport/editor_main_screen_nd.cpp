@@ -462,6 +462,7 @@ void EditorMainScreenND::setup(EditorUndoRedoManager *p_undo_redo_manager) {
 	_layout_menu->set_theme_type_variation("FlatMenuButton");
 	_layout_menu->set_text(TTR("Layout"));
 	_layout_menu->set_tooltip_text(TTR("Change the layout of the ND editor viewports."));
+	_toolbar_hbox->add_child(_layout_menu);
 	// For ND, we don't have the Layout menu, so hide it. However, keep most of this code around so
 	// it's easier to copy-paste the 4D editor code into the ND editor and consolidate the changes.
 	_layout_menu->hide();
