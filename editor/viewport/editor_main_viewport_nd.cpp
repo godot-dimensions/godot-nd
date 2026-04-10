@@ -10,18 +10,27 @@
 #if GDEXTENSION
 #include <godot_cpp/classes/editor_interface.hpp>
 #include <godot_cpp/classes/editor_selection.hpp>
+#include <godot_cpp/classes/input_event_screen_drag.hpp>
 #elif GODOT_MODULE
 #include "editor/editor_data.h"
 #include "editor/editor_interface.h"
 #endif
 
-Vector2 EditorMainViewportND::_get_warped_mouse_motion(const Ref<InputEventMouseMotion> &p_ev_mouse_motion) const {
+Vector2 EditorMainViewportND::_get_warped_mouse_motion(const Ref<InputEvent> &p_input_event) const {
+	Ref<InputEventMouseMotion> ev_mouse_motion = p_input_event;
+	if (ev_mouse_motion.is_valid()) {
 #if GODOT_MODULE
-	if (bool(EDITOR_GET("editors/3d/navigation/warped_mouse_panning"))) {
-		return Input::get_singleton()->warp_mouse_motion(p_ev_mouse_motion, _input_surface_nd->get_global_rect());
-	}
+		if (bool(EDITOR_GET("editors/3d/navigation/warped_mouse_panning"))) {
+			return Input::get_singleton()->warp_mouse_motion(ev_mouse_motion, _input_surface_nd->get_global_rect());
+		}
 #endif // GODOT_MODULE
-	return p_ev_mouse_motion->get_relative();
+		return ev_mouse_motion->get_relative();
+	}
+	Ref<InputEventScreenDrag> ev_screen_drag = p_input_event;
+	if (ev_screen_drag.is_valid()) {
+		return ev_screen_drag->get_relative();
+	}
+	ERR_FAIL_V_MSG(Vector2(), "Expected InputEventMouseMotion or InputEventScreenDrag.");
 }
 
 Ref<TransformND> _ground_basis_rotation(const int p_dimension, const Vector2 &p_rotation_radians) {
@@ -30,9 +39,10 @@ Ref<TransformND> _ground_basis_rotation(const int p_dimension, const Vector2 &p_
 	return ground_rot_dx->compose_square(ground_rot_zd);
 }
 
-Ref<TransformND> EditorMainViewportND::_ground_rotation_input(const Ref<InputEventMouseMotion> &p_input_event, const Vector2 &p_rotation_radians) const {
+Ref<TransformND> EditorMainViewportND::_ground_rotation_input(const Ref<InputEvent> &p_input_event, const Vector2 &p_rotation_radians) const {
 	Input *input = Input::get_singleton();
-	const bool cmd_or_ctrl = p_input_event->is_ctrl_pressed() || p_input_event->is_command_or_control_pressed();
+	Ref<InputEventWithModifiers> ev_with_modifiers = p_input_event;
+	const bool cmd_or_ctrl = ev_with_modifiers.is_valid() && (ev_with_modifiers->is_ctrl_pressed() || ev_with_modifiers->is_command_or_control_pressed());
 	if (_dimension > 12 && input->is_physical_key_pressed(KEY_PERIOD)) {
 		return _ground_basis_rotation(12, p_rotation_radians);
 	} else if (_dimension > 11 && input->is_physical_key_pressed(KEY_COMMA)) {
@@ -104,7 +114,7 @@ Ref<TransformND> EditorMainViewportND::get_view_camera_transform() const {
 	return _editor_camera_nd->get_transform();
 }
 
-void EditorMainViewportND::navigation_freelook(const Ref<InputEventMouseMotion> &p_input_event) {
+void EditorMainViewportND::navigation_freelook(const Ref<InputEvent> &p_input_event) {
 	const Vector2 relative = _get_warped_mouse_motion(p_input_event);
 	const double degrees_per_pixel = EDITOR_GET("editors/3d/freelook/freelook_sensitivity");
 	const double radians_per_pixel = Math::deg_to_rad(degrees_per_pixel);
@@ -120,7 +130,7 @@ void EditorMainViewportND::navigation_freelook(const Ref<InputEventMouseMotion> 
 	_viewport_rotation_nd->queue_redraw();
 }
 
-void EditorMainViewportND::navigation_orbit(const Ref<InputEventMouseMotion> &p_input_event) {
+void EditorMainViewportND::navigation_orbit(const Ref<InputEvent> &p_input_event) {
 	Vector2 relative = _get_warped_mouse_motion(p_input_event);
 	const double degrees_per_pixel = EDITOR_GET("editors/3d/navigation_feel/orbit_sensitivity");
 	const double radians_per_pixel = Math::deg_to_rad(degrees_per_pixel);
@@ -140,10 +150,11 @@ void EditorMainViewportND::navigation_orbit(const Ref<InputEventMouseMotion> &p_
 	_viewport_rotation_nd->queue_redraw();
 }
 
-void EditorMainViewportND::navigation_pan(const Ref<InputEventMouseMotion> &p_input_event) {
+void EditorMainViewportND::navigation_pan(const Ref<InputEvent> &p_input_event) {
 	Vector2 relative = _get_warped_mouse_motion(p_input_event) / get_size().y;
 	VectorN pan;
-	if (p_input_event->is_ctrl_pressed() || p_input_event->is_command_or_control_pressed()) {
+	Ref<InputEventWithModifiers> ev_with_modifiers = p_input_event;
+	if (ev_with_modifiers.is_valid() && (ev_with_modifiers->is_ctrl_pressed() || ev_with_modifiers->is_command_or_control_pressed())) {
 		pan = VectorN{ 0.0, 0.0, relative.y, relative.x };
 	} else {
 		pan = VectorN{ -relative.x, relative.y };

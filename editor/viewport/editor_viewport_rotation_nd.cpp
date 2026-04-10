@@ -242,7 +242,7 @@ void EditorViewportRotationND::_process_click(int p_index, Vector2 p_position, b
 	queue_redraw();
 }
 
-void EditorViewportRotationND::_process_drag(Ref<InputEventWithModifiers> p_event, int p_index, Vector2 p_position) {
+void EditorViewportRotationND::_process_drag(Ref<InputEvent> p_event, int p_index, Vector2 p_position) {
 	if (_orbiting_mouse_button_index == p_index) {
 		if (Input::get_singleton()->get_mouse_mode() == Input::MOUSE_MODE_VISIBLE) {
 			Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_CAPTURED);

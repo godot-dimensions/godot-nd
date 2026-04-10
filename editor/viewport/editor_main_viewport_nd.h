@@ -45,8 +45,8 @@ private:
 	int _dimension = 0;
 	double _information_label_auto_hide_time = 0.0;
 
-	Vector2 _get_warped_mouse_motion(const Ref<InputEventMouseMotion> &p_ev_mouse_motion) const;
-	Ref<TransformND> _ground_rotation_input(const Ref<InputEventMouseMotion> &p_input_event, const Vector2 &p_rotation_radians) const;
+	Vector2 _get_warped_mouse_motion(const Ref<InputEvent> &p_ev_mouse_motion) const;
+	Ref<TransformND> _ground_rotation_input(const Ref<InputEvent> &p_input_event, const Vector2 &p_rotation_radians) const;
 	void _on_button_toggled(const bool p_toggled_on, const int p_option);
 	void _update_theme();
 
@@ -58,9 +58,9 @@ public:
 	void focus_selected_nodes();
 	Ref<TransformND> get_view_camera_transform() const;
 	EditorCameraND *get_editor_camera_nd() const { return _editor_camera_nd; }
-	void navigation_freelook(const Ref<InputEventMouseMotion> &p_input_event);
-	void navigation_orbit(const Ref<InputEventMouseMotion> &p_input_event);
-	void navigation_pan(const Ref<InputEventMouseMotion> &p_input_event);
+	void navigation_freelook(const Ref<InputEvent> &p_input_event);
+	void navigation_orbit(const Ref<InputEvent> &p_input_event);
+	void navigation_pan(const Ref<InputEvent> &p_input_event);
 	void navigation_change_speed(const double p_speed_change);
 	void navigation_change_zoom(const double p_zoom_change);
 	void viewport_mouse_input(const Ref<InputEventMouse> &p_mouse_event);
