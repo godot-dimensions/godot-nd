@@ -136,6 +136,7 @@ Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 
 int CellMeshND::get_simplex_cell_count() {
 	const int dimension = get_dimension();
+	ERR_FAIL_COND_V_MSG(dimension < 1, -1, "CellMeshND: Mesh is empty or 0-dimensional, cannot determine simplex cell count.");
 	const PackedInt32Array cell_indices = get_simplex_cell_indices();
 	ERR_FAIL_COND_V_MSG(cell_indices.size() % dimension != 0, -1, "CellMeshND: Cell indices size must be a multiple of the dimension.");
 	return cell_indices.size() / dimension;

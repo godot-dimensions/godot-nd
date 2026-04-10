@@ -34,7 +34,8 @@ void BoxCellMeshND::set_size(const VectorN &p_size) {
 void BoxCellMeshND::set_dimension(int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "BoxCellMeshND: Dimension must not be negative.");
 	ERR_FAIL_COND_MSG(p_dimension > 10, "BoxCellMeshND: Too many dimensions for cell-based box.");
-	set_size(VectorND::with_dimension(_size, p_dimension));
+	_size = VectorND::with_dimension(_size, p_dimension);
+	_clear_caches();
 }
 
 void BoxCellMeshND::set_polytope_cells(const bool p_polytope_cells) {

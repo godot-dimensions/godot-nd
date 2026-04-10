@@ -24,7 +24,6 @@ VectorN OrthoplexCellMeshND::get_size() const {
 }
 
 void OrthoplexCellMeshND::set_size(const VectorN &p_size) {
-	set_dimension(p_size.size());
 	_size = p_size;
 	_clear_caches();
 }
@@ -32,7 +31,8 @@ void OrthoplexCellMeshND::set_size(const VectorN &p_size) {
 void OrthoplexCellMeshND::set_dimension(int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "OrthoplexCellMeshND: Dimension must not be negative.");
 	ERR_FAIL_COND_MSG(p_dimension > 30, "OrthoplexCellMeshND: Too many dimensions for orthoplex cells.");
-	set_size(VectorND::with_dimension(_size, p_dimension));
+	_size = VectorND::with_dimension(_size, p_dimension);
+	_clear_caches();
 }
 
 PackedInt32Array OrthoplexCellMeshND::get_simplex_cell_indices() {
