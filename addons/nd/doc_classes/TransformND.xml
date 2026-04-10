@@ -542,7 +542,7 @@
 			[/codeblock]
 		</member>
 		<member name="basis_columns" type="PackedFloat64Array[]" setter="set_all_basis_columns" getter="get_all_basis_columns" default="[]">
-			The local basis of the transform, as an array of VectorN (PackedFloat64Array) column vectors. The amount of columns is the same as [member input_dimension] and the amount of rows is the same as [member output_dimension] (unless the basis is a jagged array).
+			The local basis of the transform, as an array of VectorN (PackedFloat64Array) column vectors. The amount of columns is the same as [member NodeND.input_dimension] and the amount of rows is the same as [member NodeND.output_dimension] (unless the basis is a jagged array).
 			[b]Note:[/b] This returns a copy of the basis. Code like [code]transform.basis_columns[1][2] = 3.0[/code] will not work. You need to copy this to a local variable, modify it, and then set it back. For example:
 			[codeblock]
 			var b = transform.basis_columns

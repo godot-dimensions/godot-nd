@@ -157,7 +157,7 @@
 	</methods>
 	<members>
 		<member name="all_rotation_data" type="PackedFloat64Array" setter="set_all_rotation_data" getter="get_all_rotation_data" default="PackedFloat64Array()">
-			A flat array containing all rotation data in the order of [from index, to index, angle, from index, to index, angle, ...]. This is useful for quickly getting or setting all rotation data at once, and is used for serializing the [EulerND] in a compact format. The from and to indices are stored as floats, but MUST be non-negative whole numbers. The length of the array MUST be a multiple of 3, or an error will occur when setting this property.
+			A flat array containing all rotation data in the order of [code][from index, to index, angle, from index, to index, angle, ...][/code]. This is useful for quickly getting or setting all rotation data at once, and is used for serializing the [EulerND] in a compact format. The from and to indices are stored as floats, but MUST be non-negative whole numbers. The length of the array MUST be a multiple of 3, or an error will occur when setting this property.
 		</member>
 		<member name="rotation_angle_array" type="PackedFloat64Array" setter="set_rotation_angle_array" getter="get_rotation_angle_array">
 			The angles of all rotations stored in this [EulerND] as a [PackedFloat64Array]. The angles are usually in radians, but may be in degrees or other units if desired. This array always has the same length as [member rotation_count], which is the same as the length of [member rotation_from_array] and [member rotation_to_array].

@@ -408,7 +408,7 @@
 			<param index="0" name="axis" type="PackedFloat64Array" />
 			<param index="1" name="axis_index" type="int" />
 			<description>
-				Transforms the specified axis vector by the basis matrix, interpreting [param axis] as a basis vector of a child matrix. This is like [method xform_basis], but it ensures that if [param axis] does not go all the way to [param axis_index], it will be treated as if [code]1.0[/code] is at [code]axis[axis_index][/code]. This is useful for transforming axes of jagged child matrices, where the child matrix only allocates the values that are needed.
+				Transforms the specified axis vector by the basis matrix, interpreting [param axis] as a basis vector of a child matrix. This is like [method xform], but it ensures that if [param axis] does not go all the way to [param axis_index], it will be treated as if [code]1.0[/code] is at [code]axis[axis_index][/code]. This is useful for transforming axes of jagged child matrices, where the child matrix only allocates the values that are needed.
 			</description>
 		</method>
 		<method name="xform_transposed" qualifiers="const">

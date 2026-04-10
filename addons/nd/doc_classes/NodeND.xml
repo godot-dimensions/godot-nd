@@ -96,7 +96,7 @@
 	<signals>
 		<signal name="dimension_changed">
 			<description>
-				Emits whenever a method on this node is called to change its dimension, including [method set_dimension], [method set_input_dimension], and [method set_output_dimension]. This signal does not emit when a [TransformND] is set or changed. Code setting the transform directly is assumed to keep the same dimension and is not checked for performance reasons, and therefore such code should emit this signal manually if it changes the dimension.
+				Emits whenever the dimension of this node changes by calling a setter method. For example, this signal is emitted when [member dimension], [member input_dimension], or [member output_dimension] properties are modified. This signal does not emit when a [TransformND] is set or changed. Code setting the transform directly is assumed to keep the same dimension and is not checked for performance reasons, and therefore such code should emit this signal manually if it changes the dimension.
 			</description>
 		</signal>
 	</signals>

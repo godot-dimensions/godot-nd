@@ -13,19 +13,19 @@
 		<method name="_get_simplex_cell_boundary_normals" qualifiers="virtual">
 			<return type="PackedFloat64Array[]" />
 			<description>
-				Callback method that should return the boundary normals of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_cell_boundary_normals] for details of the returned data.
+				Callback method that should return the boundary normals of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_boundary_normals] for details of the returned data.
 			</description>
 		</method>
 		<method name="_get_simplex_cell_indices" qualifiers="virtual">
 			<return type="PackedInt32Array" />
 			<description>
-				Callback method that should return the cell indices of a cell mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_cell_indices] for details of the returned data.
+				Callback method that should return the cell indices of a cell mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_indices] for details of the returned data.
 			</description>
 		</method>
 		<method name="_get_simplex_cell_vertex_normals" qualifiers="virtual">
 			<return type="PackedFloat64Array[]" />
 			<description>
-				Callback method that should return the vertex normals of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_cell_vertex_normals] for details of the returned data.
+				Callback method that should return the vertex normals of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_vertex_normals] for details of the returned data.
 			</description>
 		</method>
 		<method name="calculate_edge_indices_from_simplex_cell_indices" qualifiers="static">
@@ -34,7 +34,7 @@
 			<param index="1" name="dimension" type="int" />
 			<param index="2" name="deduplicate" type="bool" />
 			<description>
-				Calculates the edge indices from the [param cell_indices] array of simplex cells. The [param dimension] parameter specifies the number of dimensions of the mesh, such that every [param dimension] cell indices make up a cell. If [param deduplicate] is [code]true[/code], duplicate edges will be removed from the returned array. The returned edge indices array points to the vertices of the mesh, where each edge is defined by a pair of indices.
+				Calculates the edge indices from the [param simplex_cell_indices] array of simplex cells. The [param dimension] parameter specifies the number of dimensions of the mesh, such that every [param dimension] cell indices make up a cell. If [param deduplicate] is [code]true[/code], duplicate edges will be removed from the returned array. The returned edge indices array points to the vertices of the mesh, where each edge is defined by a pair of indices.
 			</description>
 		</method>
 		<method name="cell_mesh_clear_cache">
@@ -46,31 +46,31 @@
 		<method name="get_indices_per_simplex_cell">
 			<return type="int" />
 			<description>
-				Gets the number of indices per cell. This is the number of vertices that make up a cell. For example, a triangle has 3 vertices, so the number of indices per cell is 3. The total number of indices in the [method get_cell_indices] array is equal to this value multiplied by [method get_cell_count].
+				Gets the number of indices per cell. This is the number of vertices that make up a cell. For example, a triangle has 3 vertices, so the number of indices per cell is 3. The total number of indices in the [method get_simplex_cell_indices] array is equal to this value multiplied by [method get_simplex_cell_count].
 			</description>
 		</method>
 		<method name="get_simplex_cell_boundary_normals">
 			<return type="PackedFloat64Array[]" />
 			<description>
-				Gets the boundary normals of the simplex cells. Normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be one-fourth as long as the [method get_cell_indices] array, or empty for no normals, or else the mesh is invalid.
+				Gets the boundary normals of the simplex cells. Normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be one-fourth as long as the [method get_simplex_cell_indices] array, or empty for no normals, or else the mesh is invalid.
 			</description>
 		</method>
 		<method name="get_simplex_cell_count">
 			<return type="int" />
 			<description>
-				Gets the number of simplex cells in the cell mesh. Each simplex cell has [method get_indices_per_cell] vertex indices. Multiplying these together gives the length of the [method get_cell_indices] array.
+				Gets the number of simplex cells in the cell mesh. Each simplex cell has [method get_indices_per_simplex_cell] vertex indices. Multiplying these together gives the length of the [method get_simplex_cell_indices] array.
 			</description>
 		</method>
 		<method name="get_simplex_cell_indices">
 			<return type="PackedInt32Array" />
 			<description>
-				Gets the cell indices of the cell mesh. Each set of [method get_indices_per_cell] integers represents the indices of the vertices that make up a cell, for a total of [method get_cell_count] cells. The vertices can be obtained using [method MeshND.get_vertices]. Integers in this array should not exceed the length of the vertices array.
+				Gets the cell indices of the cell mesh. Each set of [method get_indices_per_simplex_cell] integers represents the indices of the vertices that make up a cell, for a total of [method get_simplex_cell_count] cells. The vertices can be obtained using [method MeshND.get_vertices]. Integers in this array should not exceed the length of the vertices array.
 			</description>
 		</method>
 		<method name="get_simplex_cell_vertex_normals">
 			<return type="PackedFloat64Array[]" />
 			<description>
-				Gets the vertex normals of the simplex cells. Vertex normals define how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be the same length as the [method get_cell_indices] array, or empty for no normals, or else the mesh is invalid.
+				Gets the vertex normals of the simplex cells. Vertex normals define how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be the same length as the [method get_simplex_cell_indices] array, or empty for no normals, or else the mesh is invalid.
 			</description>
 		</method>
 		<method name="to_array_cell_mesh">
