@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../math/vector_nd.h"
+
 #include "tests/test_macros.h"
 
 namespace TestVectorND {

@@ -1,7 +1,5 @@
 #include "editor_transform_gizmo_nd.h"
 
-#include "editor_main_screen_nd.h"
-
 #include "../../math/geometry_nd.h"
 #include "../../math/plane_nd.h"
 #include "../../math/vector_nd.h"
@@ -9,6 +7,7 @@
 #include "../../model/mesh/wire/box_wire_mesh_nd.h"
 #include "../../model/mesh/wire/wire_material_nd.h"
 #include "../../render/rendering_server_nd.h"
+#include "editor_main_screen_nd.h"
 
 #if GDEXTENSION
 #include <godot_cpp/classes/editor_inspector.hpp>

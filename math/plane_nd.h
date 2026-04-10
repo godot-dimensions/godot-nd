@@ -24,7 +24,7 @@ public:
 	double get_distance() const { return _distance; }
 	void set_distance(const double p_distance) { _distance = p_distance; }
 
-	VectorN get_normal() const { return _normal; };
+	VectorN get_normal() const { return _normal; }
 	void set_normal(const VectorN &p_normal) { _normal = p_normal; }
 
 	// Point functions.

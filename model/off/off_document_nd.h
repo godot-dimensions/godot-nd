@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../../godot_nd_defines.h"
-
 #include "../mesh/cell/array_cell_mesh_nd.h"
 #include "../mesh/wire/array_wire_mesh_nd.h"
 

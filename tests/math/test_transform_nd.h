@@ -2,6 +2,7 @@
 
 #include "../../math/transform_nd.h"
 #include "../../math/vector_nd.h"
+
 #include "tests/test_macros.h"
 
 namespace TestTransformND {
