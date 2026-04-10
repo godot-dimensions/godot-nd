@@ -963,7 +963,7 @@ Projection TransformND::to_4d() {
 			Vector4(get_basis_element(3, 0), get_basis_element(3, 1), get_basis_element(3, 2), get_basis_element(3, 3)));
 }
 
-String TransformND::to_string() {
+String TransformND::_to_string() {
 	String ret = "TransformND(B[";
 	const int column_count = _columns.size();
 	for (int i = 0; i < column_count; i++) {

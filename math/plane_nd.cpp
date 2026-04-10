@@ -99,7 +99,7 @@ Ref<PlaneND> PlaneND::flipped() const {
 	return neg;
 }
 
-String PlaneND::to_string() {
+String PlaneND::_to_string() {
 	return "[N: " + String(Variant(_normal)) + ", D: " + String::num_real(_distance, false) + "]";
 }
 

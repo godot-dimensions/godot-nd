@@ -42,6 +42,9 @@ using namespace godot;
 // Prior to Godot 4.6, the internal API of free_rid in RenderingServer and other servers did not match the exposed API.
 // See https://github.com/godotengine/godot/pull/107139
 #define free_rid free
+
+// Prior to Godot 4.6, the internal API of to_string did not match the exposed API of _to_string.
+#define _to_string to_string
 #endif
 
 #if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR > 4

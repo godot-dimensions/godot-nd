@@ -7,6 +7,8 @@
 #if GDEXTENSION
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/templates/hash_set.hpp>
+#elif GODOT_MODULE
+#include "core/io/file_access.h"
 #endif
 
 void OFFDocumentND::_count_unique_edges_from_faces() {

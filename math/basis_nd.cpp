@@ -858,7 +858,7 @@ Projection BasisND::to_4d() {
 			Vector4(get_element(3, 0), get_element(3, 1), get_element(3, 2), get_element(3, 3)));
 }
 
-String BasisND::to_string() {
+String BasisND::_to_string() {
 	String ret = "BasisND(B[";
 	const int column_count = _columns.size();
 	for (int i = 0; i < column_count; i++) {

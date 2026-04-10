@@ -47,7 +47,7 @@ public:
 
 	// Operators.
 	Ref<PlaneND> flipped() const;
-	String to_string() MODULE_OVERRIDE;
+	virtual String _to_string() MODULE_OVERRIDE;
 
 	// Constructors.
 	static Ref<PlaneND> from_normal_distance(const VectorN &p_normal, double p_distance = 0.0f);

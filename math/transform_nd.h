@@ -121,7 +121,7 @@ public:
 	Transform2D to_2d();
 	Transform3D to_3d();
 	Projection to_4d();
-	String to_string() MODULE_OVERRIDE;
+	virtual String _to_string() MODULE_OVERRIDE;
 	static Ref<TransformND> from_2d(const Transform2D &p_transform);
 	static Ref<TransformND> from_3d(const Transform3D &p_transform);
 	static Ref<TransformND> from_4d(const Projection &p_basis, const Vector4 &p_origin = Vector4(0, 0, 0, 0));
