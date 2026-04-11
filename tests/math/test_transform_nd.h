@@ -15,10 +15,10 @@ TEST_CASE("[TransformND] Trivial getters/setters") {
 	Vector<VectorN> columns = { VectorN{ 1, 0, 0, 0 }, empty, empty, empty };
 	test->set_all_basis_columns(columns);
 	VectorN column3 = VectorN{ 0, 0, 0, 1 };
-	CHECK_MESSAGE(test->get_basis_column(3) == column3, "TransformND column getter should fill in missing values with identity.");
-	CHECK_MESSAGE(test->get_basis_column(10) == zero4d, "TransformND column getter should not crash when out of bounds and fill missing values with zero.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(test->get_basis_column(3), column3), "TransformND column getter should fill in missing values with identity.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(test->get_basis_column(10), zero4d), "TransformND column getter should not crash when out of bounds and fill missing values with zero.");
 	VectorN row2 = VectorN{ 0, 0, 1, 0 };
-	CHECK_MESSAGE(test->get_basis_row(2) == row2, "TransformND row getter should fill in missing values with identity.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(test->get_basis_row(2), row2), "TransformND row getter should fill in missing values with identity.");
 }
 
 TEST_CASE("[TransformND] Determinant") {
@@ -131,7 +131,7 @@ TEST_CASE("[TransformND] Inverse Basis") {
 	Vector<VectorN> rot_xz = { VectorN{ 0, 0, 1 }, VectorN{ 0, 1, 0 }, VectorN{ -1, 0, 0 } };
 	Vector<VectorN> rot_zx = { VectorN{ 0, 0, -1 }, VectorN{ 0, 1, 0 }, VectorN{ 1, 0, 0 } };
 	test->set_all_basis_columns(rot_xz);
-	CHECK_MESSAGE(test->inverse_basis()->get_all_basis_columns() == rot_zx, "TransformND inverse_basis of 90 degree rotation should be the inverse rotation.");
+	CHECK_MESSAGE(VectorND::is_equal_exact_array(test->inverse_basis()->get_all_basis_columns(), rot_zx), "TransformND inverse_basis of 90 degree rotation should be the inverse rotation.");
 
 	const double angle = 0.5;
 	test = TransformND::from_rotation(0, 1, angle);

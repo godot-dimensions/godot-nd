@@ -1,5 +1,6 @@
 #include "off_document_nd.h"
 
+#include "../../math/vector_nd.h"
 #include "../mesh/cell/cell_material_nd.h"
 #include "../mesh/mesh_instance_nd.h"
 #include "../mesh/wire/wire_material_nd.h"
@@ -39,7 +40,7 @@ int64_t OFFDocumentND::_find_or_insert_vertex(const VectorN &p_vertex, const boo
 	const int64_t vertex_count = _vertices.size();
 	if (p_deduplicate_vertices) {
 		for (int64_t vertex_number = 0; vertex_number < vertex_count; vertex_number++) {
-			if (_vertices[vertex_number] == p_vertex) {
+			if (VectorND::is_equal_exact(_vertices[vertex_number], p_vertex)) {
 				return vertex_number;
 			}
 		}

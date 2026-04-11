@@ -34,7 +34,7 @@ int ArrayCellMeshND::append_vertex(const VectorN &p_vertex, const bool p_dedupli
 	const int64_t vertex_count = _vertices.size();
 	if (p_deduplicate_vertices) {
 		for (int64_t i = 0; i < vertex_count; i++) {
-			if (_vertices[i] == p_vertex) {
+			if (VectorND::is_equal_exact(_vertices[i], p_vertex)) {
 				return i;
 			}
 		}

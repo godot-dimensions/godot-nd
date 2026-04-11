@@ -433,6 +433,19 @@ bool VectorND::is_equal_exact(const VectorN &p_a, const VectorN &p_b) {
 	return true;
 }
 
+bool VectorND::is_equal_exact_array(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b) {
+	const int64_t size = p_a.size();
+	if (size != p_b.size()) {
+		return false;
+	}
+	for (int64_t i = 0; i < size; i++) {
+		if (!is_equal_exact(p_a[i], p_b[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 bool VectorND::is_finite(const VectorN &p_vector) {
 	const int64_t dimension = p_vector.size();
 	for (int64_t i = 0; i < dimension; i++) {

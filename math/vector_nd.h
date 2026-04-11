@@ -79,6 +79,7 @@ public:
 	static VectorN inverse(const VectorN &p_vector);
 	static bool is_equal_approx(const VectorN &p_a, const VectorN &p_b);
 	static bool is_equal_exact(const VectorN &p_a, const VectorN &p_b);
+	static bool is_equal_exact_array(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b);
 	static bool is_finite(const VectorN &p_vector);
 	static bool is_zero_approx(const VectorN &p_vector);
 	static double length(const VectorN &p_vector);
