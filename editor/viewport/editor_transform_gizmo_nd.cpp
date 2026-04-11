@@ -322,6 +322,11 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 	const Ref<TransformND> camera_transform = p_camera->get_global_transform();
 	const Ref<TransformND> gizmo_transform = get_transform();
 	const VectorN gizmo_scale_abs = gizmo_transform->get_scale_abs();
+	const int dimension = gizmo_scale_abs.size();
+	if (dimension == 0 || VectorND::length_squared(gizmo_scale_abs) == 0.0) {
+		set_visible(false);
+		return;
+	}
 	if (_is_stretch_enabled) {
 		const Ref<RectND> bounds = _get_rect_bounds_of_selection(gizmo_transform->inverse());
 		if (bounds->get_dimension() == 0) {
@@ -343,7 +348,10 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 	} else {
 		scale_dist_number = VectorND::distance_to(gizmo_transform->get_origin(), camera_transform->get_origin()) * 0.4;
 	}
-	const VectorN scale_vector = VectorND::fill(get_dimension(), scale_dist_number);
+	if (scale_dist_number < CMP_EPSILON) {
+		return;
+	}
+	const VectorN scale_vector = VectorND::fill(dimension, scale_dist_number);
 	if (_is_use_local_rotation) {
 		const VectorN mesh_holder_scale = VectorND::divide_vector(scale_vector, gizmo_scale_abs);
 		_mesh_holder->set_basis(BasisND::from_scale(mesh_holder_scale));
@@ -352,7 +360,6 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 	}
 	// Now that the main mesh holder has the correct transform, conformalize the keep-conformal holders.
 	// While the mesh holder affects mouse input, this adjustment is purely a visual effect.
-	const int dimension = get_dimension();
 	for (int i = 0; i < dimension; i++) {
 		_mesh_keep_conformal[i]->set_transform(TransformND::identity_transform(dimension));
 		Ref<BasisND> basis = _mesh_keep_conformal[i]->get_global_basis();

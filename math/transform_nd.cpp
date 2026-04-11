@@ -653,7 +653,7 @@ VectorN TransformND::get_scale_abs() const {
 	VectorN scale;
 	scale.resize(column_count);
 	for (int i = 0; i < column_count; i++) {
-		scale.set(i, VectorND::length(_columns[i]));
+		scale.set(i, VectorND::length(get_basis_column(i)));
 	}
 	return scale;
 }
@@ -662,7 +662,7 @@ void TransformND::set_scale_abs(const VectorN &p_scale) {
 	const int64_t column_count = _columns.size();
 	for (int64_t i = 0; i < column_count; i++) {
 		const double scale = i < p_scale.size() ? p_scale[i] : 1.0;
-		_columns.set(i, VectorND::with_length(_columns[i], scale));
+		_columns.set(i, VectorND::with_length(get_basis_column(i), scale));
 	}
 }
 

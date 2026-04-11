@@ -171,7 +171,9 @@ Ref<BasisND> NodeND::get_global_basis() const {
 void NodeND::set_global_basis(const Ref<BasisND> &p_basis) {
 	const NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
 	if (node_nd_parent) {
-		Ref<BasisND> local_basis = node_nd_parent->get_global_basis()->inverse()->compose_square(p_basis);
+		const Ref<BasisND> parent_basis = node_nd_parent->get_global_basis();
+		ERR_FAIL_COND_MSG(parent_basis->determinant() == 0, "Cannot set global basis because the parent is not invertible.");
+		const Ref<BasisND> local_basis = parent_basis->inverse()->compose_square(p_basis);
 		set_basis(local_basis);
 	} else {
 		set_basis(p_basis);
