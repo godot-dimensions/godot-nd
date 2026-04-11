@@ -332,7 +332,8 @@ void EditorMainScreenND::update_dimension() {
 			_editor_main_viewports[i]->set_dimension(dimension);
 		}
 	}
-	_transform_gizmo_nd->set_gizmo_dimension(dimension);
+	// The gizmo dimension follows the selected nodes' transform dimension and may
+	// legitimately differ from the scene-wide maximum dimension shown here.
 	_origin_marker->set_dimension(dimension);
 }
 
