@@ -42,5 +42,5 @@ public:
 
 	static RenderingServerND *get_singleton() { return singleton; }
 	RenderingServerND() { singleton = this; }
-	~RenderingServerND() { singleton = nullptr; }
+	~RenderingServerND();
 };

@@ -24,6 +24,23 @@ Ref<RenderingEngineND> RenderingServerND::_get_rendering_engine(const String &p_
 	return _rendering_engines.begin()->value;
 }
 
+RenderingServerND::~RenderingServerND() {
+	for (const KeyValue<Viewport *, Vector<CameraND *>> &E : _viewport_cameras) {
+		Viewport *viewport = E.key;
+		if (viewport == nullptr) {
+			continue;
+		}
+		for (KeyValue<String, Ref<RenderingEngineND>> &engine_entry : _rendering_engines) {
+			if (engine_entry.value.is_valid()) {
+				engine_entry.value->cleanup_for_viewport_if_needed(viewport);
+			}
+		}
+	}
+	_viewport_cameras.clear();
+	_rendering_engines.clear();
+	singleton = nullptr;
+}
+
 TypedArray<MeshInstanceND> RenderingServerND::_get_visible_mesh_instances() const {
 	TypedArray<MeshInstanceND> visible_mesh_instances;
 	for (int i = 0; i < _mesh_instances.size(); i++) {
