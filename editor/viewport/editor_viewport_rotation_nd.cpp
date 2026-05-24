@@ -38,88 +38,89 @@ void EditorViewportRotationND::_notification(int p_what) {
 
 void EditorViewportRotationND::_draw() {
 	const Vector2 center = get_size() / 2.0f;
-	if (_focused_axis.axis_number > -3 || _orbiting_mouse_button_index != -1) {
+	if (_focused_target.hit_type != HIT_TYPE_NONE || _orbiting_mouse_button_index != -1) {
 		draw_circle(center, center.x, Color(0.5f, 0.5f, 0.5f, 0.25f), true, -1.0f, true);
 	}
-	Vector<Axis2D> axis_to_draw;
+	Vector<HitTarget2D> axis_to_draw;
 	_get_sorted_axis(center, axis_to_draw);
 	for (int i = 0; i < axis_to_draw.size(); ++i) {
-		Axis2D axis = axis_to_draw[i];
-		if (axis.axis_type == AXIS_TYPE_LINE) {
+		HitTarget2D axis = axis_to_draw[i];
+		if (axis.hit_type == HIT_TYPE_AXIS_LINE) {
 			_draw_axis_line(axis, center);
-		} else if (axis.axis_type == AXIS_TYPE_PLANE) {
-			_draw_axis_plane(axis);
+		} else if (axis.hit_type == HIT_TYPE_PLANE) {
+			_draw_plane_semicircles(axis);
 		} else {
 			_draw_axis_circle(axis);
 		}
 	}
 }
 
-void EditorViewportRotationND::_draw_axis_circle(const Axis2D &p_axis) {
-	const bool is_focused = _focused_axis.axis_number == p_axis.axis_number && _focused_axis.axis_type == p_axis.axis_type;
-	const Color axis_color = p_axis.axis_number < 0 ? Color(0.6f, 0.6f, 0.6f) : _axis_colors[p_axis.axis_number % _axis_colors.size()];
-	const float alpha = MIN(2.0f, p_axis.z_index + 2.0f);
+void EditorViewportRotationND::_draw_axis_circle(const HitTarget2D &p_target) {
+	const bool is_focused = _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.hit_type == p_target.hit_type;
+	const Color axis_color = p_target.primary_axis_number < 0 ? Color(0.6f, 0.6f, 0.6f) : _axis_colors[p_target.primary_axis_number % _axis_colors.size()];
+	const float alpha = MIN(2.0f, p_target.z_index + 2.0f);
 	const Color color = is_focused ? Color(axis_color.lightened(0.75f), 1.0f) : Color(axis_color, alpha);
-	const double axis_circle_radius = (8.0f + p_axis.z_index) * _editor_scale;
-	if (p_axis.axis_type == AXIS_TYPE_CIRCLE_POSITIVE) {
-		draw_circle(p_axis.screen_point, axis_circle_radius, color, true, -1.0f, true);
+	const double axis_circle_radius = (8.0f + p_target.z_index) * _editor_scale;
+	if (p_target.hit_type == HIT_TYPE_AXIS_CIRCLE_POSITIVE) {
+		draw_circle(p_target.screen_point, axis_circle_radius, color, true, -1.0f, true);
 		// Draw the axis letter for the positive axes.
-		const String axis_letter = VectorND::axis_letter(p_axis.axis_number);
+		const String axis_letter = VectorND::axis_letter(p_target.primary_axis_number);
 		const Ref<Font> &font = get_theme_font(StringName("rotation_control"), StringName("EditorFonts"));
 		const int font_size = get_theme_font_size(StringName("rotation_control_size"), StringName("EditorFonts"));
 		const Size2 char_size = font->get_char_size(axis_letter[0], font_size);
 		Vector2 char_offset = Vector2(-char_size.width / 2.0f, char_size.height * 0.25f);
-		if (p_axis.axis_number < 0) {
+		if (p_target.primary_axis_number < 0) {
 			char_offset.y += 4.0f;
 		}
-		draw_char(font, p_axis.screen_point + char_offset, axis_letter, font_size, Color(0.0f, 0.0f, 0.0f, alpha * 0.6f));
+		draw_char(font, p_target.screen_point + char_offset, axis_letter, font_size, Color(0.0f, 0.0f, 0.0f, alpha * 0.6f));
 	} else {
+		CRASH_COND(p_target.hit_type != HIT_TYPE_AXIS_CIRCLE_NEGATIVE);
 		// Draw an outline around the negative axes.
-		draw_circle(p_axis.screen_point, axis_circle_radius, color, true, -1.0f, true);
-		draw_circle(p_axis.screen_point, axis_circle_radius * 0.8f, color.darkened(0.4f), true, -1.0f, true);
+		draw_circle(p_target.screen_point, axis_circle_radius, color, true, -1.0f, true);
+		draw_circle(p_target.screen_point, axis_circle_radius * 0.8f, color.darkened(0.4f), true, -1.0f, true);
 	}
 }
 
-void EditorViewportRotationND::_draw_axis_line(const Axis2D &p_axis, const Vector2 &p_center) {
-	const bool is_focused = _focused_axis.axis_number == p_axis.axis_number && _focused_axis.axis_type == AXIS_TYPE_CIRCLE_POSITIVE;
-	const Color axis_color = _axis_colors[p_axis.axis_number % _axis_colors.size()];
-	const float alpha = MIN(2.0f, p_axis.z_index + 2.0f);
+void EditorViewportRotationND::_draw_axis_line(const HitTarget2D &p_target, const Vector2 &p_center) {
+	const bool is_focused = _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.hit_type == HIT_TYPE_AXIS_CIRCLE_POSITIVE;
+	const Color axis_color = _axis_colors[p_target.primary_axis_number % _axis_colors.size()];
+	const float alpha = MIN(2.0f, p_target.z_index + 2.0f);
 	const Color color = is_focused ? Color(axis_color.lightened(0.75f), 1.0f) : Color(axis_color, alpha);
-	draw_line(p_center, p_axis.screen_point, color, 1.5f * _editor_scale, true);
+	draw_line(p_center, p_target.screen_point, color, 1.5f * _editor_scale, true);
 }
 
-void EditorViewportRotationND::_draw_axis_plane(const Axis2D &p_axis) {
-	const bool is_focused = _focused_axis.axis_number == p_axis.axis_number && _focused_axis.axis_type == p_axis.axis_type && _focused_axis.secondary_axis_number == p_axis.secondary_axis_number;
-	Color primary_color = _axis_colors[p_axis.axis_number % _axis_colors.size()];
-	Color secondary_color = _axis_colors[p_axis.secondary_axis_number % _axis_colors.size()];
+void EditorViewportRotationND::_draw_plane_semicircles(const HitTarget2D &p_target) {
+	const bool is_focused = _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.hit_type == p_target.hit_type && _focused_target.secondary_axis_number == p_target.secondary_axis_number;
+	Color primary_color = _axis_colors[p_target.primary_axis_number % _axis_colors.size()];
+	Color secondary_color = _axis_colors[p_target.secondary_axis_number % _axis_colors.size()];
 	if (is_focused) {
 		primary_color = primary_color.lightened(0.75f);
 		secondary_color = secondary_color.lightened(0.75f);
 	} else {
-		const float alpha = MIN(2.0f, p_axis.z_index + 2.0f);
+		const float alpha = MIN(2.0f, p_target.z_index + 2.0f);
 		primary_color.a = alpha;
 		secondary_color.a = alpha;
 	}
 	constexpr float QUARTER_TURN = Math_TAU / 4.0f;
-	const float outer_radius = (4.0f + p_axis.z_index) * _editor_scale;
-	_draw_filled_arc(p_axis.screen_point, outer_radius, p_axis.angle + QUARTER_TURN, p_axis.angle + QUARTER_TURN * 3.0f, primary_color);
-	_draw_filled_arc(p_axis.screen_point, outer_radius, p_axis.angle - QUARTER_TURN, p_axis.angle + QUARTER_TURN, secondary_color);
-	if (p_axis.z_index < 4.0f) {
-		const float inner_radius = (3.0f + p_axis.z_index) * _editor_scale;
-		_draw_filled_arc(p_axis.screen_point, inner_radius, p_axis.angle + QUARTER_TURN, p_axis.angle + QUARTER_TURN * 3.0f, primary_color.darkened(0.4f));
-		_draw_filled_arc(p_axis.screen_point, inner_radius, p_axis.angle - QUARTER_TURN, p_axis.angle + QUARTER_TURN, secondary_color.darkened(0.4f));
+	const float outer_radius = (4.0f + p_target.z_index) * _editor_scale;
+	_draw_filled_arc(p_target.screen_point, outer_radius, p_target.angle + QUARTER_TURN, p_target.angle + QUARTER_TURN * 3.0f, primary_color);
+	_draw_filled_arc(p_target.screen_point, outer_radius, p_target.angle - QUARTER_TURN, p_target.angle + QUARTER_TURN, secondary_color);
+	if (p_target.z_index < 4.0f) {
+		const float inner_radius = (3.0f + p_target.z_index) * _editor_scale;
+		_draw_filled_arc(p_target.screen_point, inner_radius, p_target.angle + QUARTER_TURN, p_target.angle + QUARTER_TURN * 3.0f, primary_color.darkened(0.4f));
+		_draw_filled_arc(p_target.screen_point, inner_radius, p_target.angle - QUARTER_TURN, p_target.angle + QUARTER_TURN, secondary_color.darkened(0.4f));
 	} else {
 		// If the circle is big enough, draw letters.
-		const String primary_letter = VectorND::axis_letter(p_axis.axis_number);
-		const String secondary_letter = VectorND::axis_letter(p_axis.secondary_axis_number);
+		const String primary_letter = VectorND::axis_letter(p_target.primary_axis_number);
+		const String secondary_letter = VectorND::axis_letter(p_target.secondary_axis_number);
 		const Ref<Font> &font = get_theme_font(StringName("rotation_control"), StringName("EditorFonts"));
 		const int font_size = get_theme_font_size(StringName("rotation_control_size"), StringName("EditorFonts"));
 		const Vector2 primary_char_size = font->get_char_size(primary_letter[0], font_size);
 		const Vector2 secondary_char_size = font->get_char_size(secondary_letter[0], font_size);
 		const Vector2 primary_char_offset = Vector2(Math::ceil(-5.5f * _editor_scale - 0.5f * primary_char_size.width), primary_char_size.height * 0.25f);
 		const Vector2 secondary_char_offset = Vector2(Math::floor(5.5f * _editor_scale - 0.5f * secondary_char_size.width), secondary_char_size.height * 0.25f);
-		draw_char(font, p_axis.screen_point + primary_char_offset, primary_letter, font_size, Color(0.0f, 0.0f, 0.0f, primary_color.a * 0.6f));
-		draw_char(font, p_axis.screen_point + secondary_char_offset, secondary_letter, font_size, Color(0.0f, 0.0f, 0.0f, secondary_color.a * 0.6f));
+		draw_char(font, p_target.screen_point + primary_char_offset, primary_letter, font_size, Color(0.0f, 0.0f, 0.0f, primary_color.a * 0.6f));
+		draw_char(font, p_target.screen_point + secondary_char_offset, secondary_letter, font_size, Color(0.0f, 0.0f, 0.0f, secondary_color.a * 0.6f));
 	}
 }
 
@@ -137,10 +138,10 @@ void EditorViewportRotationND::_draw_filled_arc(const Vector2 &p_center, double 
 	draw_polygon(points, colors);
 }
 
-EditorViewportRotationND::Axis2D EditorViewportRotationND::_make_plane_axis(const Ref<TransformND> &p_basis, const int p_right, const int p_up, const Vector2 &p_center, const double p_radius) {
-	Axis2D ret;
-	ret.axis_type = AXIS_TYPE_PLANE;
-	ret.axis_number = p_right;
+EditorViewportRotationND::HitTarget2D EditorViewportRotationND::_make_plane_axis(const Ref<TransformND> &p_basis, const int p_right, const int p_up, const Vector2 &p_center, const double p_radius) {
+	HitTarget2D ret;
+	ret.hit_type = HIT_TYPE_PLANE;
+	ret.primary_axis_number = p_right;
 	ret.secondary_axis_number = p_up;
 	const Vector3 right_vec3 = VectorND::to_3d(p_basis->get_basis_column(p_right));
 	const Vector3 up_vec3 = VectorND::to_3d(p_basis->get_basis_column(p_up));
@@ -151,7 +152,7 @@ EditorViewportRotationND::Axis2D EditorViewportRotationND::_make_plane_axis(cons
 	return ret;
 }
 
-void EditorViewportRotationND::_get_sorted_axis(const Vector2 &p_center, Vector<Axis2D> &r_axis) {
+void EditorViewportRotationND::_get_sorted_axis(const Vector2 &p_center, Vector<HitTarget2D> &r_axis) {
 	const Vector2 center = get_size() / 2.0f;
 	const double radius = get_size().x / 2.0f - 10.0f * _editor_scale;
 	const Ref<TransformND> camera_transform = _editor_main_viewport->get_view_camera_transform();
@@ -165,54 +166,50 @@ void EditorViewportRotationND::_get_sorted_axis(const Vector2 &p_center, Vector<
 		if (axis_screen_position.is_zero_approx()) {
 			// Special case when the axis is aligned with the camera.
 			if (screen_aligned_axis_index == -1) {
-				Axis2D axis;
-				axis.axis_type = AXIS_TYPE_CIRCLE_POSITIVE;
-				axis.axis_number = i;
+				HitTarget2D axis;
+				axis.hit_type = HIT_TYPE_AXIS_CIRCLE_POSITIVE;
+				// Start the camera-aligned axis with the axis index.
+				axis.primary_axis_number = i;
 				axis.screen_point = center;
 				screen_aligned_axis_index = r_axis.size();
 				r_axis.push_back(axis);
 			} else {
-				Axis2D axis = r_axis[screen_aligned_axis_index];
-				axis.axis_number = -1;
+				HitTarget2D axis = r_axis[screen_aligned_axis_index];
+				// If more than one axis is aligned with the camera, set the axis number to -1.
+				// This will use "*" instead of a letter and use a gray color in `_draw_axis_circle`.
+				axis.primary_axis_number = -1;
 				r_axis.set(screen_aligned_axis_index, axis);
 			}
 		} else {
-			Axis2D pos_axis;
-			pos_axis.axis_type = AXIS_TYPE_CIRCLE_POSITIVE;
-			pos_axis.axis_number = i;
+			HitTarget2D pos_axis;
+			pos_axis.hit_type = HIT_TYPE_AXIS_CIRCLE_POSITIVE;
+			pos_axis.primary_axis_number = i;
 			pos_axis.screen_point = center + axis_screen_position;
 			pos_axis.z_index = axis_3d.z;
 			r_axis.push_back(pos_axis);
 
-			Axis2D line_axis;
-			line_axis.axis_type = AXIS_TYPE_LINE;
-			line_axis.axis_number = i;
+			HitTarget2D line_axis;
+			line_axis.hit_type = HIT_TYPE_AXIS_LINE;
+			line_axis.primary_axis_number = i;
 			line_axis.screen_point = center + axis_screen_position;
 			// Ensure the lines draw behind their connected circles.
 			line_axis.z_index = MIN(axis_3d.z, 0.0f) - (float)CMP_EPSILON;
 			r_axis.push_back(line_axis);
 
-			Axis2D neg_axis;
-			neg_axis.axis_type = AXIS_TYPE_CIRCLE_NEGATIVE;
-			neg_axis.axis_number = i;
+			HitTarget2D neg_axis;
+			neg_axis.hit_type = HIT_TYPE_AXIS_CIRCLE_NEGATIVE;
+			neg_axis.primary_axis_number = i;
 			neg_axis.screen_point = center - axis_screen_position;
 			neg_axis.z_index = -axis_3d.z;
 			r_axis.push_back(neg_axis);
 		}
 	}
-	// Add orthogonal planes. Disabled to avoid cluttering the UI.
-	//r_axis.append(_make_plane_axis(camera_transform_transposed, 0, 1, center, radius));
-	//r_axis.append(_make_plane_axis(camera_transform_transposed, 2, 1, center, radius));
-	//r_axis.append(_make_plane_axis(camera_transform_transposed, 0, 2, center, radius));
-	//r_axis.append(_make_plane_axis(camera_transform_transposed, 0, 3, center, radius));
-	//r_axis.append(_make_plane_axis(camera_transform_transposed, 3, 1, center, radius));
-	//r_axis.append(_make_plane_axis(camera_transform_transposed, 2, 3, center, radius));
 	// Sort the axes by z_index.
-	r_axis.sort_custom<Axis2DCompare>();
+	r_axis.sort_custom<HitTarget2DCompare>();
 }
 
 void EditorViewportRotationND::_on_mouse_exited() {
-	_focused_axis.axis_number = -3;
+	_focused_target = HitTarget2D();
 	queue_redraw();
 }
 
@@ -225,9 +222,9 @@ void EditorViewportRotationND::_process_click(int p_index, Vector2 p_position, b
 			_orbiting_mouse_button_index = p_index;
 		}
 	} else {
-		if (_focused_axis.axis_number > -2) {
-			if (_focused_axis.secondary_axis_number > -1) {
-				_editor_main_viewport->set_orthogonal_view_plane(int(_focused_axis.axis_number), int(_focused_axis.secondary_axis_number));
+		if (_focused_target.hit_type >= HIT_TYPE_AXIS_CIRCLE_POSITIVE) {
+			if (_focused_target.primary_axis_number > -1 && _focused_target.secondary_axis_number > -1) {
+				_editor_main_viewport->set_orthogonal_view_plane(int(_focused_target.primary_axis_number), int(_focused_target.secondary_axis_number));
 			} else {
 				_editor_main_viewport->set_orthonormalized_axis_aligned();
 			}
@@ -249,7 +246,8 @@ void EditorViewportRotationND::_process_drag(Ref<InputEvent> p_event, int p_inde
 			_orbiting_mouse_start = p_position;
 		}
 		_editor_main_viewport->navigation_orbit(p_event);
-		_focused_axis.axis_number = -2;
+		_focused_target.hit_type = HIT_TYPE_BACKGROUND;
+		_focused_target.primary_axis_number = -1;
 	} else {
 		_update_focus();
 	}
@@ -259,22 +257,23 @@ void EditorViewportRotationND::_process_drag(Ref<InputEvent> p_event, int p_inde
 void EditorViewportRotationND::_update_focus() {
 	const Vector2 center = get_size() / 2.0f;
 	const Vector2 mouse_pos = get_local_mouse_position();
-	const int original_focus = _focused_axis.axis_number;
-	_focused_axis = Axis2D();
-	_focused_axis.z_index = -10.0f;
+	const int original_focus = _focused_target.primary_axis_number;
+	_focused_target = HitTarget2D();
+	_focused_target.z_index = -10.0f;
 	if (mouse_pos.distance_to(center) < center.x) {
-		_focused_axis.axis_number = -2;
+		_focused_target.hit_type = HIT_TYPE_BACKGROUND;
+		_focused_target.primary_axis_number = -1;
 	}
-	Vector<Axis2D> axes;
+	Vector<HitTarget2D> axes;
 	_get_sorted_axis(center, axes);
 	for (int i = 0; i < axes.size(); i++) {
-		const Axis2D &axis = axes[i];
-		if (axis.z_index > _focused_axis.z_index && mouse_pos.distance_to(axis.screen_point) < 8.0f * _editor_scale) {
-			_focused_axis = axis;
+		const HitTarget2D &axis = axes[i];
+		if (axis.z_index > _focused_target.z_index && mouse_pos.distance_to(axis.screen_point) < 8.0f * _editor_scale) {
+			_focused_target = axis;
 		}
 	}
 
-	if (_focused_axis.axis_number != original_focus) {
+	if (_focused_target.primary_axis_number != original_focus) {
 		queue_redraw();
 	}
 }

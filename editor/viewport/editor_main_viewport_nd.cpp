@@ -61,7 +61,7 @@ Ref<TransformND> EditorMainViewportND::_ground_rotation_input(const Ref<InputEve
 		return _ground_basis_rotation(5, p_rotation_radians);
 	} else if (_dimension > 4 && input->is_physical_key_pressed(KEY_Z)) {
 		return _ground_basis_rotation(4, p_rotation_radians);
-	} else if (_dimension > 3 && cmd_or_ctrl) {
+	} else if (_dimension > 3 && (cmd_or_ctrl || input->is_mouse_button_pressed(MOUSE_BUTTON_LEFT))) {
 		return _ground_basis_rotation(3, p_rotation_radians);
 	} else if (_dimension > 2) {
 		_editor_camera_nd->rotate_pitch_no_apply(-p_rotation_radians.y);
