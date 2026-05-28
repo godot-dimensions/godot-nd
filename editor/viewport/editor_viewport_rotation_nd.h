@@ -45,8 +45,8 @@ class EditorViewportRotationND : public Control {
 	void _draw_axis_line(const HitTarget2D &p_axis, const Vector2 &p_center);
 	void _draw_plane_semicircles(const HitTarget2D &p_axis);
 	void _draw_filled_arc(const Vector2 &p_center, const double p_radius, const double p_start_angle, const double p_end_angle, const Color &p_color);
-	void _get_sorted_axis(const Vector2 &p_center, Vector<HitTarget2D> &r_axis);
-	void _get_sorted_axis_screen_aligned(const Ref<TransformND> &p_basis, const Vector2 &p_center, const double p_radius, const int p_right_index, const int p_up_index, Vector<HitTarget2D> &r_axis);
+	void _get_sorted_axis(const Vector2 &p_center, Vector<HitTarget2D> &r_targets);
+	void _get_sorted_axis_screen_aligned(const Ref<TransformND> &p_basis, const Vector2 &p_center, const double p_radius, const int p_right_index, const int p_up_index, Vector<HitTarget2D> &r_targets);
 	HitTarget2D _make_plane_axis(const Ref<TransformND> &p_basis, const int p_a, const int p_b, const Vector2 &p_center, const double p_radius);
 	void _on_mouse_exited();
 	void _process_click(int p_index, Vector2 p_position, bool p_pressed);

@@ -152,7 +152,7 @@ EditorViewportRotationND::HitTarget2D EditorViewportRotationND::_make_plane_axis
 	return ret;
 }
 
-void EditorViewportRotationND::_get_sorted_axis(const Vector2 &p_center, Vector<HitTarget2D> &r_axis) {
+void EditorViewportRotationND::_get_sorted_axis(const Vector2 &p_center, Vector<HitTarget2D> &r_targets) {
 	const Vector2 center = get_size() / 2.0f;
 	const double radius = get_size().x / 2.0f - 10.0f * _editor_scale;
 	const Ref<TransformND> camera_transform = _editor_main_viewport->get_view_camera_transform();
@@ -171,14 +171,14 @@ void EditorViewportRotationND::_get_sorted_axis(const Vector2 &p_center, Vector<
 				// Start the camera-aligned axis with the axis index.
 				axis.primary_axis_number = i;
 				axis.screen_point = center;
-				screen_aligned_axis_index = r_axis.size();
-				r_axis.push_back(axis);
+				screen_aligned_axis_index = r_targets.size();
+				r_targets.push_back(axis);
 			} else {
-				HitTarget2D axis = r_axis[screen_aligned_axis_index];
+				HitTarget2D axis = r_targets[screen_aligned_axis_index];
 				// If more than one axis is aligned with the camera, set the axis number to -1.
 				// This will use "*" instead of a letter and use a gray color in `_draw_axis_circle`.
 				axis.primary_axis_number = -1;
-				r_axis.set(screen_aligned_axis_index, axis);
+				r_targets.set(screen_aligned_axis_index, axis);
 			}
 		} else {
 			HitTarget2D pos_axis;
@@ -186,7 +186,7 @@ void EditorViewportRotationND::_get_sorted_axis(const Vector2 &p_center, Vector<
 			pos_axis.primary_axis_number = i;
 			pos_axis.screen_point = center + axis_screen_position;
 			pos_axis.z_index = axis_3d.z;
-			r_axis.push_back(pos_axis);
+			r_targets.push_back(pos_axis);
 
 			HitTarget2D line_axis;
 			line_axis.hit_type = HIT_TYPE_AXIS_LINE;
@@ -194,18 +194,18 @@ void EditorViewportRotationND::_get_sorted_axis(const Vector2 &p_center, Vector<
 			line_axis.screen_point = center + axis_screen_position;
 			// Ensure the lines draw behind their connected circles.
 			line_axis.z_index = MIN(axis_3d.z, 0.0f) - (float)CMP_EPSILON;
-			r_axis.push_back(line_axis);
+			r_targets.push_back(line_axis);
 
 			HitTarget2D neg_axis;
 			neg_axis.hit_type = HIT_TYPE_AXIS_CIRCLE_NEGATIVE;
 			neg_axis.primary_axis_number = i;
 			neg_axis.screen_point = center - axis_screen_position;
 			neg_axis.z_index = -axis_3d.z;
-			r_axis.push_back(neg_axis);
+			r_targets.push_back(neg_axis);
 		}
 	}
 	// Sort the axes by z_index.
-	r_axis.sort_custom<HitTarget2DCompare>();
+	r_targets.sort_custom<HitTarget2DCompare>();
 }
 
 void EditorViewportRotationND::_on_mouse_exited() {
