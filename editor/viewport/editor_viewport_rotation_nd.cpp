@@ -56,8 +56,10 @@ void EditorViewportRotationND::_draw() {
 }
 
 void EditorViewportRotationND::_draw_axis_circle(const HitTarget2D &p_target) {
+	const int64_t axis_colors_size = _axis_colors.size();
+	ERR_FAIL_COND_MSG(axis_colors_size == 0, "Axis colors array is empty.");
 	const bool is_focused = _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.hit_type == p_target.hit_type;
-	const Color axis_color = p_target.primary_axis_number < 0 ? Color(0.6f, 0.6f, 0.6f) : _axis_colors[p_target.primary_axis_number % _axis_colors.size()];
+	const Color axis_color = p_target.primary_axis_number < 0 ? Color(0.6f, 0.6f, 0.6f) : _axis_colors[p_target.primary_axis_number % axis_colors_size];
 	const float alpha = MIN(2.0f, p_target.z_index + 2.0f);
 	const Color color = is_focused ? Color(axis_color.lightened(0.75f), 1.0f) : Color(axis_color, alpha);
 	const double axis_circle_radius = (8.0f + p_target.z_index) * _editor_scale;
@@ -82,17 +84,21 @@ void EditorViewportRotationND::_draw_axis_circle(const HitTarget2D &p_target) {
 }
 
 void EditorViewportRotationND::_draw_axis_line(const HitTarget2D &p_target, const Vector2 &p_center) {
+	const int64_t axis_colors_size = _axis_colors.size();
+	ERR_FAIL_COND_MSG(axis_colors_size == 0, "Axis colors array is empty.");
 	const bool is_focused = _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.hit_type == HIT_TYPE_AXIS_CIRCLE_POSITIVE;
-	const Color axis_color = _axis_colors[p_target.primary_axis_number % _axis_colors.size()];
+	const Color axis_color = _axis_colors[p_target.primary_axis_number % axis_colors_size];
 	const float alpha = MIN(2.0f, p_target.z_index + 2.0f);
 	const Color color = is_focused ? Color(axis_color.lightened(0.75f), 1.0f) : Color(axis_color, alpha);
 	draw_line(p_center, p_target.screen_point, color, 1.5f * _editor_scale, true);
 }
 
 void EditorViewportRotationND::_draw_plane_semicircles(const HitTarget2D &p_target) {
+	const int64_t axis_colors_size = _axis_colors.size();
+	ERR_FAIL_COND_MSG(axis_colors_size == 0, "Axis colors array is empty.");
 	const bool is_focused = _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.hit_type == p_target.hit_type && _focused_target.secondary_axis_number == p_target.secondary_axis_number;
-	Color primary_color = _axis_colors[p_target.primary_axis_number % _axis_colors.size()];
-	Color secondary_color = _axis_colors[p_target.secondary_axis_number % _axis_colors.size()];
+	Color primary_color = _axis_colors[p_target.primary_axis_number % axis_colors_size];
+	Color secondary_color = _axis_colors[p_target.secondary_axis_number % axis_colors_size];
 	if (is_focused) {
 		primary_color = primary_color.lightened(0.75f);
 		secondary_color = secondary_color.lightened(0.75f);
