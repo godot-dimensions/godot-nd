@@ -33,6 +33,14 @@ void EditorViewportRotationND::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 			_update_theme();
 		} break;
+		case NOTIFICATION_WM_MOUSE_EXIT:
+		case NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		case NOTIFICATION_VP_MOUSE_EXIT: {
+			_on_mouse_exited();
+			if (Input::get_singleton()->get_mouse_mode() == InputClassEnums::MOUSE_MODE_CAPTURED) {
+				Input::get_singleton()->set_mouse_mode(InputClassEnums::MOUSE_MODE_VISIBLE);
+			}
+		} break;
 	}
 }
 
@@ -58,10 +66,10 @@ void EditorViewportRotationND::_draw() {
 void EditorViewportRotationND::_draw_axis_circle(const HitTarget2D &p_target) {
 	const int64_t axis_colors_size = _axis_colors.size();
 	ERR_FAIL_COND_MSG(axis_colors_size == 0, "Axis colors array is empty.");
-	const bool is_focused = _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.hit_type == p_target.hit_type;
+	const bool is_focused = _focused_target.hit_type == p_target.hit_type && _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.secondary_axis_number == p_target.secondary_axis_number;
 	const Color axis_color = p_target.primary_axis_number < 0 ? Color(0.6f, 0.6f, 0.6f) : _axis_colors[p_target.primary_axis_number % axis_colors_size];
 	const float alpha = MIN(2.0f, p_target.z_index + 2.0f);
-	const Color color = is_focused ? Color(axis_color.lightened(0.75f), 1.0f) : Color(axis_color, alpha);
+	const Color color = is_focused ? Color(axis_color.lightened(0.5f), 1.0f) : Color(axis_color, alpha);
 	const double axis_circle_radius = (8.0f + p_target.z_index) * _editor_scale;
 	if (p_target.hit_type == HIT_TYPE_AXIS_CIRCLE_POSITIVE) {
 		draw_circle(p_target.screen_point, axis_circle_radius, color, true, -1.0f, true);
@@ -89,7 +97,7 @@ void EditorViewportRotationND::_draw_axis_line(const HitTarget2D &p_target, cons
 	const bool is_focused = _focused_target.primary_axis_number == p_target.primary_axis_number && _focused_target.hit_type == HIT_TYPE_AXIS_CIRCLE_POSITIVE;
 	const Color axis_color = _axis_colors[p_target.primary_axis_number % axis_colors_size];
 	const float alpha = MIN(2.0f, p_target.z_index + 2.0f);
-	const Color color = is_focused ? Color(axis_color.lightened(0.75f), 1.0f) : Color(axis_color, alpha);
+	const Color color = is_focused ? Color(axis_color.lightened(0.5f), 1.0f) : Color(axis_color, alpha);
 	draw_line(p_center, p_target.screen_point, color, 1.5f * _editor_scale, true);
 }
 
@@ -100,8 +108,8 @@ void EditorViewportRotationND::_draw_plane_semicircles(const HitTarget2D &p_targ
 	Color primary_color = _axis_colors[p_target.primary_axis_number % axis_colors_size];
 	Color secondary_color = _axis_colors[p_target.secondary_axis_number % axis_colors_size];
 	if (is_focused) {
-		primary_color = primary_color.lightened(0.75f);
-		secondary_color = secondary_color.lightened(0.75f);
+		primary_color = primary_color.lightened(0.5f);
+		secondary_color = secondary_color.lightened(0.5f);
 	} else {
 		const float alpha = MIN(2.0f, p_target.z_index + 2.0f);
 		primary_color.a = alpha;
@@ -263,7 +271,9 @@ void EditorViewportRotationND::_process_drag(Ref<InputEvent> p_event, int p_inde
 void EditorViewportRotationND::_update_focus() {
 	const Vector2 center = get_size() / 2.0f;
 	const Vector2 mouse_pos = get_local_mouse_position();
-	const int original_focus = _focused_target.primary_axis_number;
+	const HitType2D original_hit_type = _focused_target.hit_type;
+	const int original_primary_focus = _focused_target.primary_axis_number;
+	const int original_secondary_focus = _focused_target.secondary_axis_number;
 	_focused_target = HitTarget2D();
 	_focused_target.z_index = -10.0f;
 	if (mouse_pos.distance_to(center) < center.x) {
@@ -279,7 +289,7 @@ void EditorViewportRotationND::_update_focus() {
 		}
 	}
 
-	if (_focused_target.primary_axis_number != original_focus) {
+	if (_focused_target.hit_type != original_hit_type || _focused_target.primary_axis_number != original_primary_focus || _focused_target.secondary_axis_number != original_secondary_focus) {
 		queue_redraw();
 	}
 }
@@ -299,18 +309,18 @@ void EditorViewportRotationND::_update_theme() {
 void EditorViewportRotationND::GDEXTMOD_GUI_INPUT(const Ref<InputEvent> &p_event) {
 	ERR_FAIL_COND(p_event.is_null());
 
-	// Mouse events
+	// Mouse events.
 	const Ref<InputEventMouseButton> mb = p_event;
 	if (mb.is_valid() && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
-		_process_click(100, mb->get_position(), mb->is_pressed());
+		_process_click(MOUSE_SENTINEL_INDEX, mb->get_position(), mb->is_pressed());
 	}
 
 	const Ref<InputEventMouseMotion> mm = p_event;
 	if (mm.is_valid()) {
-		_process_drag(mm, 100, mm->get_global_position());
+		_process_drag(mm, MOUSE_SENTINEL_INDEX, mm->get_global_position());
 	}
 
-	// Touch events
+	// Touch events.
 	const Ref<InputEventScreenTouch> screen_touch = p_event;
 	if (screen_touch.is_valid()) {
 		_process_click(screen_touch->get_index(), screen_touch->get_position(), screen_touch->is_pressed());
