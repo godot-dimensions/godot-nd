@@ -47,5 +47,5 @@ public:
 	GDVIRTUAL0R(PackedInt32Array, _get_edge_indices);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_vertices);
 	GDVIRTUAL0R(bool, _validate_mesh_data);
-	GDVIRTUAL1(_validate_material_for_mesh, const Ref<MaterialND> &);
+	GDVIRTUAL1(_validate_material_for_mesh, Ref<MaterialND>);
 };
