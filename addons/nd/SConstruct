@@ -37,6 +37,10 @@ sources = (
 
 env.Append(CPPDEFINES=["GDEXTENSION"])
 
+if env["platform"] == "windows":
+    if env["OBJSUFFIX"].endswith(".obj") and not env["OBJSUFFIX"].endswith(".o.obj"):
+        env["OBJSUFFIX"] = env["OBJSUFFIX"][:-4] + ".o.obj"
+
 bin_path = "bin/"
 extension_name = "godot_nd"
 debug_or_release = "release" if env["target"] == "template_release" else "debug"
