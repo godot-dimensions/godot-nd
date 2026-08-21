@@ -154,7 +154,8 @@ void EditorMainViewportND::navigation_pan(const Ref<InputEvent> &p_input_event) 
 	Vector2 relative = _get_warped_mouse_motion(p_input_event) / get_size().y;
 	VectorN pan;
 	Ref<InputEventWithModifiers> ev_with_modifiers = p_input_event;
-	if (ev_with_modifiers.is_valid() && (ev_with_modifiers->is_ctrl_pressed() || ev_with_modifiers->is_command_or_control_pressed())) {
+	const bool cmd_or_ctrl = ev_with_modifiers.is_valid() && (ev_with_modifiers->is_ctrl_pressed() || ev_with_modifiers->is_command_or_control_pressed());
+	if (cmd_or_ctrl || Input::get_singleton()->is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
 		pan = VectorN{ 0.0, 0.0, relative.y, relative.x };
 	} else {
 		pan = VectorN{ -relative.x, relative.y };

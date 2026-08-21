@@ -438,7 +438,7 @@ String OFFDocumentND::_color_to_off_string_nd(const Color &p_color) {
 }
 
 String OFFDocumentND::_cell_to_off_string_nd(const PackedInt32Array &p_face) {
-	String ret = String::num(p_face.size());
+	String ret = String::num_int64(p_face.size());
 	for (int i = 0; i < p_face.size(); i++) {
 		ret += String(" ") + String::num_int64(p_face[i]);
 	}
