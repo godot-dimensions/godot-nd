@@ -152,7 +152,9 @@ Ref<TransformND> NodeND::get_global_transform() const {
 void NodeND::set_global_transform(const Ref<TransformND> &p_transform) {
 	NodeND *node_nd_parent = Object::cast_to<NodeND>(get_parent());
 	if (node_nd_parent) {
-		set_transform(node_nd_parent->get_global_transform()->inverse()->compose_square(p_transform));
+		const Ref<TransformND> parent_global_transform = node_nd_parent->get_global_transform();
+		ERR_FAIL_COND_MSG(parent_global_transform->get_basis()->determinant() == 0, "Cannot set global transform because the parent is not invertible.");
+		set_transform(parent_global_transform->inverse()->compose_square(p_transform));
 	} else {
 		set_transform(p_transform);
 	}

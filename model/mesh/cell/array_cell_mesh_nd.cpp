@@ -10,22 +10,14 @@ void ArrayCellMeshND::_clear_cache() {
 bool ArrayCellMeshND::validate_mesh_data() {
 	const int64_t cell_indices_count = _simplex_cell_indices.size();
 	const int dimension = get_dimension();
-	if (cell_indices_count % dimension != 0) {
-		return false; // Must be a multiple of _dimension.
-	}
+	ERR_FAIL_COND_V_MSG(cell_indices_count % dimension != 0, false, "ArrayCellMeshND: Simplex cell indices size must be a multiple of the dimension.");
 	const int64_t cell_boundary_normals_count = _simplex_cell_boundary_normals.size();
-	if (cell_boundary_normals_count > 0 && cell_boundary_normals_count * dimension != cell_indices_count) {
-		return false; // Must have one normal per cell (dimension indices).
-	}
+	ERR_FAIL_COND_V_MSG(cell_boundary_normals_count > 0 && cell_boundary_normals_count * dimension != cell_indices_count, false, "ArrayCellMeshND: Simplex cell boundary normals size must be one dimension-th of simplex cell indices size (or empty).");
 	const int64_t cell_vertex_normals_count = _simplex_cell_vertex_normals.size();
-	if (cell_vertex_normals_count > 0 && cell_vertex_normals_count != cell_indices_count) {
-		return false; // Must have one normal per cell vertex instance (1 per index).
-	}
+	ERR_FAIL_COND_V_MSG(cell_vertex_normals_count > 0 && cell_vertex_normals_count != cell_indices_count, false, "ArrayCellMeshND: Simplex cell vertex normals size must be the same as simplex cell indices size (or empty).");
 	const int64_t vertex_count = _vertices.size();
 	for (int32_t cell_index : _simplex_cell_indices) {
-		if (cell_index < 0 || cell_index >= vertex_count) {
-			return false; // Cells must reference valid vertices.
-		}
+		ERR_FAIL_COND_V_MSG(cell_index < 0 || cell_index >= vertex_count, false, "ArrayCellMeshND: Simplex cell indices must reference valid vertices.");
 	}
 	return true;
 }
