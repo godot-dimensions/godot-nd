@@ -6,9 +6,13 @@
 #include "../mesh/wire/wire_material_nd.h"
 
 #if GDEXTENSION
+#include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/templates/hash_set.hpp>
 #elif GODOT_MODULE
+#include "core/config/project_settings.h"
+#include "core/io/dir_access.h"
 #include "core/io/file_access.h"
 #endif
 
@@ -473,6 +477,11 @@ PackedByteArray OFFDocumentND::export_save_to_byte_array() {
 }
 
 void OFFDocumentND::export_save_to_file(const String &p_path) {
+	const String base_dir = ProjectSettings::get_singleton()->globalize_path(p_path.get_base_dir());
+	if (!base_dir.is_empty()) {
+		Error dir_err = DirAccess::make_dir_recursive_absolute(base_dir);
+		ERR_FAIL_COND_MSG(dir_err != OK, "Error: Failed to create base directory for export file: " + base_dir);
+	}
 #if GDEXTENSION
 	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::WRITE);
 	ERR_FAIL_COND_MSG(file.is_null(), "Error: Could not open file " + p_path + " for writing.");
