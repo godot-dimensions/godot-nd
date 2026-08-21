@@ -105,7 +105,7 @@
 		<member name="projection_type" type="int" setter="set_projection_type" getter="get_projection_type" enum="CameraND.ProjectionType" default="1">
 			The type of projection to use for ND to 2D projection. If [constant PROJECTION_ORTHOGRAPHIC], project ND to 2D orthographically. If [constant PROJECTION_PERSPECTIVE], project ND to 2D with perspective.
 		</member>
-		<member name="rendering_engine" type="String" setter="set_rendering_engine" getter="get_rendering_engine" default="&quot;&quot;">
+		<member name="rendering_engine_name" type="String" setter="set_rendering_engine_name" getter="get_rendering_engine_name" default="&quot;&quot;">
 			The rendering engine to use. Rendering engines must extend [RenderingEngineND] and be registered with [method RenderingServerND.register_rendering_engine] to be available as an option.
 		</member>
 		<member name="view_angle_type" type="int" setter="set_view_angle_type" getter="get_view_angle_type" enum="CameraND.ViewAngleType" default="0">

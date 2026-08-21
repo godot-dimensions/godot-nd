@@ -31,8 +31,8 @@ void EditorCameraSettingsND::set_perp_fade_slope(const double p_perp_fade_slope)
 	write_to_config_file();
 }
 
-void EditorCameraSettingsND::set_rendering_engine(const String &p_rendering_engine) {
-	_rendering_engine = p_rendering_engine;
+void EditorCameraSettingsND::set_rendering_engine_name(const String &p_rendering_engine_name) {
+	_rendering_engine_name = p_rendering_engine_name;
 	notify_property_list_changed();
 	apply_to_cameras();
 	write_to_config_file();
@@ -48,7 +48,7 @@ void EditorCameraSettingsND::apply_to_cameras() const {
 		camera->set_perp_fade_mode(_perp_fade_mode);
 		camera->set_perp_fade_distance(_perp_fade_distance);
 		camera->set_perp_fade_slope(_perp_fade_slope);
-		camera->set_rendering_engine(_rendering_engine);
+		camera->set_rendering_engine_name(_rendering_engine_name);
 	}
 }
 
@@ -61,7 +61,8 @@ void EditorCameraSettingsND::setup(Node *p_ancestor_of_cameras, Ref<ConfigFile> 
 	_perp_fade_mode = (CameraND::PerpFadeMode)(int)p_config_file->get_value("camera", "perp_fade_mode", _perp_fade_mode);
 	_perp_fade_distance = p_config_file->get_value("camera", "perp_fade_distance", _perp_fade_distance);
 	_perp_fade_slope = p_config_file->get_value("camera", "perp_fade_slope", _perp_fade_slope);
-	_rendering_engine = p_config_file->get_value("camera", "rendering_engine", _rendering_engine);
+	// Keep this in sync with `EditorMainScreenND::_update_rendering_engine_menu()`.
+	_rendering_engine_name = p_config_file->get_value("camera", "rendering_engine_name", _rendering_engine_name);
 	apply_to_cameras();
 }
 
@@ -84,15 +85,15 @@ void EditorCameraSettingsND::write_to_config_file() const {
 	if (!Math::is_equal_approx(_perp_fade_slope, 1.0)) {
 		_nd_editor_config_file->set_value("camera", "perp_fade_slope", _perp_fade_slope);
 	}
-	if (!_rendering_engine.is_empty()) {
-		_nd_editor_config_file->set_value("camera", "rendering_engine", _rendering_engine);
+	if (!_rendering_engine_name.is_empty()) {
+		_nd_editor_config_file->set_value("camera", "rendering_engine_name", _rendering_engine_name);
 	}
 	_nd_editor_config_file->save(_nd_editor_config_file_path);
 }
 
 void EditorCameraSettingsND::_validate_property(PropertyInfo &p_property) const {
 	if (p_property.name == StringName("clip_far")) {
-		if (_rendering_engine == "Wireframe Canvas") {
+		if (_rendering_engine_name == "Wireframe Canvas") {
 			p_property.usage = PROPERTY_USAGE_NONE;
 		}
 	} else if (p_property.name == StringName("perp_fade_color_negative")) {

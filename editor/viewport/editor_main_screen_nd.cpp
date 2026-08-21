@@ -190,11 +190,11 @@ void EditorMainScreenND::_on_view_menu_id_pressed(const int p_id) {
 void EditorMainScreenND::_on_rendering_engine_menu_id_pressed(const int p_id) {
 	const String name = _rendering_engine_menu_popup->get_item_text(p_id);
 	if (name == TTR("Automatic (default)")) {
-		if (_nd_editor_config_file->has_section_key("camera", "rendering_engine")) {
-			_nd_editor_config_file->erase_section_key("camera", "rendering_engine");
+		if (_nd_editor_config_file->has_section_key("camera", "rendering_engine_name")) {
+			_nd_editor_config_file->erase_section_key("camera", "rendering_engine_name");
 		}
 	} else {
-		_nd_editor_config_file->set_value("camera", "rendering_engine", name);
+		_nd_editor_config_file->set_value("camera", "rendering_engine_name", name);
 	}
 	_update_rendering_engine_menu();
 	_nd_editor_config_file->save(_nd_editor_config_file_path);
@@ -208,15 +208,15 @@ void EditorMainScreenND::_update_rendering_engine_menu() {
 	for (const String &name : rendering_engine_names) {
 		_rendering_engine_menu_popup->add_radio_check_item(name);
 	}
-	// Then select the rendering engine based on the saved name.
-	const String rendering_engine_name = _nd_editor_config_file->get_value("camera", "rendering_engine", String());
+	// Then select the rendering engine based on the saved name. Keep this in sync with `EditorCameraSettingsND`.
+	const String rendering_engine_name = _nd_editor_config_file->get_value("camera", "rendering_engine_name", String());
 	const int64_t index = rendering_engine_names.find(rendering_engine_name);
 	if (index == -1) {
 		_rendering_engine_menu_popup->set_item_checked(0, true); // Automatic (default).
-		_camera_settings->set_rendering_engine("");
+		_camera_settings->set_rendering_engine_name("");
 	} else {
 		_rendering_engine_menu_popup->set_item_checked(index + 1, true); // +1 because of the "Automatic" item.
-		_camera_settings->set_rendering_engine(rendering_engine_name);
+		_camera_settings->set_rendering_engine_name(rendering_engine_name);
 	}
 }
 

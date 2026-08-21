@@ -12,18 +12,6 @@
 #endif
 #endif
 
-Ref<RenderingEngineND> RenderingServerND::_get_rendering_engine(const String &p_friendly_name) const {
-	if (_rendering_engines.has(p_friendly_name)) {
-		return _rendering_engines[p_friendly_name];
-	}
-	// Fallback to the first registered rendering engine. If the name is empty,
-	// treat it as "auto" and do not print a warning. Else, print a warning.
-	if (!p_friendly_name.is_empty()) {
-		WARN_PRINT("Rendering engine '" + p_friendly_name + "' not registered. Using the first registered engine.");
-	}
-	return _rendering_engines.begin()->value;
-}
-
 RenderingServerND::~RenderingServerND() {
 	for (const KeyValue<Viewport *, Vector<CameraND *>> &E : _viewport_cameras) {
 		Viewport *viewport = E.key;
@@ -68,15 +56,15 @@ void RenderingServerND::_render_frame() {
 			continue; // No ND cameras are currently rendering.
 		}
 		ERR_FAIL_COND_MSG(_rendering_engines.is_empty(), "No ND rendering engines registered. ND rendering will not occur.");
-		Ref<RenderingEngineND> rendering_engine = _get_rendering_engine(camera0->get_rendering_engine());
-		if (viewport->has_meta("last_rendering_engine_nd")) {
-			Variant last_rendering_engine_variant = viewport->get_meta("last_rendering_engine_nd");
+		Ref<RenderingEngineND> rendering_engine = get_rendering_engine_from_name(camera0->get_rendering_engine_name());
+		if (viewport->has_meta("last_rendering_engine_name_nd")) {
+			Variant last_rendering_engine_variant = viewport->get_meta("last_rendering_engine_name_nd");
 			if (last_rendering_engine_variant.get_type() == Variant::STRING) {
 				const String last_rendering_engine_name = last_rendering_engine_variant;
 				const String next_rendering_engine_name = rendering_engine->get_friendly_name();
 				if (next_rendering_engine_name != last_rendering_engine_name) {
-					Ref<RenderingEngineND> last_rendering_engine_nd = _get_rendering_engine(last_rendering_engine_name);
-					last_rendering_engine_nd->cleanup_for_viewport_if_needed(viewport);
+					Ref<RenderingEngineND> last_rendering_engine_name_nd = get_rendering_engine_from_name(last_rendering_engine_name);
+					last_rendering_engine_name_nd->cleanup_for_viewport_if_needed(viewport);
 				}
 			}
 		}
@@ -237,6 +225,18 @@ PackedStringArray RenderingServerND::get_rendering_engine_names() const {
 		i++;
 	}
 	return engine_names;
+}
+
+Ref<RenderingEngineND> RenderingServerND::get_rendering_engine_from_name(const String &p_friendly_name) const {
+	if (_rendering_engines.has(p_friendly_name)) {
+		return _rendering_engines[p_friendly_name];
+	}
+	// Fallback to the first registered rendering engine. If the name is empty,
+	// treat it as "auto" and do not print a warning. Else, print a warning.
+	if (!p_friendly_name.is_empty()) {
+		WARN_PRINT("Rendering engine '" + p_friendly_name + "' not registered. Using the first registered engine.");
+	}
+	return _rendering_engines.begin()->value;
 }
 
 RenderingServerND *RenderingServerND::singleton = nullptr;

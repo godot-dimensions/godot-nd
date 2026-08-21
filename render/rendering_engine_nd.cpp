@@ -65,7 +65,7 @@ void RenderingEngineND::setup_for_viewport_if_needed(Viewport *p_for_viewport) {
 	if (_setup_viewports.has(p_for_viewport)) {
 		return;
 	}
-	p_for_viewport->set_meta("last_rendering_engine_nd", get_friendly_name());
+	p_for_viewport->set_meta("last_rendering_engine_name_nd", get_friendly_name());
 	_setup_viewports.append(p_for_viewport);
 	setup_for_viewport();
 }
@@ -80,7 +80,7 @@ void RenderingEngineND::cleanup_for_viewport_if_needed(Viewport *p_for_viewport)
 		return;
 	}
 	_setup_viewports.erase(p_for_viewport);
-	p_for_viewport->remove_meta("last_rendering_engine_nd");
+	p_for_viewport->remove_meta("last_rendering_engine_name_nd");
 	cleanup_for_viewport();
 }
 
