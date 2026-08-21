@@ -1,6 +1,11 @@
 #include "rendering_server_nd.h"
 
+#ifdef TOOLS_ENABLED
+#include "../editor/viewport/editor_camera_nd.h"
+#endif // TOOLS_ENABLED
+
 #if GDEXTENSION
+#include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
 #elif GODOT_MODULE
@@ -55,6 +60,15 @@ void RenderingServerND::_render_frame() {
 		if (!camera0->is_current()) {
 			continue; // No ND cameras are currently rendering.
 		}
+#ifdef TOOLS_ENABLED
+		if (Engine::get_singleton()->is_editor_hint()) {
+			// Only allow editor cameras to render in the editor.
+			EditorCameraND *editor_camera = Object::cast_to<EditorCameraND>(camera0->get_parent());
+			if (editor_camera == nullptr) {
+				continue;
+			}
+		}
+#endif // TOOLS_ENABLED
 		ERR_FAIL_COND_MSG(_rendering_engines.is_empty(), "No ND rendering engines registered. ND rendering will not occur.");
 		Ref<RenderingEngineND> rendering_engine = get_rendering_engine_from_name(camera0->get_rendering_engine_name());
 		if (viewport->has_meta("last_rendering_engine_name_nd")) {

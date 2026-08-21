@@ -7,6 +7,7 @@
 #include "../../model/mesh/wire/box_wire_mesh_nd.h"
 #include "../../model/mesh/wire/wire_material_nd.h"
 #include "../../render/rendering_server_nd.h"
+#include "editor_camera_nd.h"
 #include "editor_main_screen_nd.h"
 
 #if GDEXTENSION
@@ -62,6 +63,7 @@ Ref<WireMaterialND> _make_plane_material_nd(const Color &p_first_color, const Co
 Ref<WireMaterialND> _make_rotation_ring_material_nd(const Color &p_first_color, const Color &p_second_color) {
 	Ref<WireMaterialND> mat;
 	mat.instantiate();
+	mat->set_line_thickness(LINE_THICKNESS_ND);
 	mat->set_albedo_source(WireMaterialND::WIRE_COLOR_SOURCE_PER_EDGE_ONLY);
 	PackedColorArray colors;
 	for (int i = 0; i < ROTATION_RING_SEGMENTS_ND; i++) {
@@ -115,7 +117,7 @@ Ref<ArrayWireMeshND> _make_rotation_ring_wire_mesh_nd() {
 }
 
 Ref<ArrayWireMeshND> _make_plane_wire_mesh_nd() {
-	// Must match `constexpr int PLANE_SEGMENTS_ND`.
+	// Must match `constexpr int PLANE_EDGES_ND`.
 	Vector<VectorN> vertices = {
 		VectorN{ -PLANE_RADIUS_ND * 0.9, -PLANE_RADIUS_ND, 0.0, 0.0 }, // First triangle lower left.
 		VectorN{ PLANE_RADIUS_ND, -PLANE_RADIUS_ND, 0.0, 0.0 }, // First triangle lower right.
@@ -265,6 +267,10 @@ void EditorTransformGizmoND::_regenerate_gizmo_meshes() {
 }
 
 void EditorTransformGizmoND::_on_rendering_server_pre_render(CameraND *p_camera, Viewport *p_viewport, RenderingEngineND *p_rendering_engine) {
+	EditorCameraND *editor_camera = Object::cast_to<EditorCameraND>(p_camera->get_parent());
+	if (editor_camera == nullptr) {
+		return;
+	}
 	_update_gizmo_mesh_transform(p_camera);
 }
 
