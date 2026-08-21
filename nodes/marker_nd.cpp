@@ -31,7 +31,6 @@ void MarkerND::_notification(int p_what) {
 			generate_marker_mesh();
 		} break;
 	}
-	MeshInstanceND::_notification(p_what);
 }
 
 void MarkerND::_validate_property(PropertyInfo &p_property) const {
