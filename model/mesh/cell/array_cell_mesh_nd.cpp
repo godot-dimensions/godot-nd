@@ -119,6 +119,7 @@ void ArrayCellMeshND::merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<
 			}
 		}
 	}
+	_clear_cache();
 	reset_mesh_data_validation();
 }
 

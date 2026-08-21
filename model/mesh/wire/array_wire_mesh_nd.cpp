@@ -85,6 +85,7 @@ void ArrayWireMeshND::merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<
 	if (self_material.is_null()) {
 		set_material(p_other->get_material());
 	}
+	wire_mesh_clear_cache();
 	reset_mesh_data_validation();
 }
 
