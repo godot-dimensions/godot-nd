@@ -11,6 +11,157 @@
 // These are a superset of the directions found in Godot's Vector3 type.
 // These align with the G4MF specification: https://github.com/godot-dimensions/g4mf/blob/main/specification/parts/coordinate_system.md
 
+#if USE_FUNCTIONS_FOR_VECTORS
+const VectorN &VectorND::DIR_RIGHT_FUNC() {
+	static const VectorN constant = VectorN{ 1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_LEFT_FUNC() {
+	static const VectorN constant = VectorN{ -1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_UP_FUNC() {
+	static const VectorN constant = VectorN{ 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_DOWN_FUNC() {
+	static const VectorN constant = VectorN{ 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_BACK_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_FORWARD_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_ANA_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_KATA_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_SURSUM_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::DIR_DEORSUM_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_LEFT_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_RIGHT_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ -1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_TOP_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_BOTTOM_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_FRONT_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_REAR_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_ANA_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_KATA_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_SURSUM_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::MODEL_DEORSUM_SIDE_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_EAST_FUNC() {
+	static const VectorN constant = VectorN{ 1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_WEST_FUNC() {
+	static const VectorN constant = VectorN{ -1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_ZENITH_FUNC() {
+	static const VectorN constant = VectorN{ 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_NADIR_FUNC() {
+	static const VectorN constant = VectorN{ 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_SOUTH_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_NORTH_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_ANTH_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_KENTH_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, -1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_SURTH_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 0, 1 };
+	return constant;
+}
+
+const VectorN &VectorND::CARDINAL_DEORTH_FUNC() {
+	static const VectorN constant = VectorN{ 0, 0, 0, 0, -1 };
+	return constant;
+}
+#else
 const VectorN VectorND::DIR_RIGHT = VectorN{ 1 };
 const VectorN VectorND::DIR_LEFT = VectorN{ -1 };
 const VectorN VectorND::DIR_UP = VectorN{ 0, 1 };
@@ -43,6 +194,7 @@ const VectorN VectorND::CARDINAL_ANTH = VectorN{ 0, 0, 0, 1 };
 const VectorN VectorND::CARDINAL_KENTH = VectorN{ 0, 0, 0, -1 };
 const VectorN VectorND::CARDINAL_SURTH = VectorN{ 0, 0, 0, 0, 1 };
 const VectorN VectorND::CARDINAL_DEORTH = VectorN{ 0, 0, 0, 0, -1 };
+#endif
 
 // Cosmetic functions.
 

@@ -13,6 +13,78 @@ protected:
 public:
 	// These are a superset of the directions found in Godot's Vector3 type.
 	// These align with the G4MF specification: https://github.com/godot-dimensions/g4mf/blob/main/specification/parts/coordinate_system.md
+#if USE_FUNCTIONS_FOR_VECTORS
+	// Note: These are functions with local static variables instead of static
+	// variables because, in GDExtension builds, VectorN (PackedFloat64Array)
+	// cannot be constructed until the GDExtension interface has been set up,
+	// which happens long after the shared library's static initializers run.
+	// Note: This MUST NOT be set for module builds, only GDExtension builds, due to namespace pollution issues.
+	static const VectorN &DIR_RIGHT_FUNC();
+	static const VectorN &DIR_LEFT_FUNC();
+	static const VectorN &DIR_UP_FUNC();
+	static const VectorN &DIR_DOWN_FUNC();
+	static const VectorN &DIR_BACK_FUNC();
+	static const VectorN &DIR_FORWARD_FUNC();
+	static const VectorN &DIR_ANA_FUNC();
+	static const VectorN &DIR_KATA_FUNC();
+	static const VectorN &DIR_SURSUM_FUNC();
+	static const VectorN &DIR_DEORSUM_FUNC();
+
+	static const VectorN &MODEL_LEFT_SIDE_FUNC();
+	static const VectorN &MODEL_RIGHT_SIDE_FUNC();
+	static const VectorN &MODEL_TOP_SIDE_FUNC();
+	static const VectorN &MODEL_BOTTOM_SIDE_FUNC();
+	static const VectorN &MODEL_FRONT_SIDE_FUNC();
+	static const VectorN &MODEL_REAR_SIDE_FUNC();
+	static const VectorN &MODEL_ANA_SIDE_FUNC();
+	static const VectorN &MODEL_KATA_SIDE_FUNC();
+	static const VectorN &MODEL_SURSUM_SIDE_FUNC();
+	static const VectorN &MODEL_DEORSUM_SIDE_FUNC();
+
+	static const VectorN &CARDINAL_EAST_FUNC();
+	static const VectorN &CARDINAL_WEST_FUNC();
+	static const VectorN &CARDINAL_ZENITH_FUNC();
+	static const VectorN &CARDINAL_NADIR_FUNC();
+	static const VectorN &CARDINAL_SOUTH_FUNC();
+	static const VectorN &CARDINAL_NORTH_FUNC();
+	static const VectorN &CARDINAL_ANTH_FUNC();
+	static const VectorN &CARDINAL_KENTH_FUNC();
+	static const VectorN &CARDINAL_SURTH_FUNC();
+	static const VectorN &CARDINAL_DEORTH_FUNC();
+
+#define DIR_RIGHT DIR_RIGHT_FUNC()
+#define DIR_LEFT DIR_LEFT_FUNC()
+#define DIR_UP DIR_UP_FUNC()
+#define DIR_DOWN DIR_DOWN_FUNC()
+#define DIR_BACK DIR_BACK_FUNC()
+#define DIR_FORWARD DIR_FORWARD_FUNC()
+#define DIR_ANA DIR_ANA_FUNC()
+#define DIR_KATA DIR_KATA_FUNC()
+#define DIR_SURSUM DIR_SURSUM_FUNC()
+#define DIR_DEORSUM DIR_DEORSUM_FUNC()
+
+#define MODEL_LEFT_SIDE MODEL_LEFT_SIDE_FUNC()
+#define MODEL_RIGHT_SIDE MODEL_RIGHT_SIDE_FUNC()
+#define MODEL_TOP_SIDE MODEL_TOP_SIDE_FUNC()
+#define MODEL_BOTTOM_SIDE MODEL_BOTTOM_SIDE_FUNC()
+#define MODEL_FRONT_SIDE MODEL_FRONT_SIDE_FUNC()
+#define MODEL_REAR_SIDE MODEL_REAR_SIDE_FUNC()
+#define MODEL_ANA_SIDE MODEL_ANA_SIDE_FUNC()
+#define MODEL_KATA_SIDE MODEL_KATA_SIDE_FUNC()
+#define MODEL_SURSUM_SIDE MODEL_SURSUM_SIDE_FUNC()
+#define MODEL_DEORSUM_SIDE MODEL_DEORSUM_SIDE_FUNC()
+
+#define CARDINAL_EAST CARDINAL_EAST_FUNC()
+#define CARDINAL_WEST CARDINAL_WEST_FUNC()
+#define CARDINAL_ZENITH CARDINAL_ZENITH_FUNC()
+#define CARDINAL_NADIR CARDINAL_NADIR_FUNC()
+#define CARDINAL_SOUTH CARDINAL_SOUTH_FUNC()
+#define CARDINAL_NORTH CARDINAL_NORTH_FUNC()
+#define CARDINAL_ANTH CARDINAL_ANTH_FUNC()
+#define CARDINAL_KENTH CARDINAL_KENTH_FUNC()
+#define CARDINAL_SURTH CARDINAL_SURTH_FUNC()
+#define CARDINAL_DEORTH CARDINAL_DEORTH_FUNC()
+#else
 	static const VectorN DIR_RIGHT;
 	static const VectorN DIR_LEFT;
 	static const VectorN DIR_UP;
@@ -45,6 +117,7 @@ public:
 	static const VectorN CARDINAL_KENTH;
 	static const VectorN CARDINAL_SURTH;
 	static const VectorN CARDINAL_DEORTH;
+#endif
 
 	// Cosmetic functions.
 	static Color axis_color(int64_t p_axis);
