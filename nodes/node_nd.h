@@ -89,8 +89,8 @@ public:
 	void set_visible(const bool p_visible);
 
 	// Rect bounds.
-	virtual Ref<RectND> get_rect_bounds(const Ref<TransformND> &p_inv_relative_to) const;
-	Ref<RectND> get_rect_bounds_recursive(const Ref<TransformND> &p_inv_relative_to) const;
+	virtual Ref<RectND> get_rect_bounds(const Ref<TransformND> &p_to_target) const;
+	Ref<RectND> get_rect_bounds_recursive(const Ref<TransformND> &p_to_target) const;
 	GDVIRTUAL1RC(Ref<RectND>, _get_rect_bounds, const Ref<TransformND> &);
 
 	NodeND();

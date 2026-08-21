@@ -22,5 +22,5 @@ public:
 	Ref<MeshND> get_mesh() const;
 	void set_mesh(const Ref<MeshND> &p_mesh);
 
-	virtual Ref<RectND> get_rect_bounds(const Ref<TransformND> &p_inv_relative_to) const override;
+	virtual Ref<RectND> get_rect_bounds(const Ref<TransformND> &p_to_target) const override;
 };

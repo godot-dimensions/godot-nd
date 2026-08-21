@@ -376,14 +376,14 @@ void EditorTransformGizmoND::_update_gizmo_mesh_transform(const CameraND *p_came
 	}
 }
 
-Ref<RectND> EditorTransformGizmoND::_get_rect_bounds_of_selection(const Ref<TransformND> &p_inv_relative_to) const {
+Ref<RectND> EditorTransformGizmoND::_get_rect_bounds_of_selection(const Ref<TransformND> &p_to_target) const {
 	Ref<RectND> bounds;
 	bounds.instantiate();
 	const int size = _selected_top_nodes.size();
 	for (int i = 0; i < size; i++) {
 		NodeND *node_nd = Object::cast_to<NodeND>(_selected_top_nodes[i]);
 		if (node_nd != nullptr) {
-			bounds = bounds->merge(node_nd->get_rect_bounds_recursive(p_inv_relative_to));
+			bounds = bounds->merge(node_nd->get_rect_bounds_recursive(p_to_target));
 		}
 	}
 	return bounds;

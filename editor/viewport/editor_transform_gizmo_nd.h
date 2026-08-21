@@ -84,7 +84,7 @@ private:
 	void _on_undo_redo_version_changed();
 	void _update_gizmo_transform();
 	void _update_gizmo_mesh_transform(const CameraND *p_camera);
-	Ref<RectND> _get_rect_bounds_of_selection(const Ref<TransformND> &p_inv_relative_to) const;
+	Ref<RectND> _get_rect_bounds_of_selection(const Ref<TransformND> &p_to_target) const;
 	static String _get_transform_part_simple_action_name(const TransformPart p_part);
 	static VectorN _origin_axis_aligned_biplane_raycast(const VectorN &p_ray_origin, const VectorN &p_ray_direction, const VectorN &p_axis1, const VectorN &p_axis2);
 
