@@ -36,7 +36,7 @@ private:
 	PerpFadeMode _perp_fade_mode = PERP_FADE_TRANSPARENCY;
 
 	// This has wrappers with trig functions, so let's use double to avoid precision loss.
-	double _focal_length = 1.0;
+	double _focal_length = 1.25;
 
 	double _depth_fade_start = 25.0;
 	double _orthographic_size = 5.0;

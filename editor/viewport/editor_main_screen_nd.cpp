@@ -182,7 +182,7 @@ void EditorMainScreenND::_on_view_menu_id_pressed(const int p_id) {
 			_nd_editor_config_file->save(_nd_editor_config_file_path);
 		} break;
 		case VIEW_ITEM_CAMERA_SETTINGS: {
-			_camera_settings_dialog->popup_centered(Size2(400, 300) * EDSCALE);
+			_camera_settings_dialog->popup_centered(Size2(400, 360) * EDSCALE);
 		} break;
 	}
 }

@@ -14,6 +14,9 @@ class EditorCameraSettingsND : public Object {
 
 	Node *_ancestor_of_cameras = nullptr;
 
+	// Keep these default values in sync with the CameraND defaults and the values in `write_to_config_file()`.
+	CameraND::ViewAngleType _view_angle_type = CameraND::VIEW_ANGLE_FOCAL_LENGTH;
+	double _focal_length = 1.25;
 	double _clip_near = 0.05;
 	double _clip_far = 4000.0;
 
@@ -30,6 +33,15 @@ protected:
 	void _validate_property(PropertyInfo &p_property) const;
 
 public:
+	CameraND::ViewAngleType get_view_angle_type() const { return _view_angle_type; }
+	void set_view_angle_type(const CameraND::ViewAngleType p_view_angle_type);
+
+	double get_focal_length() const { return _focal_length; }
+	void set_focal_length(const double p_focal_length);
+
+	double get_field_of_view() const;
+	void set_field_of_view(const double p_field_of_view);
+
 	double get_clip_near() const { return _clip_near; }
 	void set_clip_near(const double p_clip_near);
 
