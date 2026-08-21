@@ -83,9 +83,9 @@ void RenderingServerND::_render_frame() {
 		// Now that we have a rendering engine selected, set up its properties.
 		rendering_engine->setup_for_viewport_if_needed(viewport);
 		rendering_engine->set_camera(camera0);
+		emit_signal("pre_render", camera0, viewport, rendering_engine);
 		PackedInt64Array visible_mesh_instance_object_ids = _get_visible_mesh_instance_object_ids();
 		rendering_engine->set_mesh_instance_object_ids(visible_mesh_instance_object_ids);
-		emit_signal("pre_render", camera0, viewport, rendering_engine);
 		rendering_engine->calculate_relative_transforms();
 		rendering_engine->render_frame();
 	}
