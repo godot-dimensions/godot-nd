@@ -18,7 +18,7 @@ class RenderingServerND : public Object {
 	Vector<MeshInstanceND *> _mesh_instances;
 
 	Ref<RenderingEngineND> _get_rendering_engine(const String &p_friendly_name) const;
-	TypedArray<MeshInstanceND> _get_visible_mesh_instances() const;
+	PackedInt64Array _get_visible_mesh_instance_object_ids() const;
 	bool _is_render_frame_connected = false;
 	void _render_frame();
 

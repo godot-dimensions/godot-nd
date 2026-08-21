@@ -24,7 +24,8 @@ class RenderingEngineND : public RefCounted {
 
 	Viewport *_viewport = nullptr;
 	CameraND *_camera = nullptr;
-	TypedArray<MeshInstanceND> _mesh_instances;
+
+	PackedInt64Array _mesh_instance_object_ids;
 	TypedArray<TransformND> _mesh_relative_transforms;
 
 	void _sort_meshes_by_relative_z();
@@ -35,17 +36,15 @@ protected:
 public:
 	void calculate_relative_transforms();
 
-	Viewport *get_viewport() const;
-	void set_viewport(Viewport *p_viewport);
+	Viewport *get_viewport() const { return _viewport; }
+	void set_viewport(Viewport *p_viewport); // Internal use only, do not expose.
 
-	CameraND *get_camera() const;
-	void set_camera(CameraND *p_camera);
+	CameraND *get_camera() const { return _camera; }
+	void set_camera(CameraND *p_camera); // Internal use only, do not expose.
 
-	TypedArray<MeshInstanceND> get_mesh_instances() const;
-	void set_mesh_instances(TypedArray<MeshInstanceND> p_mesh_instances);
-
-	TypedArray<TransformND> get_mesh_relative_transforms() const;
-	void set_mesh_relative_transforms(TypedArray<TransformND> p_mesh_relative_transforms);
+	PackedInt64Array get_mesh_instance_object_ids() const { return _mesh_instance_object_ids; }
+	void set_mesh_instance_object_ids(PackedInt64Array p_mesh_instance_object_ids); // Internal use only, do not expose.
+	TypedArray<TransformND> get_mesh_relative_transforms() const { return _mesh_relative_transforms; }
 
 	void setup_for_viewport_if_needed(Viewport *p_for_viewport);
 	void cleanup_for_viewport_if_needed(Viewport *p_for_viewport);

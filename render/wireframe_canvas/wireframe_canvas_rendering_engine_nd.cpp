@@ -31,16 +31,17 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 	Vector<PackedColorArray> edge_colors_to_draw;
 	PackedFloat32Array edge_thicknesses_to_draw;
 	Vector<PackedVector2Array> edge_vertices_to_draw;
-	TypedArray<MeshInstanceND> mesh_instances = get_mesh_instances();
-	TypedArray<TransformND> mesh_relative_transforms = get_mesh_relative_transforms();
+	const PackedInt64Array mesh_instance_object_ids = get_mesh_instance_object_ids();
+	const TypedArray<TransformND> mesh_relative_transforms = get_mesh_relative_transforms();
 	const bool camera_has_perspective = camera->get_projection_type() == CameraND::PROJECTION_PERSPECTIVE;
 	const bool camera_has_perp_fading = camera->get_perp_fade_mode() != CameraND::PERP_FADE_DISABLED;
 	const bool camera_has_perp_fade_hue_shift = camera->get_perp_fade_mode() & CameraND::PERP_FADE_HUE_SHIFT;
 	const bool camera_has_perp_fade_transparency = camera->get_perp_fade_mode() & CameraND::PERP_FADE_TRANSPARENCY;
 	const double camera_clip_far = camera->get_clip_far();
 	const double camera_clip_near = camera->get_clip_near();
-	for (int mesh_index = 0; mesh_index < mesh_instances.size(); mesh_index++) {
-		MeshInstanceND *mesh_inst = Object::cast_to<MeshInstanceND>(mesh_instances[mesh_index]);
+	for (int64_t mesh_index = 0; mesh_index < mesh_instance_object_ids.size(); mesh_index++) {
+		const ObjectID mesh_instance_object_id = (ObjectID)mesh_instance_object_ids[mesh_index];
+		MeshInstanceND *mesh_inst = Object::cast_to<MeshInstanceND>(ObjectDB::get_instance(mesh_instance_object_id));
 		ERR_CONTINUE(mesh_inst == nullptr);
 		const Ref<MeshND> mesh = mesh_inst->get_mesh();
 		const Ref<MaterialND> material = mesh_inst->get_active_material();

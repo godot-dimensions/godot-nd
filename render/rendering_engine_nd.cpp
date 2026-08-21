@@ -5,11 +5,12 @@
 #include <vector>
 
 void RenderingEngineND::calculate_relative_transforms() {
-	const int mesh_count = _mesh_instances.size();
+	const int mesh_count = _mesh_instance_object_ids.size();
 	_mesh_relative_transforms.resize(mesh_count);
 	const Ref<TransformND> camera_inverse_transform = _camera->get_global_transform()->inverse();
-	for (int i = 0; i < _mesh_instances.size(); i++) {
-		const MeshInstanceND *mesh_instance = (const MeshInstanceND *)(const Object *)_mesh_instances[i];
+	for (int64_t i = 0; i < _mesh_instance_object_ids.size(); i++) {
+		const ObjectID mesh_instance_object_id = (ObjectID)_mesh_instance_object_ids[i];
+		const MeshInstanceND *mesh_instance = Object::cast_to<const MeshInstanceND>(ObjectDB::get_instance(mesh_instance_object_id));
 		const Ref<TransformND> relative_transform = camera_inverse_transform->compose_square(mesh_instance->get_global_transform());
 		_mesh_relative_transforms[i] = relative_transform;
 	}
@@ -19,9 +20,10 @@ void RenderingEngineND::calculate_relative_transforms() {
 void RenderingEngineND::_sort_meshes_by_relative_z() {
 	// Can't use Godot's types to do this operation easily, so we'll use the standard library instead.
 	std::vector<std::tuple<Variant, Variant>> combined;
-	combined.reserve(_mesh_instances.size());
-	for (int i = 0; i < _mesh_instances.size(); ++i) {
-		combined.emplace_back(_mesh_instances[i], _mesh_relative_transforms[i]);
+	const int64_t mesh_count = _mesh_instance_object_ids.size();
+	combined.reserve(mesh_count);
+	for (int64_t i = 0; i < mesh_count; ++i) {
+		combined.emplace_back(_mesh_instance_object_ids[i], _mesh_relative_transforms[i]);
 	}
 	// Sort the vector of tuples based on the Z position.
 	std::sort(combined.begin(), combined.end(), [](const auto &a, const auto &b) {
@@ -35,41 +37,21 @@ void RenderingEngineND::_sort_meshes_by_relative_z() {
 	});
 	// Unpack the sorted tuples back into the original arrays
 	for (size_t i = 0; i < combined.size(); ++i) {
-		_mesh_instances[i] = std::get<0>(combined[i]);
+		_mesh_instance_object_ids.set(i, std::get<0>(combined[i]));
 		_mesh_relative_transforms[i] = std::get<1>(combined[i]);
 	}
-}
-
-Viewport *RenderingEngineND::get_viewport() const {
-	return _viewport;
 }
 
 void RenderingEngineND::set_viewport(Viewport *p_viewport) {
 	_viewport = p_viewport;
 }
 
-CameraND *RenderingEngineND::get_camera() const {
-	return _camera;
-}
-
 void RenderingEngineND::set_camera(CameraND *p_camera) {
 	_camera = p_camera;
 }
 
-TypedArray<MeshInstanceND> RenderingEngineND::get_mesh_instances() const {
-	return _mesh_instances;
-}
-
-void RenderingEngineND::set_mesh_instances(TypedArray<MeshInstanceND> p_mesh_instances) {
-	_mesh_instances = p_mesh_instances;
-}
-
-TypedArray<TransformND> RenderingEngineND::get_mesh_relative_transforms() const {
-	return _mesh_relative_transforms;
-}
-
-void RenderingEngineND::set_mesh_relative_transforms(TypedArray<TransformND> p_mesh_relative_transforms) {
-	_mesh_relative_transforms = p_mesh_relative_transforms;
+void RenderingEngineND::set_mesh_instance_object_ids(PackedInt64Array p_mesh_instance_object_ids) {
+	_mesh_instance_object_ids = p_mesh_instance_object_ids;
 }
 
 String RenderingEngineND::get_friendly_name() const {
@@ -112,20 +94,10 @@ void RenderingEngineND::render_frame() {
 
 void RenderingEngineND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_viewport"), &RenderingEngineND::get_viewport);
-	ClassDB::bind_method(D_METHOD("set_viewport", "viewport"), &RenderingEngineND::set_viewport);
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "viewport", PROPERTY_HINT_RESOURCE_TYPE, "Viewport"), "set_viewport", "get_viewport");
-
 	ClassDB::bind_method(D_METHOD("get_camera"), &RenderingEngineND::get_camera);
-	ClassDB::bind_method(D_METHOD("set_camera", "camera"), &RenderingEngineND::set_camera);
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "camera", PROPERTY_HINT_RESOURCE_TYPE, "CameraND"), "set_camera", "get_camera");
 
-	ClassDB::bind_method(D_METHOD("get_mesh_instances"), &RenderingEngineND::get_mesh_instances);
-	ClassDB::bind_method(D_METHOD("set_mesh_instances", "mesh_instances"), &RenderingEngineND::set_mesh_instances);
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "mesh_instances"), "set_mesh_instances", "get_mesh_instances");
-
+	ClassDB::bind_method(D_METHOD("get_mesh_instance_object_ids"), &RenderingEngineND::get_mesh_instance_object_ids);
 	ClassDB::bind_method(D_METHOD("get_mesh_relative_transforms"), &RenderingEngineND::get_mesh_relative_transforms);
-	ClassDB::bind_method(D_METHOD("set_mesh_relative_transforms", "mesh_relative_transforms"), &RenderingEngineND::set_mesh_relative_transforms);
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "mesh_relative_transforms"), "set_mesh_relative_transforms", "get_mesh_relative_transforms");
 
 	GDVIRTUAL_BIND(_get_friendly_name);
 	GDVIRTUAL_BIND(_setup_for_viewport);

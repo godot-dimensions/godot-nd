@@ -41,18 +41,19 @@ RenderingServerND::~RenderingServerND() {
 	singleton = nullptr;
 }
 
-TypedArray<MeshInstanceND> RenderingServerND::_get_visible_mesh_instances() const {
-	TypedArray<MeshInstanceND> visible_mesh_instances;
+PackedInt64Array RenderingServerND::_get_visible_mesh_instance_object_ids() const {
+	PackedInt64Array visible_mesh_instance_object_ids;
 	for (int i = 0; i < _mesh_instances.size(); i++) {
 		MeshInstanceND *mesh_instance = (MeshInstanceND *)(Object *)_mesh_instances[i];
+		CRASH_COND_MSG(mesh_instance == nullptr, "MeshInstanceND is null. This should never happen.");
 		if (mesh_instance->is_visible_in_tree()) {
 			Ref<MeshND> mesh = mesh_instance->get_mesh();
 			if (mesh.is_valid() && mesh->is_mesh_data_valid()) {
-				visible_mesh_instances.append(mesh_instance);
+				visible_mesh_instance_object_ids.append(mesh_instance->get_instance_id());
 			}
 		}
 	}
-	return visible_mesh_instances;
+	return visible_mesh_instance_object_ids;
 }
 
 void RenderingServerND::_render_frame() {
@@ -82,8 +83,8 @@ void RenderingServerND::_render_frame() {
 		// Now that we have a rendering engine selected, set up its properties.
 		rendering_engine->setup_for_viewport_if_needed(viewport);
 		rendering_engine->set_camera(camera0);
-		TypedArray<MeshInstanceND> visible_mesh_instances = _get_visible_mesh_instances();
-		rendering_engine->set_mesh_instances(visible_mesh_instances);
+		PackedInt64Array visible_mesh_instance_object_ids = _get_visible_mesh_instance_object_ids();
+		rendering_engine->set_mesh_instance_object_ids(visible_mesh_instance_object_ids);
 		emit_signal("pre_render", camera0, viewport, rendering_engine);
 		rendering_engine->calculate_relative_transforms();
 		rendering_engine->render_frame();
@@ -200,10 +201,14 @@ CameraND *RenderingServerND::get_current_camera(Viewport *p_viewport) const {
 }
 
 void RenderingServerND::register_mesh_instance(MeshInstanceND *p_mesh_instance) {
+	ERR_FAIL_NULL(p_mesh_instance);
+	ERR_FAIL_COND_MSG(_mesh_instances.has(p_mesh_instance), "MeshInstanceND is already registered.");
 	_mesh_instances.append(p_mesh_instance);
 }
 
 void RenderingServerND::unregister_mesh_instance(MeshInstanceND *p_mesh_instance) {
+	ERR_FAIL_NULL(p_mesh_instance);
+	ERR_FAIL_COND_MSG(!_mesh_instances.has(p_mesh_instance), "MeshInstanceND is not registered.");
 	_mesh_instances.erase(p_mesh_instance);
 }
 
