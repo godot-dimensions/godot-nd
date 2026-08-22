@@ -1,5 +1,6 @@
 #include "transform_nd.h"
 
+#include "rect_nd.h"
 #include "vector_nd.h"
 
 void TransformND::_make_basis_square_in_place(Vector<VectorN> &p_basis) {
@@ -466,6 +467,34 @@ Vector<VectorN> TransformND::xform_many(const Vector<VectorN> &p_vectors) const 
 		ret.set(i, xform(p_vectors[i]));
 	}
 	return ret;
+}
+
+Ref<RectND> TransformND::xform_rect(const Ref<RectND> &p_rect) const {
+	ERR_FAIL_COND_V(p_rect.is_null(), Ref<RectND>());
+	// Computes the tight bounds of the transformed rect using interval arithmetic, generalizing
+	// https://dev.theomader.com/transform-bounding-boxes/ to N dimensions. This is O(dimension^2),
+	// which unlike enumerating all 2^dimension corners, stays tractable at high dimension counts.
+	const int dimension = MAX(get_dimension(), p_rect->get_dimension());
+	const VectorN rect_min = VectorND::with_dimension(p_rect->get_position(), dimension);
+	const VectorN rect_max = VectorND::with_dimension(p_rect->get_end(), dimension);
+	const VectorN origin = VectorND::with_dimension(_origin, dimension);
+	VectorN result_min = origin;
+	VectorN result_max = origin;
+	for (int row = 0; row < dimension; row++) {
+		for (int column = 0; column < dimension; column++) {
+			const double element = get_basis_element(column, row);
+			const double e = element * rect_min[column];
+			const double f = element * rect_max[column];
+			if (e < f) {
+				result_min.set(row, result_min[row] + e);
+				result_max.set(row, result_max[row] + f);
+			} else {
+				result_min.set(row, result_min[row] + f);
+				result_max.set(row, result_max[row] + e);
+			}
+		}
+	}
+	return RectND::from_position_end(result_min, result_max);
 }
 
 VectorN TransformND::xform_basis(const VectorN &p_vector) const {
@@ -1203,6 +1232,7 @@ void TransformND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("translate_global", "translation"), &TransformND::translate_global);
 	ClassDB::bind_method(D_METHOD("translate_local", "translation"), &TransformND::translate_local);
 	ClassDB::bind_method(D_METHOD("xform", "vector"), &TransformND::xform);
+	ClassDB::bind_method(D_METHOD("xform_rect", "rect"), &TransformND::xform_rect);
 	ClassDB::bind_method(D_METHOD("xform_basis", "vector"), &TransformND::xform_basis);
 	ClassDB::bind_method(D_METHOD("xform_basis_axis", "axis", "axis_index"), &TransformND::xform_basis_axis);
 	ClassDB::bind_method(D_METHOD("xform_transposed", "vector"), &TransformND::xform_transposed);

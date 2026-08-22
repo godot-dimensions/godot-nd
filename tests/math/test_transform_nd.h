@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../math/rect_nd.h"
 #include "../../math/transform_nd.h"
 #include "../../math/vector_nd.h"
 
@@ -186,5 +187,51 @@ TEST_CASE("[TransformND] From Scale") {
 	Vector<VectorN> scaled23456 = { VectorN{ 2 }, VectorN{ 0, 3 }, VectorN{ 0, 0, 4 }, VectorN{ 0, 0, 0, 5 }, VectorN{ 0, 0, 0, 0, 6 } };
 	precomputed->set_all_basis_columns(scaled23456);
 	CHECK_MESSAGE(from_scale->is_equal_approx(precomputed), "TransformND from_scale should match precomputed scale matrix.");
+}
+
+TEST_CASE("[TransformND] Xform Rect") {
+	const Ref<RectND> offset_rect = RectND::from_position_size(VectorN{ 5, 5, 5, 5 }, VectorN{ 1, 1, 1, 1 });
+	// An identity transform must leave the rect untouched, including a rect that does not contain the origin.
+	Ref<TransformND> identity;
+	identity.instantiate();
+	identity->set_dimension(4);
+	Ref<RectND> result = identity->xform_rect(offset_rect);
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_position(), VectorN{ 5, 5, 5, 5 }), "TransformND xform_rect by identity should not move the rect towards the origin.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_size(), VectorN{ 1, 1, 1, 1 }), "TransformND xform_rect by identity should not inflate the rect towards the origin.");
+
+	// A pure translation must move the rect without changing its size.
+	Ref<TransformND> translated = TransformND::from_position(VectorN{ 10, 20, 30, 40 });
+	result = translated->xform_rect(offset_rect);
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_position(), VectorN{ 15, 25, 35, 45 }), "TransformND xform_rect should translate the rect position.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_size(), VectorN{ 1, 1, 1, 1 }), "TransformND xform_rect should not change the size for a pure translation.");
+
+	// A uniform scale about the origin scales both the position and the size.
+	Ref<TransformND> scaled = TransformND::from_scale(VectorN{ 2, 2, 2, 2 });
+	result = scaled->xform_rect(offset_rect);
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_position(), VectorN{ 10, 10, 10, 10 }), "TransformND xform_rect should scale the rect position.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_size(), VectorN{ 2, 2, 2, 2 }), "TransformND xform_rect should scale the rect size.");
+
+	// A rect straddling the origin still works, and the result must be the tight bounds of the corners.
+	const Ref<RectND> straddling_rect = RectND::from_position_size(VectorN{ -1, -1, -1, -1 }, VectorN{ 2, 2, 2, 2 });
+	result = identity->xform_rect(straddling_rect);
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_position(), VectorN{ -1, -1, -1, -1 }), "TransformND xform_rect by identity should not move a rect that straddles the origin.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_size(), VectorN{ 2, 2, 2, 2 }), "TransformND xform_rect by identity should not resize a rect that straddles the origin.");
+
+	// A 45-degree rotation of a unit square must give the tight diagonal bounding box, verified against hand-computed values.
+	Ref<TransformND> rotated = TransformND::from_rotation(0, 1, Math_PI * 0.25);
+	const Ref<RectND> unit_rect = RectND::from_position_size(VectorN{ 0, 0 }, VectorN{ 1, 1 });
+	result = rotated->xform_rect(unit_rect);
+	const double half_diagonal = Math::sqrt(2.0) * 0.5;
+	CHECK_MESSAGE(VectorND::is_equal_approx(result->get_position(), VectorN{ -half_diagonal, 0.0 }), "TransformND xform_rect of a 45-degree rotated unit square should give the tight diagonal bounds.");
+	CHECK_MESSAGE(VectorND::is_equal_approx(result->get_size(), VectorN{ Math::sqrt(2.0), Math::sqrt(2.0) }), "TransformND xform_rect of a 45-degree rotated unit square should give the tight diagonal bounds.");
+
+	// Mismatched dimensions between the transform and the rect must not crash and must treat missing elements as zero/identity.
+	Ref<TransformND> transform_2d;
+	transform_2d.instantiate();
+	transform_2d->set_dimension(2);
+	const Ref<RectND> rect_4d = RectND::from_position_size(VectorN{ 1, 1, 1, 1 }, VectorN{ 1, 1, 1, 1 });
+	result = transform_2d->xform_rect(rect_4d);
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_position(), VectorN{ 1, 1, 1, 1 }), "TransformND xform_rect should pad a lower-dimensional identity transform to match a higher-dimensional rect.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(result->get_size(), VectorN{ 1, 1, 1, 1 }), "TransformND xform_rect should pad a lower-dimensional identity transform to match a higher-dimensional rect.");
 }
 } // namespace TestTransformND

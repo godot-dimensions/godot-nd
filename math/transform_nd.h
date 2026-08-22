@@ -2,6 +2,8 @@
 
 #include "basis_nd.h"
 
+class RectND;
+
 class TransformND : public RefCounted {
 	GDCLASS(TransformND, RefCounted);
 
@@ -75,6 +77,7 @@ public:
 
 	VectorN xform(const VectorN &p_vector) const;
 	Vector<VectorN> xform_many(const Vector<VectorN> &p_vectors) const;
+	Ref<RectND> xform_rect(const Ref<RectND> &p_rect) const;
 	VectorN xform_basis(const VectorN &p_vector) const;
 	VectorN xform_basis_axis(const VectorN &p_axis, const int p_axis_index) const;
 	VectorN xform_transposed(const VectorN &p_vector) const;

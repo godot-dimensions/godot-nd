@@ -516,6 +516,13 @@
 				Transforms the specified axis vector by the basis matrix of this transform, interpreting [param axis] as a basis vector of a child matrix. This is like [method xform_basis], but it ensures that if [param axis] does not go all the way to [param axis_index], it will be treated as if [code]1.0[/code] is at [code]axis[axis_index][/code]. This is useful for transforming axes of jagged child matrices, where the child matrix only allocates the values that are needed.
 			</description>
 		</method>
+		<method name="xform_rect" qualifiers="const">
+			<return type="RectND" />
+			<param index="0" name="rect" type="RectND" />
+			<description>
+				Transforms the specified [RectND] by this transform, and returns the tightest [RectND] that contains the result. Note that if the basis is not axis-aligned, the returned rect will generally be larger than the transformed shape, since a rotated or skewed box needs a bigger axis-aligned box to contain it.
+			</description>
+		</method>
 		<method name="xform_transposed" qualifiers="const">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="vector" type="PackedFloat64Array" />
