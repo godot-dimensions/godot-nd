@@ -833,7 +833,7 @@ Ref<BasisND> BasisND::divide_scalar(const double p_scalar) const {
 
 // Conversion.
 
-Transform2D BasisND::to_2d() {
+Transform2D BasisND::to_2d() const {
 	return Transform2D(
 			get_element(0, 0),
 			get_element(0, 1),
@@ -843,14 +843,47 @@ Transform2D BasisND::to_2d() {
 			0.0f);
 }
 
-Basis BasisND::to_3d() {
+Basis BasisND::to_3d() const {
 	return Basis(
 			Vector3(get_element(0, 0), get_element(0, 1), get_element(0, 2)),
 			Vector3(get_element(1, 0), get_element(1, 1), get_element(1, 2)),
 			Vector3(get_element(2, 0), get_element(2, 1), get_element(2, 2)));
 }
 
-Projection BasisND::to_4d() {
+Basis BasisND::to_3d_orthonormalize_z_dominant() const {
+	Vector3 x_3d = Vector3(get_element(0, 0), get_element(0, 1), get_element(0, 2));
+	Vector3 y_3d = Vector3(get_element(1, 0), get_element(1, 1), get_element(1, 2));
+	Vector3 z_3d = Vector3(get_element(2, 0), get_element(2, 1), get_element(2, 2));
+	if (unlikely(z_3d == Vector3())) {
+		z_3d = x_3d.cross(y_3d);
+		if (unlikely(z_3d == Vector3())) {
+			z_3d = Vector3(0.0, 0.0, 1.0);
+		}
+	}
+	z_3d.normalize();
+	x_3d -= z_3d * z_3d.dot(x_3d);
+	if (unlikely(x_3d == Vector3())) {
+		x_3d = y_3d.cross(z_3d);
+		if (unlikely(x_3d == Vector3())) {
+			x_3d = Vector3(0.0, 1.0, 0.0).cross(z_3d);
+			if (unlikely(x_3d == Vector3())) {
+				x_3d = Vector3(1.0, 0.0, 0.0).cross(z_3d);
+			}
+		}
+	}
+	x_3d.normalize();
+	y_3d -= z_3d * z_3d.dot(y_3d);
+	y_3d -= x_3d * x_3d.dot(y_3d);
+	if (unlikely(y_3d == Vector3())) {
+		y_3d = z_3d.cross(x_3d);
+		// Should be impossible given the previous checks.
+		CRASH_COND(y_3d == Vector3());
+	}
+	y_3d.normalize();
+	return Basis(x_3d, y_3d, z_3d);
+}
+
+Projection BasisND::to_4d() const {
 	return Projection(
 			Vector4(get_element(0, 0), get_element(0, 1), get_element(0, 2), get_element(0, 3)),
 			Vector4(get_element(1, 0), get_element(1, 1), get_element(1, 2), get_element(1, 3)),
@@ -1084,6 +1117,7 @@ void BasisND::_bind_methods() {
 	// Conversion.
 	ClassDB::bind_method(D_METHOD("to_2d"), &BasisND::to_2d);
 	ClassDB::bind_method(D_METHOD("to_3d"), &BasisND::to_3d);
+	ClassDB::bind_method(D_METHOD("to_3d_orthonormalize_z_dominant"), &BasisND::to_3d_orthonormalize_z_dominant);
 	ClassDB::bind_method(D_METHOD("to_4d"), &BasisND::to_4d);
 	ClassDB::bind_static_method("BasisND", D_METHOD("from_2d", "transform"), &BasisND::from_2d);
 	ClassDB::bind_static_method("BasisND", D_METHOD("from_3d", "basis"), &BasisND::from_3d);

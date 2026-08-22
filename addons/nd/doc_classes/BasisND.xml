@@ -364,19 +364,25 @@
 				Sets the amount of basis rows. This sets the length of all column vectors to the specified amount. If the amount is less than the current amount, the extra rows are removed. If the amount is more than the current amount, the new values are set to identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest).
 			</description>
 		</method>
-		<method name="to_2d">
+		<method name="to_2d" qualifiers="const">
 			<return type="Transform2D" />
 			<description>
 				Converts the basis to a 2-dimensional [Transform2D]. Any elements outside of 2D space are ignored, and if any elements are missing, identity values are used.
 			</description>
 		</method>
-		<method name="to_3d">
+		<method name="to_3d" qualifiers="const">
 			<return type="Basis" />
 			<description>
 				Converts the basis to a 3-dimensional [Transform3D]. Any elements outside of 3D space are ignored, and if any elements are missing, identity values are used.
 			</description>
 		</method>
-		<method name="to_4d">
+		<method name="to_3d_orthonormalize_z_dominant" qualifiers="const">
+			<return type="Basis" />
+			<description>
+				Converts the basis to a 3-dimensional [Basis], like [method to_3d], but the returned basis is orthonormalized using a Z-dominant method. The Z axis is preserved as closely as possible (only normalized, not otherwise adjusted), while the X and Y axes are re-derived to be orthogonal to it. This is useful for converting an N-dimensional basis to a 3D basis when the Z axis is the most important axis to preserve, such as for oriented objects which use +Z or -Z as the forward or front-facing direction, like [SpotLight3D] or directional audio emitters.
+			</description>
+		</method>
+		<method name="to_4d" qualifiers="const">
 			<return type="Projection" />
 			<description>
 				Converts the basis to a 4-dimensional [Projection] basis. Any elements outside of 4D space are ignored, and if any elements are missing, identity values are used.

@@ -105,9 +105,10 @@ public:
 	Ref<BasisND> divide_scalar(const double p_scalar) const;
 
 	// Conversion.
-	Transform2D to_2d();
-	Basis to_3d();
-	Projection to_4d();
+	Transform2D to_2d() const;
+	Basis to_3d() const;
+	Basis to_3d_orthonormalize_z_dominant() const;
+	Projection to_4d() const;
 	virtual String _to_string() MODULE_OVERRIDE;
 	static Ref<BasisND> from_2d(const Transform2D &p_transform);
 	static Ref<BasisND> from_3d(const Basis &p_basis);
