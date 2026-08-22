@@ -21,8 +21,9 @@ class RenderingServerND : public Object {
 	Vector<MeshInstanceND *> _mesh_instances;
 
 	PackedInt64Array _get_visible_mesh_instance_object_ids() const;
-	bool _is_render_frame_connected = false;
+	bool _are_render_frame_and_process_frame_connected = false;
 	void _render_frame();
+	void _request_godot_redraw();
 
 protected:
 	static RenderingServerND *singleton;
