@@ -160,6 +160,7 @@ public:
 	static double length_squared(const VectorN &p_vector);
 	static VectorN lerp(const VectorN &p_from, const VectorN &p_to, const double p_weight);
 	static VectorN limit_length(const VectorN &p_vector, const double p_len = 1.0);
+	static VectorN limit_length_taxicab(const VectorN &p_vector, const double p_len = 1.0);
 	static int64_t max_absolute_axis_index(const VectorN &p_vector);
 	static int64_t max_axis_index(const VectorN &p_vector);
 	static int64_t min_axis_index(const VectorN &p_vector);

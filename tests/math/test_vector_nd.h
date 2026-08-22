@@ -12,6 +12,22 @@ TEST_CASE("[VectorND] Drop first dimensions") {
 	CHECK_MESSAGE(VectorND::is_equal_exact(dropped, expected), "VectorND drop_first_dimensions with 2 should drop the first two dimensions.");
 }
 
+TEST_CASE("[VectorND] Limit length taxicab") {
+	const VectorN unchanged = VectorND::limit_length_taxicab(VectorN{ 1, -2, 0.5 }, 4.0);
+	CHECK_MESSAGE(VectorND::is_equal_exact(unchanged, VectorN{ 1, -2, 0.5 }), "VectorND limit_length_taxicab should not change a vector within the limit.");
+	const VectorN limited_2d = VectorND::limit_length_taxicab(VectorN{ 3, -3 }, 4.0);
+	CHECK_MESSAGE(VectorND::is_equal_approx(limited_2d, VectorN{ 2, -2 }), "VectorND limit_length_taxicab should take away length from each axis as equally as possible, preserving signs.");
+	const VectorN limited_3d = VectorND::limit_length_taxicab(VectorN{ 5, 1, 0 }, 3.0);
+	CHECK_MESSAGE(VectorND::is_equal_approx(limited_3d, VectorN{ 3, 0, 0 }), "VectorND limit_length_taxicab should zero the shortest axes and take away more from the longest.");
+	// This case matches the test of the specialized Vector4D function.
+	const VectorN limited_4d = VectorND::limit_length_taxicab(VectorN{ 4, -2, 1, 0 }, 4.0);
+	CHECK_MESSAGE(VectorND::is_equal_approx(limited_4d, VectorN{ 3, -1, 0, 0 }), "VectorND limit_length_taxicab should give the same result as the specialized Vector4D function.");
+	const VectorN limited_5d = VectorND::limit_length_taxicab(VectorN{ 2, 2, 2, 2, 2 });
+	CHECK_MESSAGE(VectorND::is_equal_approx(limited_5d, VectorN{ 0.2, 0.2, 0.2, 0.2, 0.2 }), "VectorND limit_length_taxicab should default to a taxicab length of 1.0.");
+	const VectorN limited_empty = VectorND::limit_length_taxicab(VectorN());
+	CHECK_MESSAGE(limited_empty.size() == 0, "VectorND limit_length_taxicab of an empty vector should be an empty vector.");
+}
+
 TEST_CASE("[VectorND] Perpendicular") {
 	for (int64_t vector_amount = 1; vector_amount < 20; vector_amount++) {
 		const int64_t dimension = vector_amount + 1;

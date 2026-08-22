@@ -661,6 +661,47 @@ VectorN VectorND::limit_length(const VectorN &p_vector, const double p_len) {
 	return limited;
 }
 
+VectorN VectorND::limit_length_taxicab(const VectorN &p_vector, const double p_len) {
+	const int64_t dimension = p_vector.size();
+	const VectorN abs_vector = abs(p_vector);
+	double taxicab_length = 0.0;
+	for (int64_t i = 0; i < dimension; i++) {
+		taxicab_length += abs_vector[i];
+	}
+	if (taxicab_length <= p_len) {
+		return p_vector;
+	}
+	// Else, we need to take away length from each axis, as equally as possible.
+	// But we need to start with the shortest axis because it will be the first to reach 0.
+	Vector<int64_t> axes;
+	axes.resize(dimension);
+	for (int64_t i = 0; i < dimension; i++) {
+		axes.set(i, i);
+	}
+	std::sort(axes.ptrw(), axes.ptrw() + dimension, [&abs_vector](const int64_t p_a, const int64_t p_b) {
+		return abs_vector[p_a] > abs_vector[p_b];
+	});
+	taxicab_length -= p_len;
+	VectorN limited = duplicate(p_vector);
+	for (int64_t i = dimension; i > 0; i--) {
+		const int64_t axis = axes[i - 1];
+		const double takeaway = taxicab_length / i;
+		if (abs_vector[axis] <= takeaway) {
+			limited.set(axis, 0.0);
+			// Since this axis reached zero, we need to take away more from the other axes.
+			taxicab_length -= abs_vector[axis];
+		} else {
+			taxicab_length -= takeaway;
+			if (limited[axis] < 0.0) {
+				limited.set(axis, limited[axis] + takeaway);
+			} else {
+				limited.set(axis, limited[axis] - takeaway);
+			}
+		}
+	}
+	return limited;
+}
+
 int64_t VectorND::max_absolute_axis_index(const VectorN &p_vector) {
 	const int64_t dimension = p_vector.size();
 	ERR_FAIL_COND_V(dimension == 0, -1);
@@ -1184,6 +1225,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("length_squared", "vector"), &VectorND::length_squared);
 	ClassDB::bind_static_method("VectorND", D_METHOD("lerp", "from", "to", "weight"), &VectorND::lerp);
 	ClassDB::bind_static_method("VectorND", D_METHOD("limit_length", "vector", "length"), &VectorND::limit_length, DEFVAL(1.0));
+	ClassDB::bind_static_method("VectorND", D_METHOD("limit_length_taxicab", "vector", "length"), &VectorND::limit_length_taxicab, DEFVAL(1.0));
 	ClassDB::bind_static_method("VectorND", D_METHOD("max_absolute_axis_index", "vector"), &VectorND::max_absolute_axis_index);
 	ClassDB::bind_static_method("VectorND", D_METHOD("max_axis_index", "vector"), &VectorND::max_axis_index);
 	ClassDB::bind_static_method("VectorND", D_METHOD("min_axis_index", "vector"), &VectorND::min_axis_index);

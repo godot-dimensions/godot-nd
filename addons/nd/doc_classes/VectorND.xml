@@ -299,6 +299,14 @@
 				Returns a new VectorN ([PackedFloat64Array]) that is the input vector scaled to a length of [param length]. If the input vector is shorter than [param length], it will be returned unchanged.
 			</description>
 		</method>
+		<method name="limit_length_taxicab" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="length" type="float" default="1.0" />
+			<description>
+				Returns a new VectorN ([PackedFloat64Array]) with a maximum length by limiting its length to [param length] using the taxicab distance metric instead of the Euclidean distance metric. The taxicab length is the sum of the absolute values of each component, also known as Manhattan length or L1 norm, which provides the distance when only axis-aligned movement is allowed.
+			</description>
+		</method>
 		<method name="max_absolute_axis_index" qualifiers="static">
 			<return type="int" />
 			<param index="0" name="vector" type="PackedFloat64Array" />
