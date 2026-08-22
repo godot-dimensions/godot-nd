@@ -81,3 +81,9 @@ class EditorMainViewportND;
 class EditorPreviewEnvironmentND;
 class EditorTransformGizmoND;
 class EditorViewportRotationND;
+
+enum class EditorViewportCameraRotationAxisLockND : int8_t {
+	FULLY_LOCKED,
+	FREE_GROUND_VIEW,
+	FULLY_FREE,
+};

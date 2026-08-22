@@ -36,8 +36,8 @@ public:
 	void orbit_rotate_ground_basis(const Ref<TransformND> &p_ground_basis);
 	void rotate_pitch_no_apply(const double p_pitch_angle);
 	void set_camera_dimension(const int p_dimension);
-	void set_ground_view_axes(const int p_right, const int p_up, const int p_back, const double p_yaw_angle = 0.5f, const double p_pitch_angle = -0.5f);
-	void set_orthonormalized_axis_aligned(const double p_yaw_angle = 0.5f, const double p_pitch_angle = -0.5f);
+	void set_ground_view_axes(const int p_right, const int p_up, const int p_back, const double p_yaw_angle = 0.5f, const double p_pitch_angle = -0.5f, const bool p_free_rotation = false);
+	bool set_orthonormalized_axis_aligned(const double p_yaw_angle = 0.5f, const double p_pitch_angle = -0.5f, const EditorViewportCameraRotationAxisLockND p_rotation_axis_lock = EditorViewportCameraRotationAxisLockND::FULLY_LOCKED);
 	void set_target_position(const VectorN &p_position);
 	void set_orthogonal_view_plane(const int p_right, const int p_up);
 

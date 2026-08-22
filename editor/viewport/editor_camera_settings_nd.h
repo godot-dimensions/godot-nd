@@ -12,7 +12,7 @@
 class EditorCameraSettingsND : public Object {
 	GDCLASS(EditorCameraSettingsND, Object);
 
-	Node *_ancestor_of_cameras = nullptr;
+	EditorMainScreenND *_editor_main_screen = nullptr;
 
 	// Keep these default values in sync with the CameraND defaults and the values in `write_to_config_file()`.
 	CameraND::ViewAngleType _view_angle_type = CameraND::VIEW_ANGLE_FOCAL_LENGTH;
@@ -20,6 +20,7 @@ class EditorCameraSettingsND : public Object {
 	double _clip_near = 0.05;
 	double _clip_far = 4000.0;
 
+	EditorViewportCameraRotationAxisLockND _rotation_axis_lock = EditorViewportCameraRotationAxisLockND::FULLY_LOCKED;
 	CameraND::PerpFadeMode _perp_fade_mode = CameraND::PERP_FADE_TRANSPARENCY;
 	double _perp_fade_distance = 5.0;
 	double _perp_fade_slope = 1.0;
@@ -48,6 +49,9 @@ public:
 	double get_clip_far() const { return _clip_far; }
 	void set_clip_far(const double p_clip_far);
 
+	int get_rotation_axis_lock() const { return (int)_rotation_axis_lock; }
+	void set_rotation_axis_lock(const int p_rotation_axis_lock);
+
 	CameraND::PerpFadeMode get_perp_fade_mode() const { return _perp_fade_mode; }
 	void set_perp_fade_mode(const CameraND::PerpFadeMode p_perp_fade_mode);
 
@@ -61,6 +65,6 @@ public:
 	void set_rendering_engine_name(const String &p_rendering_engine_name);
 
 	void apply_to_cameras() const;
-	void setup(Node *p_ancestor_of_cameras, Ref<ConfigFile> &p_config_file, const String &p_config_file_path);
+	void setup(EditorMainScreenND *p_editor_main_screen, Ref<ConfigFile> &p_config_file, const String &p_config_file_path);
 	void write_to_config_file() const;
 };

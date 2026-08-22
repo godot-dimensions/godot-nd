@@ -144,12 +144,11 @@ void EditorCameraND::set_camera_dimension(const int p_dimension) {
 	_update_transform_with_pitch();
 }
 
-void EditorCameraND::set_ground_view_axes(const int p_right, const int p_up, const int p_back, const double p_yaw_angle, const double p_pitch_angle) {
+void EditorCameraND::set_ground_view_axes(const int p_right, const int p_up, const int p_back, const double p_yaw_angle, const double p_pitch_angle, const bool p_free_rotation) {
 	ERR_FAIL_COND(p_right == p_up || p_right == p_back || p_up == p_back);
 	ERR_FAIL_COND(p_right != 0 && p_right < 3);
 	ERR_FAIL_COND(p_up != 1 && p_up < 3);
 	ERR_FAIL_COND(p_back != 2 && p_back < 3);
-	_pitch_angle = p_pitch_angle;
 	_target_transform = TransformND::from_rotation(2, 0, p_yaw_angle);
 	if (p_right != 0) {
 		_target_transform = TransformND::from_swap_rotation(0, p_right)->compose_square(_target_transform);
@@ -160,14 +159,42 @@ void EditorCameraND::set_ground_view_axes(const int p_right, const int p_up, con
 	if (p_back != 2) {
 		_target_transform = TransformND::from_swap_rotation(2, p_back)->compose_square(_target_transform);
 	}
+	if (p_free_rotation) {
+		_target_transform = _target_transform->compose_square(TransformND::from_rotation(1, 2, p_pitch_angle));
+		_pitch_angle = 0.0;
+	} else {
+		_pitch_angle = p_pitch_angle;
+	}
 	_update_transform_with_pitch();
 }
 
-void EditorCameraND::set_orthonormalized_axis_aligned(const double p_yaw_angle, const double p_pitch_angle) {
-	_pitch_angle = p_pitch_angle;
+bool EditorCameraND::set_orthonormalized_axis_aligned(const double p_yaw_angle, const double p_pitch_angle, const EditorViewportCameraRotationAxisLockND p_rotation_axis_lock) {
 	Ref<TransformND> ortho = get_transform()->orthonormalized_axis_aligned();
+	bool free_rotation;
+	switch (p_rotation_axis_lock) {
+		case EditorViewportCameraRotationAxisLockND::FREE_GROUND_VIEW: {
+			free_rotation = VectorND::get_component(ortho->get_basis_column(1), 1) == 0.0;
+		} break;
+		case EditorViewportCameraRotationAxisLockND::FULLY_FREE: {
+			free_rotation = true;
+		} break;
+		default: { // FULLY_LOCKED.
+			free_rotation = false;
+		} break;
+	}
+	// Holding Shift inverts the free rotation state, so that the user can temporarily override the axis lock policy.
+	if (Input::get_singleton()->is_key_pressed(KEY_SHIFT)) {
+		free_rotation = !free_rotation;
+	}
 	_target_transform = ortho->compose_square(TransformND::from_rotation(2, 0, p_yaw_angle));
+	if (free_rotation) {
+		_target_transform = _target_transform->compose_square(TransformND::from_rotation(1, 2, p_pitch_angle));
+		_pitch_angle = 0.0;
+	} else {
+		_pitch_angle = p_pitch_angle;
+	}
 	_update_transform_with_pitch();
+	return free_rotation;
 }
 
 void EditorCameraND::set_orthogonal_view_plane(const int p_right, const int p_up) {

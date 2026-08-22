@@ -551,6 +551,13 @@ VectorN VectorND::floor(const VectorN &p_vector) {
 	return floor_vector;
 }
 
+double VectorND::get_component(const VectorN &p_vector, const int64_t p_axis) {
+	if (p_axis < 0 || p_axis >= p_vector.size()) {
+		return 0.0;
+	}
+	return p_vector[p_axis];
+}
+
 VectorN VectorND::inverse(const VectorN &p_vector) {
 	const int64_t dimension = p_vector.size();
 	VectorN inverse_vector;

@@ -44,6 +44,8 @@ private:
 	PackedColorArray _axis_colors;
 	int _dimension = 0;
 	double _information_label_auto_hide_time = 0.0;
+	EditorViewportCameraRotationAxisLockND _rotation_axis_lock = EditorViewportCameraRotationAxisLockND::FULLY_LOCKED;
+	bool _camera_uses_free_rotation = false;
 
 	Vector2 _get_warped_mouse_motion(const Ref<InputEvent> &p_ev_mouse_motion) const;
 	Ref<TransformND> _ground_rotation_input(const Ref<InputEvent> &p_input_event, const Vector2 &p_rotation_radians) const;
@@ -66,6 +68,7 @@ public:
 	void navigation_change_zoom(const double p_zoom_change);
 	void viewport_mouse_input(const Ref<InputEventMouse> &p_mouse_event);
 
+	void set_camera_rotation_axis_lock_policy(const EditorViewportCameraRotationAxisLockND p_axis_lock);
 	void set_dimension(const int p_dimension);
 	void set_ground_view_axes(const int p_right, const int p_up, const int p_back);
 	void set_orthonormalized_axis_aligned();

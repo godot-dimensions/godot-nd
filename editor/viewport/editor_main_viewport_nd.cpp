@@ -66,6 +66,9 @@ Ref<TransformND> EditorMainViewportND::_ground_rotation_input(const Ref<InputEve
 	} else if (_dimension > 3 && (cmd_or_ctrl || input->is_mouse_button_pressed(MOUSE_BUTTON_LEFT))) {
 		return _ground_basis_rotation(3, p_rotation_radians);
 	} else if (_dimension > 2) {
+		if (_camera_uses_free_rotation) {
+			return TransformND::from_rotation(0, 2, p_rotation_radians.x)->compose_square(TransformND::from_rotation(1, 2, -p_rotation_radians.y));
+		}
 		_editor_camera_nd->rotate_pitch_no_apply(-p_rotation_radians.y);
 		return TransformND::from_rotation(0, 2, p_rotation_radians.x);
 	}
@@ -209,13 +212,33 @@ void EditorMainViewportND::set_dimension(const int p_dimension) {
 	_viewport_rotation_nd->set_dimension(p_dimension);
 }
 
+void EditorMainViewportND::set_camera_rotation_axis_lock_policy(const EditorViewportCameraRotationAxisLockND p_axis_lock) {
+	_rotation_axis_lock = p_axis_lock;
+}
+
 void EditorMainViewportND::set_ground_view_axes(const int p_right, const int p_up, const int p_back) {
-	_editor_camera_nd->set_ground_view_axes(p_right, p_up, p_back);
+	switch (_rotation_axis_lock) {
+		case EditorViewportCameraRotationAxisLockND::FULLY_LOCKED: {
+			_camera_uses_free_rotation = false;
+		} break;
+		case EditorViewportCameraRotationAxisLockND::FREE_GROUND_VIEW: {
+			_camera_uses_free_rotation = p_up == 1;
+		} break;
+		case EditorViewportCameraRotationAxisLockND::FULLY_FREE: {
+			_camera_uses_free_rotation = true;
+		} break;
+	}
+	// Holding Shift inverts the free rotation state, so that the user can temporarily override the axis lock policy.
+	const bool shift = Input::get_singleton()->is_key_pressed(KEY_SHIFT);
+	if (shift) {
+		_camera_uses_free_rotation = !_camera_uses_free_rotation;
+	}
+	_editor_camera_nd->set_ground_view_axes(p_right, p_up, p_back, 0.5f, -0.5f, _camera_uses_free_rotation);
 	_viewport_rotation_nd->queue_redraw();
 }
 
 void EditorMainViewportND::set_orthonormalized_axis_aligned() {
-	_editor_camera_nd->set_orthonormalized_axis_aligned();
+	_camera_uses_free_rotation = _editor_camera_nd->set_orthonormalized_axis_aligned(0.5f, -0.5f, _rotation_axis_lock);
 	_viewport_rotation_nd->queue_redraw();
 }
 

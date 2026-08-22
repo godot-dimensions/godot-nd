@@ -307,12 +307,24 @@ void EditorMainScreenND::press_menu_item(const int p_option) {
 	}
 }
 
+void EditorMainScreenND::set_camera_rotation_axis_lock_policy(const EditorViewportCameraRotationAxisLockND p_axis_lock) {
+	// This function is named "policy" because it does not immediately change the camera's rotation axis lock,
+	// rather it sets the policy for how it will be handled the next time the user clicks on the rotation widget.
+	_rotation_axis_lock = p_axis_lock;
+	for (int i = 0; i < _MAX_VIEWPORTS; i++) {
+		if (_editor_main_viewports[i] != nullptr) {
+			_editor_main_viewports[i]->set_camera_rotation_axis_lock_policy(p_axis_lock);
+		}
+	}
+}
+
 void EditorMainScreenND::set_viewport_layout(const int8_t p_viewport_count, const Side p_dominant_side) {
 	ERR_FAIL_COND(p_viewport_count > _MAX_VIEWPORTS);
 	for (int i = 0; i < p_viewport_count; i++) {
 		if (_editor_main_viewports[i] == nullptr) {
 			_editor_main_viewports[i] = memnew(EditorMainViewportND);
 			_editor_main_viewports[i]->set_name(StringName("EditorMainViewportND_" + itos(i)));
+			_editor_main_viewports[i]->set_camera_rotation_axis_lock_policy(_rotation_axis_lock);
 			_editor_main_viewports[i]->setup(this, _transform_gizmo_nd);
 			_editor_main_viewport_holder->add_child(_editor_main_viewports[i]);
 		}

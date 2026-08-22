@@ -149,6 +149,7 @@ public:
 	static Vector<VectorN> fill_array(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value);
 	static TypedArray<VectorN> fill_array_bind(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value);
 	static VectorN floor(const VectorN &p_vector);
+	static double get_component(const VectorN &p_vector, const int64_t p_axis);
 	static VectorN inverse(const VectorN &p_vector);
 	static bool is_equal_approx(const VectorN &p_a, const VectorN &p_b);
 	static bool is_equal_exact(const VectorN &p_a, const VectorN &p_b);

@@ -1,5 +1,7 @@
 #include "editor_camera_settings_nd.h"
 
+#include "editor_main_screen_nd.h"
+
 void EditorCameraSettingsND::set_view_angle_type(const CameraND::ViewAngleType p_view_angle_type) {
 	_view_angle_type = p_view_angle_type;
 	notify_property_list_changed();
@@ -35,6 +37,12 @@ void EditorCameraSettingsND::set_clip_far(const double p_clip_far) {
 	write_to_config_file();
 }
 
+void EditorCameraSettingsND::set_rotation_axis_lock(const int p_rotation_axis_lock) {
+	_rotation_axis_lock = (EditorViewportCameraRotationAxisLockND)p_rotation_axis_lock;
+	apply_to_cameras();
+	write_to_config_file();
+}
+
 void EditorCameraSettingsND::set_perp_fade_mode(const CameraND::PerpFadeMode p_perp_fade_mode) {
 	_perp_fade_mode = p_perp_fade_mode;
 	notify_property_list_changed();
@@ -62,7 +70,8 @@ void EditorCameraSettingsND::set_rendering_engine_name(const String &p_rendering
 }
 
 void EditorCameraSettingsND::apply_to_cameras() const {
-	TypedArray<Node> cameras = _ancestor_of_cameras->find_children("*", "CameraND", true, false);
+	_editor_main_screen->set_camera_rotation_axis_lock_policy(_rotation_axis_lock);
+	TypedArray<Node> cameras = _editor_main_screen->find_children("*", "CameraND", true, false);
 	for (int i = 0; i < cameras.size(); i++) {
 		CameraND *camera = Object::cast_to<CameraND>(cameras[i]);
 		CRASH_COND(camera == nullptr);
@@ -77,14 +86,15 @@ void EditorCameraSettingsND::apply_to_cameras() const {
 	}
 }
 
-void EditorCameraSettingsND::setup(Node *p_ancestor_of_cameras, Ref<ConfigFile> &p_config_file, const String &p_config_file_path) {
-	_ancestor_of_cameras = p_ancestor_of_cameras;
+void EditorCameraSettingsND::setup(EditorMainScreenND *p_editor_main_screen, Ref<ConfigFile> &p_config_file, const String &p_config_file_path) {
+	_editor_main_screen = p_editor_main_screen;
 	_nd_editor_config_file = p_config_file;
 	_nd_editor_config_file_path = p_config_file_path;
 	_view_angle_type = (CameraND::ViewAngleType)(int)p_config_file->get_value("camera", "view_angle_type", _view_angle_type);
 	_focal_length = p_config_file->get_value("camera", "focal_length", _focal_length);
 	_clip_near = p_config_file->get_value("camera", "clip_near", _clip_near);
 	_clip_far = p_config_file->get_value("camera", "clip_far", _clip_far);
+	_rotation_axis_lock = (EditorViewportCameraRotationAxisLockND)(int)p_config_file->get_value("camera", "rotation_axis_lock", (int)_rotation_axis_lock);
 	_perp_fade_mode = (CameraND::PerpFadeMode)(int)p_config_file->get_value("camera", "perp_fade_mode", _perp_fade_mode);
 	_perp_fade_distance = p_config_file->get_value("camera", "perp_fade_distance", _perp_fade_distance);
 	_perp_fade_slope = p_config_file->get_value("camera", "perp_fade_slope", _perp_fade_slope);
@@ -108,6 +118,9 @@ void EditorCameraSettingsND::write_to_config_file() const {
 	}
 	if (!Math::is_equal_approx(_clip_far, 4000.0)) {
 		_nd_editor_config_file->set_value("camera", "clip_far", _clip_far);
+	}
+	if (_rotation_axis_lock != EditorViewportCameraRotationAxisLockND::FULLY_LOCKED) {
+		_nd_editor_config_file->set_value("camera", "rotation_axis_lock", (int)_rotation_axis_lock);
 	}
 	if (_perp_fade_mode != CameraND::PERP_FADE_TRANSPARENCY) {
 		_nd_editor_config_file->set_value("camera", "perp_fade_mode", (int)_perp_fade_mode);
@@ -178,6 +191,10 @@ void EditorCameraSettingsND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_clip_far"), &EditorCameraSettingsND::get_clip_far);
 	ClassDB::bind_method(D_METHOD("set_clip_far", "clip_far"), &EditorCameraSettingsND::set_clip_far);
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "clip_far", PROPERTY_HINT_RANGE, "0.01,4000,0.01,or_greater,exp,suffix:m"), "set_clip_far", "get_clip_far");
+
+	ClassDB::bind_method(D_METHOD("get_rotation_axis_lock"), &EditorCameraSettingsND::get_rotation_axis_lock);
+	ClassDB::bind_method(D_METHOD("set_rotation_axis_lock", "rotation_axis_lock"), &EditorCameraSettingsND::set_rotation_axis_lock);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "rotation_axis_lock", PROPERTY_HINT_ENUM, "Fully Locked,Free Ground View,Fully Free"), "set_rotation_axis_lock", "get_rotation_axis_lock");
 
 	ClassDB::bind_method(D_METHOD("get_perp_fade_mode"), &EditorCameraSettingsND::get_perp_fade_mode);
 	ClassDB::bind_method(D_METHOD("set_perp_fade_mode", "perp_fade_mode"), &EditorCameraSettingsND::set_perp_fade_mode);
