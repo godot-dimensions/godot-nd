@@ -2,6 +2,9 @@
 
 #include "../../math/vector_nd.h"
 #include "../../model/mesh/wire/wire_material_nd.h"
+#include "../environment/sky/plain_sky_material_nd.h"
+#include "../environment/world_environment_nd.h"
+#include "../rendering_server_nd.h"
 #include "wireframe_render_canvas_nd.h"
 
 Color _get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<MeshND> &p_mesh, int p_edge_index) {
@@ -27,7 +30,24 @@ void WireframeCanvasRenderingEngineND::cleanup_for_viewport() {
 void WireframeCanvasRenderingEngineND::render_frame() {
 	WireframeRenderCanvasND *wire_canvas = GET_NODE_TYPE(get_viewport(), WireframeRenderCanvasND, "WireframeRenderCanvasND");
 	ERR_FAIL_NULL_MSG(wire_canvas, "WireframeCanvasRenderingEngineND: Canvas was null.");
-	const CameraND *camera = get_camera();
+	CameraND *camera = get_camera();
+	ERR_FAIL_NULL(camera);
+	// Set the background color of the canvas to the current world environment's plain sky color, if available.
+	RenderingServerND *rendering_server_nd = RenderingServerND::get_singleton();
+	ERR_FAIL_NULL(rendering_server_nd);
+	WorldEnvironmentND *world_environment_nd = rendering_server_nd->get_current_world_environment_for_camera(camera);
+	Color background_color = Color(0.0f, 0.0f, 0.0f);
+	if (world_environment_nd != nullptr) {
+		Ref<PlainSkyMaterialND> plain_sky_mat = world_environment_nd->get_sky_material();
+		if (plain_sky_mat.is_valid()) {
+			// Only scale RGB by the energy multiplier, don't scale the alpha channel.
+			const Color sky_color = plain_sky_mat->get_color();
+			const real_t energy_multiplier = plain_sky_mat->get_energy_multiplier();
+			background_color = Color(sky_color.r * energy_multiplier, sky_color.g * energy_multiplier, sky_color.b * energy_multiplier, 1.0f);
+		}
+	}
+	wire_canvas->set_background_color(background_color);
+	// Draw edges for each mesh instance in the scene.
 	Vector<PackedColorArray> edge_colors_to_draw;
 	PackedFloat32Array edge_thicknesses_to_draw;
 	Vector<PackedVector2Array> edge_vertices_to_draw;

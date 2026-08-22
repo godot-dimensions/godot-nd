@@ -7,11 +7,14 @@
 #include <godot_cpp/templates/vector.hpp>
 #endif
 
+class WorldEnvironmentND;
+
 class RenderingServerND : public Object {
 	GDCLASS(RenderingServerND, Object);
 
 	HashMap<String, Ref<RenderingEngineND>> _rendering_engines;
 	HashMap<Viewport *, Vector<CameraND *>> _viewport_cameras;
+	HashMap<Viewport *, Vector<WorldEnvironmentND *>> _viewport_world_environments;
 	// For 3D, Godot has "World3D" which meshes are added to. Cameras in the same world can see the same meshes.
 	// For ND, we will use a simpler approach, just have one global array of meshes which all cameras can see.
 	// We could add a "WorldND" class in the future if we want to add this feature, but it's not necessary for now.
@@ -31,6 +34,13 @@ public:
 	void make_camera_current(CameraND *p_camera);
 	void clear_camera_current(CameraND *p_camera);
 	CameraND *get_current_camera(Viewport *p_viewport) const;
+
+	void register_world_environment(WorldEnvironmentND *p_world_environment);
+	void unregister_world_environment(WorldEnvironmentND *p_world_environment);
+	void make_world_environment_current(WorldEnvironmentND *p_world_environment);
+	void clear_world_environment_current(WorldEnvironmentND *p_world_environment);
+	WorldEnvironmentND *get_current_world_environment(Viewport *p_viewport) const;
+	WorldEnvironmentND *get_current_world_environment_for_camera(CameraND *p_camera) const; // Internal use only, do not expose.
 
 	void register_mesh_instance(MeshInstanceND *p_mesh_instance);
 	void unregister_mesh_instance(MeshInstanceND *p_mesh_instance);

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="WorldEnvironmentND" inherits="NodeND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Defines the ND world's sky.
+	</brief_description>
+	<description>
+		A [WorldEnvironmentND] provides a [SkyMaterialND] to ND rendering engines. If the current environment has no sky material, or if no [WorldEnvironmentND] is current, the background is treated as black.
+		Only one [WorldEnvironmentND] can be current per [Viewport].
+		Unlike Godot's [WorldEnvironment] which extends [Node], [WorldEnvironmentND] extends [NodeND], which means it has an ND transform.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="clear_current">
+			<return type="void" />
+			<param index="0" name="enable_next" type="bool" />
+			<description>
+				Stops this environment from being current. If [param enable_next] is [code]true[/code], another [WorldEnvironmentND] in the same viewport may become current.
+			</description>
+		</method>
+		<method name="make_current">
+			<return type="void" />
+			<description>
+				Makes this environment current for its viewport.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="current" type="bool" setter="set_current" getter="is_current" default="false">
+			If [code]true[/code], this is the current ND environment for its viewport.
+		</member>
+		<member name="sky_material" type="SkyMaterialND" setter="set_sky_material" getter="get_sky_material">
+			The material used to draw the sky. Assign a [PlainSkyMaterialND] or custom [SkyMaterialND].
+		</member>
+	</members>
+</class>

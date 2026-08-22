@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PlainSkyMaterialND" inherits="SkyMaterialND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		An ND sky material that uses one solid color.
+	</brief_description>
+	<description>
+		A plain ND sky that displays one color as the scene's background.
+	</description>
+	<tutorials>
+		<link title="OMI_environment_sky specification">https://github.com/omigroup/gltf-extensions/blob/main/extensions/2.0/OMI_environment_sky/README.md</link>
+	</tutorials>
+	<members>
+		<member name="color" type="Color" setter="set_color" getter="get_color" default="Color(0, 0, 0, 1)">
+			The solid color displayed as the scene's background.
+		</member>
+	</members>
+</class>

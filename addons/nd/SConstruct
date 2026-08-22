@@ -16,6 +16,8 @@ env.Append(
         "../../model/off",
         "../../nodes",
         "../../render",
+        "../../render/environment",
+        "../../render/environment/sky",
         "../../render/wireframe_canvas",
     ]
 )
@@ -32,6 +34,8 @@ sources = (
     + Glob("../../model/off/*.cpp")
     + Glob("../../nodes/*.cpp")
     + Glob("../../render/*.cpp")
+    + Glob("../../render/environment/*.cpp")
+    + Glob("../../render/environment/sky/*.cpp")
     + Glob("../../render/wireframe_canvas/*.cpp")
 )
 

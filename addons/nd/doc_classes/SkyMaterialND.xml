@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="SkyMaterialND" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Base class for ND sky materials.
+	</brief_description>
+	<description>
+		A resource used by [WorldEnvironmentND] to provide the background of an ND scene. [SkyMaterialND] is intended as an abstract base; use [PlainSkyMaterialND] or a custom subclass.
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="energy_multiplier" type="float" setter="set_energy_multiplier" getter="get_energy_multiplier" default="1.0">
+			The sky's overall brightness multiplier. Higher values result in a brighter background.
+		</member>
+	</members>
+</class>

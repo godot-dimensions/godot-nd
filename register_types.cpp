@@ -23,6 +23,11 @@
 #include "nodes/marker_nd.h"
 #include "nodes/node_nd.h"
 
+// Environment.
+#include "render/environment/sky/plain_sky_material_nd.h"
+#include "render/environment/sky/sky_material_nd.h"
+#include "render/environment/world_environment_nd.h"
+
 // Virtual classes.
 #include "model/mesh/cell/cell_mesh_nd.h"
 #include "model/mesh/material_nd.h"
@@ -99,6 +104,10 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(CameraND);
 		add_godot_singleton("GeometryND", memnew(GeometryND));
 		add_godot_singleton("VectorND", memnew(VectorND));
+		// Environment.
+		GDREGISTER_VIRTUAL_CLASS(SkyMaterialND);
+		GDREGISTER_CLASS(PlainSkyMaterialND);
+		GDREGISTER_CLASS(WorldEnvironmentND);
 		// Virtual classes.
 		GDREGISTER_CLASS(MaterialND);
 		GDREGISTER_CLASS(MeshND);

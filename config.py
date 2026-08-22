@@ -23,6 +23,10 @@ def get_doc_classes():
 		"RenderingEngineND",
 		"RenderingServerND",
 		"NodeND",
+		# Environment.
+		"SkyMaterialND",
+		"PlainSkyMaterialND",
+		"WorldEnvironmentND",
 		# Mesh.
 		"ArrayCellMeshND",
 		"ArrayWireMeshND",

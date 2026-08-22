@@ -1,5 +1,7 @@
 #include "rendering_server_nd.h"
 
+#include "environment/world_environment_nd.h"
+
 #ifdef TOOLS_ENABLED
 #include "../editor/viewport/editor_camera_nd.h"
 #endif // TOOLS_ENABLED
@@ -8,8 +10,16 @@
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
+#include <godot_cpp/classes/window.hpp>
+#ifdef TOOLS_ENABLED
+#include <godot_cpp/classes/editor_interface.hpp>
+#endif // TOOLS_ENABLED
 #elif GODOT_MODULE
 #include "scene/main/scene_tree.h"
+#include "scene/main/window.h"
+#ifdef TOOLS_ENABLED
+#include "editor/editor_interface.h"
+#endif // TOOLS_ENABLED
 #if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 6
 #include "servers/rendering_server.h"
 #else
@@ -30,6 +40,7 @@ RenderingServerND::~RenderingServerND() {
 		}
 	}
 	_viewport_cameras.clear();
+	_viewport_world_environments.clear();
 	_rendering_engines.clear();
 	singleton = nullptr;
 }
@@ -200,6 +211,116 @@ CameraND *RenderingServerND::get_current_camera(Viewport *p_viewport) const {
 		return camera0;
 	}
 	return nullptr;
+}
+
+void RenderingServerND::register_world_environment(WorldEnvironmentND *p_world_environment) {
+	ERR_FAIL_NULL(p_world_environment);
+	Viewport *viewport = p_world_environment->get_viewport();
+	ERR_FAIL_NULL(viewport);
+	if (_viewport_world_environments.has(viewport)) {
+		Vector<WorldEnvironmentND *> &world_environments = _viewport_world_environments[viewport];
+		ERR_FAIL_COND_MSG(world_environments.has(p_world_environment), "WorldEnvironmentND is already registered to this Viewport.");
+		world_environments.append(p_world_environment);
+		if (p_world_environment->is_current()) {
+			RenderingServerND::make_world_environment_current(p_world_environment);
+		}
+		return;
+	}
+	// This is the first time a WorldEnvironmentND has been registered to this Viewport.
+	Vector<WorldEnvironmentND *> world_environments;
+	world_environments.append(p_world_environment);
+	_viewport_world_environments[viewport] = world_environments;
+	p_world_environment->make_current();
+}
+
+void RenderingServerND::unregister_world_environment(WorldEnvironmentND *p_world_environment) {
+	ERR_FAIL_NULL(p_world_environment);
+	Viewport *viewport = p_world_environment->get_viewport();
+	ERR_FAIL_NULL(viewport);
+	ERR_FAIL_COND(!_viewport_world_environments.has(viewport));
+	Vector<WorldEnvironmentND *> &world_environments = _viewport_world_environments[viewport];
+	ERR_FAIL_COND(!world_environments.has(p_world_environment));
+	if (p_world_environment == world_environments[0]) {
+		p_world_environment->clear_current();
+	}
+	world_environments.erase(p_world_environment);
+	if (world_environments.is_empty()) {
+		_viewport_world_environments.erase(viewport);
+	}
+}
+
+void RenderingServerND::make_world_environment_current(WorldEnvironmentND *p_world_environment) {
+	ERR_FAIL_NULL(p_world_environment);
+	if (unlikely(!p_world_environment->is_current())) {
+		// Will set the environment's variable and call RenderingServerND::make_world_environment_current again.
+		p_world_environment->make_current();
+		return;
+	}
+	Viewport *viewport = p_world_environment->get_viewport();
+	Vector<WorldEnvironmentND *> &world_environments = _viewport_world_environments[viewport];
+	ERR_FAIL_COND(!world_environments.has(p_world_environment));
+	WorldEnvironmentND *world_environment0 = world_environments[0];
+	if (p_world_environment != world_environment0) {
+		if (world_environment0->is_current()) {
+			world_environment0->clear_current(false);
+		}
+		world_environments.erase(p_world_environment);
+		world_environments.insert(0, p_world_environment);
+	}
+}
+
+void RenderingServerND::clear_world_environment_current(WorldEnvironmentND *p_world_environment) {
+	ERR_FAIL_NULL(p_world_environment);
+	if (unlikely(p_world_environment->is_current())) {
+		p_world_environment->clear_current(false);
+	}
+	Viewport *viewport = p_world_environment->get_viewport();
+	Vector<WorldEnvironmentND *> &world_environments = _viewport_world_environments[viewport];
+	ERR_FAIL_COND(!world_environments.has(p_world_environment));
+	if (p_world_environment == world_environments[0] && world_environments.size() > 1) {
+		world_environments.remove_at(0);
+		world_environments.append(p_world_environment);
+		WorldEnvironmentND *world_environment0 = world_environments[0];
+		world_environment0->make_current();
+	}
+}
+
+WorldEnvironmentND *RenderingServerND::get_current_world_environment(Viewport *p_viewport) const {
+	if (!_viewport_world_environments.has(p_viewport)) {
+		return nullptr;
+	}
+	const Vector<WorldEnvironmentND *> &world_environments = _viewport_world_environments[p_viewport];
+	if (world_environments.is_empty()) {
+		return nullptr;
+	}
+	WorldEnvironmentND *world_environment0 = world_environments[0];
+	if (world_environment0->is_current()) {
+		return world_environment0;
+	}
+	return nullptr;
+}
+
+WorldEnvironmentND *RenderingServerND::get_current_world_environment_for_camera(CameraND *p_camera) const {
+	ERR_FAIL_NULL_V(p_camera, nullptr);
+	Viewport *environment_viewport = p_camera->get_viewport();
+#ifdef TOOLS_ENABLED
+	// The edited scene and preview environment belong to different editor
+	// viewports, while each ND editor camera belongs to another SubViewport.
+	if (Engine::get_singleton()->is_editor_hint() && Object::cast_to<EditorCameraND>(p_camera->get_parent()) != nullptr) {
+		Node *edited_scene_root = EditorInterface::get_singleton()->get_edited_scene_root();
+		if (edited_scene_root != nullptr) {
+			WorldEnvironmentND *world_environment = get_current_world_environment(edited_scene_root->get_viewport());
+			if (world_environment != nullptr) {
+				return world_environment;
+			}
+		}
+		// The preview environment belongs to the editor's root viewport.
+		SceneTree *scene_tree = p_camera->get_tree();
+		ERR_FAIL_NULL_V(scene_tree, nullptr);
+		environment_viewport = scene_tree->get_root();
+	}
+#endif // TOOLS_ENABLED
+	return get_current_world_environment(environment_viewport);
 }
 
 void RenderingServerND::register_mesh_instance(MeshInstanceND *p_mesh_instance) {
