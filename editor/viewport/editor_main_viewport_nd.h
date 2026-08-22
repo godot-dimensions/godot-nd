@@ -48,6 +48,7 @@ private:
 	Vector2 _get_warped_mouse_motion(const Ref<InputEvent> &p_ev_mouse_motion) const;
 	Ref<TransformND> _ground_rotation_input(const Ref<InputEvent> &p_input_event, const Vector2 &p_rotation_radians) const;
 	void _on_button_toggled(const bool p_toggled_on, const int p_option);
+	void _project_settings_changed();
 	void _update_theme();
 
 protected:

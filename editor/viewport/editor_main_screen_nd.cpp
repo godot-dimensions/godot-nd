@@ -6,6 +6,7 @@
 #include "editor_camera_nd.h"
 #include "editor_camera_settings_nd.h"
 #include "editor_main_viewport_nd.h"
+#include "editor_preview_environment_nd.h"
 #include "editor_transform_gizmo_nd.h"
 #include "editor_viewport_rotation_nd.h"
 
@@ -401,6 +402,11 @@ void EditorMainScreenND::setup(EditorUndoRedoManager *p_undo_redo_manager) {
 	_toolbar_buttons[TOOLBAR_BUTTON_USE_LOCAL_ROTATION]->set_tooltip_text(TTR("(T) If pressed, use the object's local rotation for the gizmo. Else, transform in global space."));
 	_toolbar_buttons[TOOLBAR_BUTTON_USE_LOCAL_ROTATION]->connect("toggled", callable_mp(this, &EditorMainScreenND::_on_button_toggled).bind(TOOLBAR_BUTTON_USE_LOCAL_ROTATION));
 	_toolbar_hbox->add_child(_toolbar_buttons[TOOLBAR_BUTTON_USE_LOCAL_ROTATION]);
+	_toolbar_hbox->add_child(memnew(VSeparator));
+
+	_preview_environment = memnew(EditorPreviewEnvironmentND);
+	_preview_environment->setup(this, p_undo_redo_manager, _nd_editor_config_file, _nd_editor_config_file_path);
+	_toolbar_hbox->add_child(_preview_environment);
 
 	// All viewports share one gizmo and origin marker.
 	_transform_gizmo_nd = memnew(EditorTransformGizmoND);

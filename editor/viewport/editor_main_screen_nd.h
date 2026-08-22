@@ -89,6 +89,7 @@ private:
 	Control *_editor_main_viewport_holder = nullptr;
 	EditorMainViewportND *_editor_main_viewports[_MAX_VIEWPORTS] = { nullptr };
 	HBoxContainer *_toolbar_hbox = nullptr;
+	EditorPreviewEnvironmentND *_preview_environment = nullptr;
 	EditorTransformGizmoND *_transform_gizmo_nd = nullptr;
 	MarkerND *_origin_marker = nullptr;
 	Label *_dimensions_label = nullptr;

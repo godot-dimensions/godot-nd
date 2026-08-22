@@ -11,7 +11,9 @@
 #include <godot_cpp/classes/editor_interface.hpp>
 #include <godot_cpp/classes/editor_selection.hpp>
 #include <godot_cpp/classes/input_event_screen_drag.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
 #elif GODOT_MODULE
+#include "core/config/project_settings.h"
 #include "editor/editor_data.h"
 #include "editor/editor_interface.h"
 #endif
@@ -68,6 +70,16 @@ Ref<TransformND> EditorMainViewportND::_ground_rotation_input(const Ref<InputEve
 		return TransformND::from_rotation(0, 2, p_rotation_radians.x);
 	}
 	return Ref<TransformND>();
+}
+
+void EditorMainViewportND::_project_settings_changed() {
+	ERR_FAIL_NULL(_sub_viewport);
+	ProjectSettings *project_settings = ProjectSettings::get_singleton();
+	ERR_FAIL_NULL(project_settings);
+	// Keep the ND sub-viewport settings in sync with the project settings.
+	_sub_viewport->set_transparent_background(project_settings->get_setting("rendering/viewport/transparent_background"));
+	_sub_viewport->set_use_hdr_2d(project_settings->get_setting("rendering/viewport/hdr_2d"));
+	_sub_viewport->set_use_debanding(project_settings->get_setting("rendering/anti_aliasing/quality/use_debanding"));
 }
 
 void EditorMainViewportND::_update_theme() {
@@ -235,6 +247,8 @@ void EditorMainViewportND::setup(EditorMainScreenND *p_editor_main_screen, Edito
 
 	_sub_viewport = memnew(SubViewport);
 	_sub_viewport_container->add_child(_sub_viewport);
+	_project_settings_changed();
+	ProjectSettings::get_singleton()->connect(StringName("settings_changed"), callable_mp(this, &EditorMainViewportND::_project_settings_changed));
 
 	_information_label = memnew(Label);
 	_information_label->set_anchors_and_offsets_preset(Control::PRESET_BOTTOM_WIDE);

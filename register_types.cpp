@@ -64,6 +64,7 @@
 #include "editor/viewport/editor_input_surface_nd.h"
 #include "editor/viewport/editor_main_screen_nd.h"
 #include "editor/viewport/editor_main_viewport_nd.h"
+#include "editor/viewport/editor_preview_environment_nd.h"
 #include "editor/viewport/editor_transform_gizmo_nd.h"
 #include "editor/viewport/editor_transform_snap_settings_nd.h"
 #include "editor/viewport/editor_viewport_rotation_nd.h"
@@ -148,6 +149,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(EditorInputSurfaceND);
 		GDREGISTER_CLASS(EditorMainScreenND);
 		GDREGISTER_CLASS(EditorMainViewportND);
+		GDREGISTER_CLASS(EditorPreviewEnvironmentND);
 		GDREGISTER_CLASS(EditorTransformGizmoND);
 		GDREGISTER_CLASS(EditorTransformSnapSettingsND);
 		GDREGISTER_CLASS(EditorViewportRotationND);

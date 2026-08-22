@@ -78,5 +78,6 @@ class EditorCameraSettingsND;
 class EditorInputSurfaceND;
 class EditorMainScreenND;
 class EditorMainViewportND;
+class EditorPreviewEnvironmentND;
 class EditorTransformGizmoND;
 class EditorViewportRotationND;
