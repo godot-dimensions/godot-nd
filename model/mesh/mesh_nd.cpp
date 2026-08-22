@@ -7,6 +7,12 @@
 
 #if GDEXTENSION
 #include <godot_cpp/templates/hash_set.hpp>
+#elif GODOT_MODULE
+#if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 6
+#include "servers/rendering_server.h"
+#else
+#include "servers/rendering/rendering_server.h"
+#endif
 #endif
 
 PackedInt32Array MeshND::deduplicate_edge_indices(const PackedInt32Array &p_items) {
@@ -61,6 +67,10 @@ bool MeshND::validate_mesh_data() {
 	return ret;
 }
 
+void MeshND::update_cross_section_mesh() {
+	GDVIRTUAL_CALL(_update_cross_section_mesh);
+}
+
 void MeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 	GDVIRTUAL_CALL(_validate_material_for_mesh, p_material);
 	const Ref<WireMaterialND> wire_material = p_material;
@@ -100,6 +110,25 @@ Ref<RectND> MeshND::get_rect_bounds() {
 	}
 	_is_rect_bounds_dirty = false;
 	return _rect_bounds;
+}
+
+Ref<ArrayMesh> MeshND::get_cross_section_mesh() {
+	if (_cross_section_mesh.is_null()) {
+		_cross_section_mesh.instantiate();
+	}
+	if (_is_cross_section_mesh_dirty) {
+		const String mesh_path_or_name = get_path().is_empty() ? get_name() : get_path();
+		const String cross_section_hint = mesh_path_or_name + String(" Cross-Section Mesh");
+		_cross_section_mesh->set_name(cross_section_hint);
+		update_cross_section_mesh();
+		_is_cross_section_mesh_dirty = false;
+#if GODOT_MODULE
+		if (RenderingServer::get_singleton() != nullptr && _cross_section_mesh->get_rid().is_valid()) {
+			RenderingServer::get_singleton()->mesh_set_path(_cross_section_mesh->get_rid(), cross_section_hint);
+		}
+#endif
+	}
+	return _cross_section_mesh;
 }
 
 Ref<MaterialND> MeshND::get_material() const {
@@ -172,11 +201,14 @@ void MeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_mesh_data_valid"), &MeshND::is_mesh_data_valid);
 	ClassDB::bind_method(D_METHOD("reset_mesh_data_validation"), &MeshND::reset_mesh_data_validation);
 	ClassDB::bind_method(D_METHOD("validate_material_for_mesh", "material"), &MeshND::validate_material_for_mesh);
+	ClassDB::bind_method(D_METHOD("mark_cross_section_mesh_dirty"), &MeshND::mark_cross_section_mesh_dirty);
+	ClassDB::bind_method(D_METHOD("mark_mesh_bounds_and_cross_section_dirty"), &MeshND::mark_mesh_bounds_and_cross_section_dirty);
+	ClassDB::bind_method(D_METHOD("update_cross_section_mesh"), &MeshND::update_cross_section_mesh);
 
 	ClassDB::bind_method(D_METHOD("to_array_wire_mesh"), &MeshND::to_array_wire_mesh);
 	ClassDB::bind_method(D_METHOD("to_wire_mesh"), &MeshND::to_wire_mesh);
-	ClassDB::bind_method(D_METHOD("mark_rect_bounds_dirty"), &MeshND::mark_rect_bounds_dirty);
 	ClassDB::bind_method(D_METHOD("get_rect_bounds"), &MeshND::get_rect_bounds);
+	ClassDB::bind_method(D_METHOD("get_cross_section_mesh"), &MeshND::get_cross_section_mesh);
 
 	ClassDB::bind_method(D_METHOD("get_material"), &MeshND::get_material);
 	ClassDB::bind_method(D_METHOD("set_material", "material"), &MeshND::set_material);
@@ -191,4 +223,5 @@ void MeshND::_bind_methods() {
 	GDVIRTUAL_BIND(_get_vertices);
 	GDVIRTUAL_BIND(_validate_material_for_mesh, "material");
 	GDVIRTUAL_BIND(_validate_mesh_data);
+	GDVIRTUAL_BIND(_update_cross_section_mesh);
 }

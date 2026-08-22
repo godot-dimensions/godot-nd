@@ -106,7 +106,7 @@ void CellMeshND::cell_mesh_clear_cache() {
 	_cell_positions_cache.clear();
 	_edge_positions_cache.clear();
 	_edge_indices_cache.clear();
-	mark_rect_bounds_dirty();
+	mark_mesh_bounds_and_cross_section_dirty();
 }
 
 void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
