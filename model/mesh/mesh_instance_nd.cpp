@@ -44,19 +44,12 @@ void MeshInstanceND::set_mesh(const Ref<MeshND> &p_mesh) {
 
 Ref<RectND> MeshInstanceND::get_rect_bounds(const Ref<TransformND> &p_to_target) const {
 	const Ref<TransformND> global_xform = get_global_transform();
-	Ref<RectND> bounds;
-	bounds.instantiate();
-	bounds->set_position(p_to_target->xform(global_xform->get_origin()));
+	const Ref<TransformND> to_target = p_to_target->compose_square(global_xform);
 	const Ref<MeshND> mesh = get_mesh();
 	if (mesh.is_null()) {
-		return bounds;
+		return RectND::from_position_size(to_target->get_origin(), VectorN());
 	}
-	const Ref<TransformND> to_target = p_to_target->compose_square(global_xform);
-	const Vector<VectorN> vertices = mesh->get_vertices();
-	for (int vert_index = 0; vert_index < vertices.size(); vert_index++) {
-		bounds = bounds->expand_to_point(to_target->xform(vertices[vert_index]));
-	}
-	return bounds;
+	return to_target->xform_rect(mesh->get_rect_bounds());
 }
 
 void MeshInstanceND::_bind_methods() {

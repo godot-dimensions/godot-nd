@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../math/rect_nd.h"
 #include "material_nd.h"
 
 #if GDEXTENSION
@@ -14,14 +15,18 @@ class WireMeshND;
 class MeshND : public Resource {
 	GDCLASS(MeshND, Resource);
 
+	Ref<RectND> _rect_bounds;
 	Ref<MaterialND> _material;
 	bool _is_mesh_data_valid = false;
+	bool _is_rect_bounds_dirty = true;
 
 protected:
 	// Slightly under the 32-bit integer limit to avoid overflows.
 	static constexpr int64_t MAX_VERTICES = 2147483640;
 	static void _bind_methods();
 	virtual bool validate_mesh_data();
+	// Call when the mesh is modified to indicate that the rect bounds need to be recalculated.
+	void mark_rect_bounds_dirty() { _is_rect_bounds_dirty = true; }
 
 public:
 	static PackedInt32Array deduplicate_edge_indices(const PackedInt32Array &p_items);
@@ -33,6 +38,8 @@ public:
 
 	Ref<ArrayWireMeshND> to_array_wire_mesh();
 	virtual Ref<WireMeshND> to_wire_mesh();
+
+	Ref<RectND> get_rect_bounds();
 
 	Ref<MaterialND> get_material() const;
 	void set_material(const Ref<MaterialND> &p_material);

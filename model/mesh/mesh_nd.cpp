@@ -1,5 +1,7 @@
 #include "mesh_nd.h"
 
+#include "../../math/rect_nd.h"
+#include "../../math/vector_nd.h"
 #include "wire/array_wire_mesh_nd.h"
 #include "wire/wire_material_nd.h"
 
@@ -85,6 +87,21 @@ Ref<WireMeshND> MeshND::to_wire_mesh() {
 	return to_array_wire_mesh();
 }
 
+Ref<RectND> MeshND::get_rect_bounds() {
+	if (likely(!_is_rect_bounds_dirty)) {
+		return _rect_bounds;
+	}
+	const Vector<VectorN> vertices = get_vertices();
+	const int dimension = vertices.is_empty() ? 0 : vertices[0].size();
+	// Start by including the mesh's local origin always, even if the mesh does not cover that point.
+	_rect_bounds = RectND::from_position_size(VectorND::zero(dimension), VectorND::zero(dimension));
+	for (int vertex_index = 0; vertex_index < vertices.size(); vertex_index++) {
+		_rect_bounds->expand_self_to_point(vertices[vertex_index]);
+	}
+	_is_rect_bounds_dirty = false;
+	return _rect_bounds;
+}
+
 Ref<MaterialND> MeshND::get_material() const {
 	return _material;
 }
@@ -158,6 +175,8 @@ void MeshND::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("to_array_wire_mesh"), &MeshND::to_array_wire_mesh);
 	ClassDB::bind_method(D_METHOD("to_wire_mesh"), &MeshND::to_wire_mesh);
+	ClassDB::bind_method(D_METHOD("mark_rect_bounds_dirty"), &MeshND::mark_rect_bounds_dirty);
+	ClassDB::bind_method(D_METHOD("get_rect_bounds"), &MeshND::get_rect_bounds);
 
 	ClassDB::bind_method(D_METHOD("get_material"), &MeshND::get_material);
 	ClassDB::bind_method(D_METHOD("set_material", "material"), &MeshND::set_material);

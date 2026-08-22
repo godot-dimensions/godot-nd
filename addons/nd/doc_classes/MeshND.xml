@@ -60,6 +60,12 @@
 				Gets the edge positions of the mesh. Each VectorN ([PackedFloat64Array]) in the array is a position in meters in ND space. Edges are defined by two vertices, and the positions in this array are the positions of the vertices that make up the edges. This value is calculated from a combination of the edge indices and the vertices arrays, see [method get_edge_indices] and [method get_vertices].
 			</description>
 		</method>
+		<method name="get_rect_bounds">
+			<return type="RectND" />
+			<description>
+				Returns the [RectND] bounds of the mesh in local space, computed by expanding a rect to include every vertex, and always including the mesh's local origin even if the mesh's geometry does not cover that point. The result is cached until [method mark_rect_bounds_dirty] is called, so repeated calls are cheap.
+			</description>
+		</method>
 		<method name="get_vertices">
 			<return type="PackedFloat64Array[]" />
 			<description>
@@ -80,6 +86,12 @@
 			<description>
 				Returns [code]true[/code] if the mesh data is valid. This method checks if the data in a mesh is valid for rendering. If the mesh data is invalid, the mesh will be skipped when rendering. This method is called internally by the rendering server, but may also be called manually.
 				If a mesh has valid data, the result of the validation will be cached until the mesh data changes, so this method may be called multiple times without performance concerns. This also means this method should be called after generating a mesh. This especially useful when generating a mesh on a thread; calling this on the thread will avoid stalling the main thread with mesh validation during rendering.
+			</description>
+		</method>
+		<method name="mark_rect_bounds_dirty">
+			<return type="void" />
+			<description>
+				Marks the cached [method get_rect_bounds] value as needing to be recalculated the next time it is requested. Call this whenever the mesh's vertex data changes.
 			</description>
 		</method>
 		<method name="reset_mesh_data_validation">
