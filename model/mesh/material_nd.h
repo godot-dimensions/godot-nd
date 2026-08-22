@@ -41,6 +41,7 @@ protected:
 public:
 	virtual Color get_albedo_color_of_edge(const int64_t p_edge_index, const Ref<MeshND> &p_for_mesh);
 	bool is_default_material() const;
+	virtual void merge_with(const Ref<MaterialND> &p_material, const int p_first_item_count, const int p_second_item_count);
 
 	Color get_albedo_color() const { return _albedo_color; }
 	void set_albedo_color(const Color &p_albedo_color);

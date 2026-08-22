@@ -3,12 +3,12 @@
 #include "../../../math/vector_nd.h"
 
 bool ArrayWireMeshND::validate_mesh_data() {
-	const int64_t edge_indices_count = _edge_indices.size();
+	const int64_t edge_indices_count = _edge_vertex_indices.size();
 	if (edge_indices_count % 2 != 0) {
 		return false; // Must be a multiple of 2.
 	}
 	const int64_t vertex_count = _vertices.size();
-	for (int32_t edge_index : _edge_indices) {
+	for (int32_t edge_index : _edge_vertex_indices) {
 		if (edge_index < 0 || edge_index >= vertex_count) {
 			return false; // Edges must reference valid vertices.
 		}
@@ -27,8 +27,8 @@ void ArrayWireMeshND::append_edge_indices(int p_index_a, int p_index_b) {
 	if (p_index_a > p_index_b) {
 		SWAP(p_index_a, p_index_b);
 	}
-	_edge_indices.append(p_index_a);
-	_edge_indices.append(p_index_b);
+	_edge_vertex_indices.append(p_index_a);
+	_edge_vertex_indices.append(p_index_b);
 	wire_mesh_clear_cache();
 	reset_mesh_data_validation();
 }
@@ -67,16 +67,16 @@ PackedInt32Array ArrayWireMeshND::append_vertices_bind(const TypedArray<VectorN>
 }
 
 void ArrayWireMeshND::merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<TransformND> &p_transform) {
-	const int start_edge_count = _edge_indices.size();
+	const int start_edge_count = _edge_vertex_indices.size();
 	const int start_vertex_count = _vertices.size();
-	const int other_edge_count = p_other->_edge_indices.size();
+	const int other_edge_count = p_other->_edge_vertex_indices.size();
 	const int other_vertex_count = p_other->_vertices.size();
 	const int end_edge_count = start_edge_count + other_edge_count;
 	const int end_vertex_count = start_vertex_count + other_vertex_count;
-	_edge_indices.resize(end_edge_count);
+	_edge_vertex_indices.resize(end_edge_count);
 	_vertices.resize(end_vertex_count);
 	for (int i = 0; i < other_edge_count; i++) {
-		_edge_indices.set(start_edge_count + i, p_other->_edge_indices[i] + start_vertex_count);
+		_edge_vertex_indices.set(start_edge_count + i, p_other->_edge_vertex_indices[i] + start_vertex_count);
 	}
 	for (int i = 0; i < other_vertex_count; i++) {
 		_vertices.set(start_vertex_count + i, p_transform->xform(p_other->_vertices[i]));
@@ -90,11 +90,11 @@ void ArrayWireMeshND::merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<
 }
 
 PackedInt32Array ArrayWireMeshND::get_edge_indices() {
-	return _edge_indices;
+	return _edge_vertex_indices;
 }
 
 void ArrayWireMeshND::set_edge_indices(const PackedInt32Array &p_edge_indices) {
-	_edge_indices = p_edge_indices;
+	_edge_vertex_indices = p_edge_indices;
 	wire_mesh_clear_cache();
 	reset_mesh_data_validation();
 }
