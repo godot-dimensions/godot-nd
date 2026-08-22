@@ -5,6 +5,7 @@
 	</brief_description>
 	<description>
 		RectND is a class that represents an axis-aligned rectilinear box in N-dimensional space. It is the ND version of [Rect2], [AABB], Rect4, etc.
+		Methods that combine a [RectND] with a point, a direction, or another [RectND] operate in the highest dimension of all of their inputs, with any missing elements treated as zero. This means a lower-dimensional [RectND] behaves like a flat slab that is zero-size in the axes it does not define, so for example a 2D [RectND] only contains points whose extra elements are all zero.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -13,6 +14,25 @@
 			<return type="RectND" />
 			<description>
 				Returns a new [RectND] with a positive size and the position adjusted accordingly.
+			</description>
+		</method>
+		<method name="continuous_collision_depth" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="relative_motion" type="PackedFloat64Array" />
+			<param index="1" name="obstacle" type="RectND" />
+			<description>
+				Sweeps this [RectND] along [param relative_motion] and returns the fraction of that motion which can be traveled before hitting the [param obstacle] [RectND]. A return value of [code]1.0[/code] means the motion is unobstructed, while a smaller value means the motion is stopped partway through.
+				Note: This function can return values outside of the expected range, including values above [code]1.0[/code], below [code]0.0[/code], and even below [code]-1.0[/code]. Negative values indicate depenetration, moving out of an obstacle this [RectND] already overlaps. Handling the meaning of such values is up to the caller. For the expected use case of looping over many obstacles, start with a ratio of [code]1.0[/code] and take the minimum of the ratio and the result on each loop iteration.
+				The calculation is performed in the highest dimension of this [RectND], [param relative_motion], and [param obstacle], with any missing elements treated as zero.
+			</description>
+		</method>
+		<method name="continuous_collision_overlaps" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="relative_motion" type="PackedFloat64Array" />
+			<param index="1" name="obstacle" type="RectND" />
+			<description>
+				Returns [code]true[/code] if sweeping this [RectND] along [param relative_motion] overlaps the [param obstacle] [RectND] at any point during the motion. This is a cheaper check than [method continuous_collision_depth] for when only the yes-or-no answer is needed, such as for broad-phase collision culling.
+				The calculation is performed in the highest dimension of this [RectND], [param relative_motion], and [param obstacle], with any missing elements treated as zero.
 			</description>
 		</method>
 		<method name="duplicate" qualifiers="const">
@@ -106,11 +126,29 @@
 				Returns a new [RectND] grown by the given amount in all directions.
 			</description>
 		</method>
+		<method name="has_any_size" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if any element of [member size] is non-zero, including negative elements. Compare with [method has_surface], which only considers positive elements.
+			</description>
+		</method>
 		<method name="has_point" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="point" type="PackedFloat64Array" />
 			<description>
 				Returns [code]true[/code] if the [RectND] contains the given point.
+			</description>
+		</method>
+		<method name="has_space" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if every element of [member size] is positive, meaning [method get_space] is positive. A rect that is flat in even one dimension has no space, so this returns [code]false[/code] for it.
+			</description>
+		</method>
+		<method name="has_surface" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if any element of [member size] is positive. Compare with [method has_any_size], which also counts negative elements.
 			</description>
 		</method>
 		<method name="intersection" qualifiers="const">
@@ -152,6 +190,22 @@
 			<param index="0" name="other" type="RectND" />
 			<description>
 				Returns a new [RectND] that encloses both this [RectND] and the [param other] [RectND].
+			</description>
+		</method>
+		<method name="raycast_intersects_dict" qualifiers="const">
+			<return type="Dictionary" />
+			<param index="0" name="from" type="PackedFloat64Array" />
+			<param index="1" name="direction" type="PackedFloat64Array" />
+			<param index="2" name="max_distance" type="float" default="inf" />
+			<param index="3" name="inside_is_zero" type="bool" default="false" />
+			<description>
+				Performs a raycast against the rect. The [param from] parameter is the starting point of the ray, and the [param direction] parameter is the direction of the ray, which must be normalized. A hit is only reported if it is closer than [param max_distance], which is exclusive. If [param inside_is_zero] is [code]true[/code] and [param from] is inside the rect, the ray immediately hits at a distance of zero with a zero normal, instead of casting forward to the surface it would exit through. The returned [Dictionary] may contain the following keys:
+				- [code]"hit"[/code]: A boolean indicating whether the ray hit any part of the rect.
+				- [code]"distance"[/code]: The distance from the starting point to the hit point.
+				- [code]"normal"[/code]: The normal at the hit point, perpendicular to the surface.
+				- [code]"point"[/code]: The point of intersection. This is the same as [code]from + direction * distance[/code].
+				If the ray does not hit any part of the rect, the returned dictionary will be [code]{"hit": false}[/code].
+				The calculation is performed in the highest dimension of this [RectND], [param from], and [param direction], with any missing elements treated as zero.
 			</description>
 		</method>
 	</methods>
