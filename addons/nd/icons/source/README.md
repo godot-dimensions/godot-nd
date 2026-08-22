@@ -5,9 +5,9 @@ Conical gradients are needed for the rainbow effect. Modern SVG supports this, b
 1. Make the conical gradient in Inkscape, and export it as `GradientND.png` (already done, doesn't need to be repeated).
 2. Optimize the PNG using oxipng (already done, doesn't need to be repeated).
 3. Have the SVG paths ready, usually copied from Godot and edited in GodSVG.
-4. Edit the SVG with VS Code and insert an SVG pattern with the image data: `<pattern id="a" height="100%" patternContentUnits="objectBoundingBox" width="100%"><image height="1" width="1" xlink:href="data:image/png;base64,"/></pattern>`
+4. Edit the SVG with VS Code and insert an SVG pattern with the image data: `<pattern id="a" patternUnits="userSpaceOnUse" x="0" y="0" width="16" height="16"><image height="1" width="1" xlink:href="data:image/png;base64," x="0" y="0" width="16" height="16"/></pattern>`
 5. Convert the PNG to base64: `openssl base64 -in GradientND.png | tr -d '\n' | pbcopy` (this copies to the clipboard on macOS).
-6. Paste the image data after the `base64,` above.
+6. Paste the image data after the `base64,` above (steps 1-6 can be skipped by copying the pattern from another SVG file).
 7. Reference the pattern in SVG paths: `fill="url(#a)"`
 8. This patterned SVG can be read by GIMP, but Godot doesn't support SVG patterns. So open it in GIMP and export a PNG.
 9. Run oxipng on that PNG (optional).
