@@ -20,7 +20,7 @@
 			The half-extents of the orthoplex in meters, also known as just "extents". This is the "radius" of the orthoplex, the distance between each vertex and the center. This is a wrapper around [member size] for situations where you want to use the extents instead of size.
 		</member>
 		<member name="size" type="PackedFloat64Array" setter="set_size" getter="get_size" default="PackedFloat64Array()">
-			The size of the orthoplex in meters. This is the axis-aligned "diameter" size of the box in ND space, where each component is the distance between opposite vertices. This is the value that is stored internally.
+			The size of the orthoplex in meters. This is the axis-aligned "diameter" size of the orthoplex in ND space, where each component is the distance between opposite vertices. This is the value that is stored internally.
 		</member>
 	</members>
 </class>

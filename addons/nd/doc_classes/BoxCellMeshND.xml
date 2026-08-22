@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="BoxCellMeshND" inherits="CellMeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
-		A ND cell mesh representing a box.
+		An ND cell mesh representing a box.
 	</brief_description>
 	<description>
 		BoxCellMeshND is a class for generating cell meshes representing boxes. The box is centered at the origin, and is axis-aligned by default; if you want a box facing a different direction, you can rotate the [MeshInstanceND] node the box is attached to.
+		The 2D version of a box is a square, with 4 vertices. The 3D version of a box is a cube, with 8 vertices. The 4D version of a box is a tesseract, with 16 vertices. Boxes exist in all dimensions, and are the dual of orthoplexes (cross-polytopes).
 	</description>
 	<tutorials>
 	</tutorials>
@@ -34,7 +35,7 @@
 			If [code]true[/code], when rendering as a wireframe, interpret the cells of the box mesh as part of a larger box polytope instead of just simplexes. Each polytope is defined by a set of consecutive cells that share the same starting vertex.
 		</member>
 		<member name="size" type="PackedFloat64Array" setter="set_size" getter="get_size" default="PackedFloat64Array()">
-			The size of the box mesh in meters. This is the "diameter" size of the box in ND space, where each component is the size of the box in one of the 4 dimensions. This is the value that is stored internally.
+			The size of the box mesh in meters. This is the "diameter" size of the box in ND space, where each component is the size of the box in one of the N dimensions. This is the value that is stored internally.
 		</member>
 	</members>
 </class>

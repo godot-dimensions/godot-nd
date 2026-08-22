@@ -57,7 +57,7 @@
 			Controls whether this node's transform exists within a single dimension or converts between dimensions. See [enum NodeND.DimensionMode] for more information.
 		</member>
 		<member name="euler_rotation_count" type="int" setter="set_euler_rotation_count" getter="get_euler_rotation_count" default="0">
-			The number of Euler rotations stored in this node's [Euler4D] rotation data. If [code]0[/code], the node may still be rotated, but the representation is not represented as Euler angles, only as basis vectors, such as stored in a [BasisND] or [TransformND].
+			The number of Euler rotations stored in this node's [EulerND] rotation data. If [code]0[/code], the node may still be rotated, but the representation is not represented as Euler angles, only as basis vectors, such as stored in a [BasisND] or [TransformND].
 		</member>
 		<member name="euler_rotation_data" type="PackedFloat64Array" setter="set_euler_rotation_data" getter="get_euler_rotation_data">
 			The local rotation data of the node's [EulerND] rotation, stored as a flat [PackedFloat64Array]. Each rotation is stored as three consecutive values: the "from" axis index, the "to" axis index, and the angle in radians. The size of this array is always [code]euler_rotation_count * 3[/code]. This is a low-level property used for serialization, consider using [member rotation_euler] for high-level access with helper functions.

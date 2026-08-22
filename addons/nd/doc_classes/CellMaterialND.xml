@@ -14,7 +14,7 @@
 			The single albedo color of the material. When the [constant MaterialND.COLOR_SOURCE_FLAG_SINGLE_COLOR] albedo source flag is set, this is used as the color of the entire cell mesh. If other albedo source flags are also set, this acts as a modulate color, multiplying with the other colors.
 		</member>
 		<member name="albedo_color_array" type="PackedColorArray" setter="set_albedo_color_array" getter="get_albedo_color_array">
-			The albedo color array of the material. This may be used to color various parts of the mesh, depending on the albedo source flags. When one of the [constant Material4D.COLOR_SOURCE_FLAG_PER_VERT], [constant Material4D.COLOR_SOURCE_FLAG_PER_EDGE], or [constant Material4D.COLOR_SOURCE_FLAG_PER_CELL] albedo source flags are set, this array is used to color those respective parts of the mesh.
+			The albedo color array of the material. This may be used to color various parts of the mesh, depending on the albedo source flags. When one of the [constant MaterialND.COLOR_SOURCE_FLAG_PER_VERT], [constant MaterialND.COLOR_SOURCE_FLAG_PER_EDGE], or [constant MaterialND.COLOR_SOURCE_FLAG_PER_CELL] albedo source flags are set, this array is used to color those respective parts of the mesh.
 		</member>
 		<member name="albedo_source" type="int" setter="set_albedo_source_flags" getter="get_albedo_source_flags" enum="MaterialND.ColorSourceFlagsND" default="1">
 			The albedo source flags of the [CellMaterialND]. For cell materials, valid values are everything in [enum MaterialND.ColorSourceFlagsND] except for per-edge colors.

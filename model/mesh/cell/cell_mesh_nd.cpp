@@ -135,6 +135,10 @@ Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 	return array_mesh;
 }
 
+Ref<CellMeshND> CellMeshND::to_cell_mesh() {
+	return to_array_cell_mesh();
+}
+
 int CellMeshND::get_simplex_cell_count() {
 	const int dimension = get_dimension();
 	ERR_FAIL_COND_V_MSG(dimension < 1, -1, "CellMeshND: Mesh is empty or 0-dimensional, cannot determine simplex cell count.");
@@ -190,6 +194,18 @@ Vector<VectorN> CellMeshND::get_simplex_cell_vertex_normals() {
 	return vertex_normals;
 }
 
+Vector<VectorM> CellMeshND::get_simplex_cell_texture_map() {
+	TypedArray<VectorM> texture_map_bind;
+	GDVIRTUAL_CALL(_get_simplex_cell_texture_map, texture_map_bind);
+	Vector<VectorM> texture_map;
+	texture_map.resize(texture_map_bind.size());
+	for (int i = 0; i < texture_map_bind.size(); i++) {
+		const VectorM cell_vertex_texture = texture_map_bind[i];
+		texture_map.set(i, cell_vertex_texture);
+	}
+	return texture_map;
+}
+
 TypedArray<VectorN> CellMeshND::get_simplex_cell_boundary_normals_bind() {
 	TypedArray<VectorN> boundary_normals_bind;
 	GDVIRTUAL_CALL(_get_simplex_cell_boundary_normals, boundary_normals_bind);
@@ -218,6 +234,21 @@ TypedArray<VectorN> CellMeshND::get_simplex_cell_vertex_normals_bind() {
 		vertex_normals_bind[i] = cell_vertex_normal;
 	}
 	return vertex_normals_bind;
+}
+
+TypedArray<VectorM> CellMeshND::get_simplex_cell_texture_map_bind() {
+	TypedArray<VectorM> texture_map_bind;
+	GDVIRTUAL_CALL(_get_simplex_cell_texture_map, texture_map_bind);
+	if (!texture_map_bind.is_empty()) {
+		return texture_map_bind;
+	}
+	const Vector<VectorM> texture_map = get_simplex_cell_texture_map();
+	texture_map_bind.resize(texture_map.size());
+	for (int i = 0; i < texture_map.size(); i++) {
+		const VectorM &cell_vertex_texture = texture_map[i];
+		texture_map_bind[i] = cell_vertex_texture;
+	}
+	return texture_map_bind;
 }
 
 TypedArray<VectorN> CellMeshND::get_simplex_cell_positions_bind() {
@@ -332,8 +363,10 @@ void CellMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_indices"), &CellMeshND::get_simplex_cell_indices);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_boundary_normals"), &CellMeshND::get_simplex_cell_boundary_normals_bind);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_vertex_normals"), &CellMeshND::get_simplex_cell_vertex_normals_bind);
+	ClassDB::bind_method(D_METHOD("get_simplex_cell_texture_map"), &CellMeshND::get_simplex_cell_texture_map_bind);
 
 	GDVIRTUAL_BIND(_get_simplex_cell_indices);
 	GDVIRTUAL_BIND(_get_simplex_cell_boundary_normals);
 	GDVIRTUAL_BIND(_get_simplex_cell_vertex_normals);
+	GDVIRTUAL_BIND(_get_simplex_cell_texture_map);
 }

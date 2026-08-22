@@ -161,6 +161,24 @@ void ArrayCellMeshND::set_simplex_cell_vertex_normals_bind(const TypedArray<Vect
 	reset_mesh_data_validation();
 }
 
+Vector<VectorM> ArrayCellMeshND::get_simplex_cell_texture_map() {
+	return _simplex_cell_texture_map;
+}
+
+void ArrayCellMeshND::set_simplex_cell_texture_map(const Vector<VectorM> &p_simplex_cell_texture_map) {
+	_simplex_cell_texture_map = p_simplex_cell_texture_map;
+	reset_mesh_data_validation();
+}
+
+void ArrayCellMeshND::set_simplex_cell_texture_map_bind(const TypedArray<VectorM> &p_simplex_cell_texture_map) {
+	_simplex_cell_texture_map.clear();
+	_simplex_cell_texture_map.resize(p_simplex_cell_texture_map.size());
+	for (int i = 0; i < p_simplex_cell_texture_map.size(); i++) {
+		_simplex_cell_texture_map.set(i, p_simplex_cell_texture_map[i]);
+	}
+	reset_mesh_data_validation();
+}
+
 Vector<VectorN> ArrayCellMeshND::get_vertices() {
 	return _vertices;
 }
@@ -200,12 +218,14 @@ void ArrayCellMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_simplex_cell_indices", "simplex_cell_indices"), &ArrayCellMeshND::set_simplex_cell_indices);
 	ClassDB::bind_method(D_METHOD("set_simplex_cell_boundary_normals", "simplex_cell_normals"), &ArrayCellMeshND::set_simplex_cell_boundary_normals_bind);
 	ClassDB::bind_method(D_METHOD("set_simplex_cell_vertex_normals", "simplex_cell_vertex_normals"), &ArrayCellMeshND::set_simplex_cell_vertex_normals_bind);
+	ClassDB::bind_method(D_METHOD("set_simplex_cell_texture_map", "simplex_cell_texture_map"), &ArrayCellMeshND::set_simplex_cell_texture_map_bind);
 	ClassDB::bind_method(D_METHOD("set_vertices", "vertices"), &ArrayCellMeshND::set_vertices_bind);
 	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &ArrayCellMeshND::set_dimension);
 
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "simplex_cell_indices"), "set_simplex_cell_indices", "get_simplex_cell_indices");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "simplex_cell_boundary_normals", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_simplex_cell_boundary_normals", "get_simplex_cell_boundary_normals");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "simplex_cell_vertex_normals", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_simplex_cell_vertex_normals", "get_simplex_cell_vertex_normals");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "simplex_cell_texture_map", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_simplex_cell_texture_map", "get_simplex_cell_texture_map");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "vertices", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_vertices", "get_vertices");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension", PROPERTY_HINT_RANGE, "0,1000,1", PROPERTY_USAGE_EDITOR), "set_dimension", "get_dimension");
 }
