@@ -262,6 +262,206 @@ uint16_t MathND::double_to_float16(const double p_double) {
 	return f16_sign | uint16_t(f16_exponent << 10) | uint16_t(f16_mantissa_bits);
 }
 
+#define QUANTIZE_TO_FLOAT_BITS(bits)                                                                                                                                                                              \
+	Variant MathND::quantize_to_float##bits(const Variant &p_variant) {                                                                                                                                           \
+		switch (p_variant.get_type()) {                                                                                                                                                                           \
+			case Variant::INT: {                                                                                                                                                                                  \
+				return (int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)p_variant));                                                                                                       \
+			} break;                                                                                                                                                                                              \
+			case Variant::FLOAT: {                                                                                                                                                                                \
+				return float##bits##_to_double(double_to_float##bits((double)p_variant));                                                                                                                         \
+			} break;                                                                                                                                                                                              \
+			case Variant::VECTOR2: {                                                                                                                                                                              \
+				Vector2 v = p_variant;                                                                                                                                                                            \
+				return Vector2((real_t) float##bits##_to_double(double_to_float##bits((double)v.x)), (real_t) float##bits##_to_double(double_to_float##bits((double)v.y)));                                       \
+			} break;                                                                                                                                                                                              \
+			case Variant::VECTOR2I: {                                                                                                                                                                             \
+				Vector2i v = p_variant;                                                                                                                                                                           \
+				return Vector2i((int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.x)), (int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.y)));                    \
+			} break;                                                                                                                                                                                              \
+			case Variant::RECT2: {                                                                                                                                                                                \
+				Rect2 r = p_variant;                                                                                                                                                                              \
+				return Rect2(                                                                                                                                                                                     \
+						Vector2((real_t) float##bits##_to_double(double_to_float##bits((double)r.position.x)), (real_t) float##bits##_to_double(double_to_float##bits((double)r.position.y))),                    \
+						Vector2((real_t) float##bits##_to_double(double_to_float##bits((double)r.size.x)), (real_t) float##bits##_to_double(double_to_float##bits((double)r.size.y))));                           \
+			} break;                                                                                                                                                                                              \
+			case Variant::RECT2I: {                                                                                                                                                                               \
+				Rect2i r = p_variant;                                                                                                                                                                             \
+				return Rect2i(                                                                                                                                                                                    \
+						Vector2i((int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)r.position.x)), (int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)r.position.y))), \
+						Vector2i((int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)r.size.x)), (int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)r.size.y))));        \
+			} break;                                                                                                                                                                                              \
+			case Variant::VECTOR3: {                                                                                                                                                                              \
+				Vector3 v = p_variant;                                                                                                                                                                            \
+				return Vector3(                                                                                                                                                                                   \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)v.x)),                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)v.y)),                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)v.z)));                                                                                                                    \
+			} break;                                                                                                                                                                                              \
+			case Variant::VECTOR3I: {                                                                                                                                                                             \
+				Vector3i v = p_variant;                                                                                                                                                                           \
+				return Vector3i(                                                                                                                                                                                  \
+						(int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.x)),                                                                                                            \
+						(int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.y)),                                                                                                            \
+						(int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.z)));                                                                                                           \
+			} break;                                                                                                                                                                                              \
+			case Variant::VECTOR4: {                                                                                                                                                                              \
+				Vector4 v = p_variant;                                                                                                                                                                            \
+				return Vector4(                                                                                                                                                                                   \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)v.x)),                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)v.y)),                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)v.z)),                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)v.w)));                                                                                                                    \
+			} break;                                                                                                                                                                                              \
+			case Variant::VECTOR4I: {                                                                                                                                                                             \
+				Vector4i v = p_variant;                                                                                                                                                                           \
+				return Vector4i(                                                                                                                                                                                  \
+						(int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.x)),                                                                                                            \
+						(int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.y)),                                                                                                            \
+						(int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.z)),                                                                                                            \
+						(int64_t)float##bits##_to_double(double_to_float##bits((double)(int64_t)v.w)));                                                                                                           \
+			} break;                                                                                                                                                                                              \
+			case Variant::PLANE: {                                                                                                                                                                                \
+				Plane p = p_variant;                                                                                                                                                                              \
+				return Plane(                                                                                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)p.normal.x)),                                                                                                              \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)p.normal.y)),                                                                                                              \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)p.normal.z)),                                                                                                              \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)p.d)));                                                                                                                    \
+			} break;                                                                                                                                                                                              \
+			case Variant::QUATERNION: {                                                                                                                                                                           \
+				Quaternion q = p_variant;                                                                                                                                                                         \
+				return Quaternion(                                                                                                                                                                                \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)q.x)),                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)q.y)),                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)q.z)),                                                                                                                     \
+						(real_t) float##bits##_to_double(double_to_float##bits((double)q.w)));                                                                                                                    \
+			} break;                                                                                                                                                                                              \
+			case Variant::TRANSFORM2D: {                                                                                                                                                                          \
+				Transform2D t = p_variant;                                                                                                                                                                        \
+				return Transform2D(quantize_to_float##bits(t[0]), quantize_to_float##bits(t[1]), quantize_to_float##bits(t[2]));                                                                                  \
+			} break;                                                                                                                                                                                              \
+			case Variant::AABB: {                                                                                                                                                                                 \
+				AABB aabb = p_variant;                                                                                                                                                                            \
+				return AABB(quantize_to_float##bits(aabb.position), quantize_to_float##bits(aabb.size));                                                                                                          \
+			} break;                                                                                                                                                                                              \
+			case Variant::BASIS: {                                                                                                                                                                                \
+				Basis b = p_variant;                                                                                                                                                                              \
+				return Basis((Vector3)quantize_to_float##bits(b.get_column(0)), (Vector3)quantize_to_float##bits(b.get_column(1)), (Vector3)quantize_to_float##bits(b.get_column(2)));                            \
+			} break;                                                                                                                                                                                              \
+			case Variant::TRANSFORM3D: {                                                                                                                                                                          \
+				Transform3D t = p_variant;                                                                                                                                                                        \
+				return Transform3D(quantize_to_float##bits(t.basis), quantize_to_float##bits(t.origin));                                                                                                          \
+			} break;                                                                                                                                                                                              \
+			case Variant::PROJECTION: {                                                                                                                                                                           \
+				Projection p = p_variant;                                                                                                                                                                         \
+				return Projection(quantize_to_float##bits(p.columns[0]), quantize_to_float##bits(p.columns[1]), quantize_to_float##bits(p.columns[2]), quantize_to_float##bits(p.columns[3]));                    \
+			} break;                                                                                                                                                                                              \
+			case Variant::COLOR: {                                                                                                                                                                                \
+				Color c = p_variant;                                                                                                                                                                              \
+				return Color(                                                                                                                                                                                     \
+						(float)float##bits##_to_double(double_to_float##bits((double)c.r)),                                                                                                                       \
+						(float)float##bits##_to_double(double_to_float##bits((double)c.g)),                                                                                                                       \
+						(float)float##bits##_to_double(double_to_float##bits((double)c.b)),                                                                                                                       \
+						(float)float##bits##_to_double(double_to_float##bits((double)c.a)));                                                                                                                      \
+			} break;                                                                                                                                                                                              \
+			case Variant::DICTIONARY: {                                                                                                                                                                           \
+				Dictionary source_dict = p_variant;                                                                                                                                                               \
+				Dictionary quantized_dict;                                                                                                                                                                        \
+				Array keys = source_dict.keys();                                                                                                                                                                  \
+				for (int64_t i = 0; i < keys.size(); i++) {                                                                                                                                                       \
+					const Variant key = quantize_to_float##bits(keys[i]);                                                                                                                                         \
+					const Variant value = quantize_to_float##bits(source_dict[keys[i]]);                                                                                                                          \
+					quantized_dict[key] = value;                                                                                                                                                                  \
+				}                                                                                                                                                                                                 \
+				return quantized_dict;                                                                                                                                                                            \
+			} break;                                                                                                                                                                                              \
+			case Variant::ARRAY:                                                                                                                                                                                  \
+			case Variant::PACKED_BYTE_ARRAY:                                                                                                                                                                      \
+			case Variant::PACKED_INT32_ARRAY:                                                                                                                                                                     \
+			case Variant::PACKED_INT64_ARRAY:                                                                                                                                                                     \
+			case Variant::PACKED_FLOAT32_ARRAY:                                                                                                                                                                   \
+			case Variant::PACKED_FLOAT64_ARRAY:                                                                                                                                                                   \
+			case Variant::PACKED_STRING_ARRAY:                                                                                                                                                                    \
+			case Variant::PACKED_VECTOR2_ARRAY:                                                                                                                                                                   \
+			case Variant::PACKED_VECTOR3_ARRAY:                                                                                                                                                                   \
+			case Variant::PACKED_COLOR_ARRAY:                                                                                                                                                                     \
+			case Variant::PACKED_VECTOR4_ARRAY: {                                                                                                                                                                 \
+				Array source_array = p_variant;                                                                                                                                                                   \
+				Array quantized_array;                                                                                                                                                                            \
+				quantized_array.resize(source_array.size());                                                                                                                                                      \
+				for (int64_t i = 0; i < source_array.size(); i++) {                                                                                                                                               \
+					quantized_array[i] = quantize_to_float##bits(source_array[i]);                                                                                                                                \
+				}                                                                                                                                                                                                 \
+				return quantized_array;                                                                                                                                                                           \
+			} break;                                                                                                                                                                                              \
+			default: {                                                                                                                                                                                            \
+				return p_variant;                                                                                                                                                                                 \
+			} break;                                                                                                                                                                                              \
+		}                                                                                                                                                                                                         \
+	}
+
+QUANTIZE_TO_FLOAT_BITS(8)
+QUANTIZE_TO_FLOAT_BITS(16)
+
+int32_t MathND::find_common_int32(const PackedInt32Array &p_a, const PackedInt32Array &p_b, int64_t &r_a_index, int64_t &r_b_index) {
+	for (int64_t a_index = 0; a_index < p_a.size(); a_index++) {
+		const int32_t a_item = p_a[a_index];
+		for (int64_t b_index = 0; b_index < p_b.size(); b_index++) {
+			const int32_t b_item = p_b[b_index];
+			if (a_item == b_item) {
+				r_a_index = a_index;
+				r_b_index = b_index;
+				return a_item;
+			}
+		}
+	}
+	return INT32_MIN;
+}
+
+bool MathND::has_common_int32(const PackedInt32Array &p_a, const PackedInt32Array &p_b) {
+	for (int64_t a_index = 0; a_index < p_a.size(); a_index++) {
+		const int32_t a_item = p_a[a_index];
+		for (int64_t b_index = 0; b_index < p_b.size(); b_index++) {
+			if (a_item == p_b[b_index]) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool MathND::ensure_first_two_indices_share_common_int32(PackedInt32Array &r_indices, const Vector<PackedInt32Array> &p_indexed_data) {
+	if (r_indices.size() < 2) {
+		return true;
+	}
+	const int32_t first_index = r_indices[0];
+	if (first_index < 0 || first_index >= p_indexed_data.size()) {
+		return false;
+	}
+	const PackedInt32Array &first_data = p_indexed_data[first_index];
+	const int32_t second_index = r_indices[1];
+	if (second_index >= 0 && second_index < p_indexed_data.size()) {
+		if (has_common_int32(first_data, p_indexed_data[second_index])) {
+			return true;
+		}
+	}
+	for (int64_t other_index_in_list = 2; other_index_in_list < r_indices.size(); other_index_in_list++) {
+		const int32_t other_index = r_indices[other_index_in_list];
+		if (other_index < 0 || other_index >= p_indexed_data.size()) {
+			continue;
+		}
+		if (!has_common_int32(first_data, p_indexed_data[other_index])) {
+			continue;
+		}
+		const int32_t old_second_index = r_indices[1];
+		r_indices.set(1, other_index);
+		r_indices.set(other_index_in_list, old_second_index);
+		return true;
+	}
+	return false;
+}
+
 MathND *MathND::singleton = nullptr;
 
 void MathND::_bind_methods() {
@@ -271,4 +471,8 @@ void MathND::_bind_methods() {
 	ClassDB::bind_static_method("MathND", D_METHOD("double_to_float4", "double"), &MathND::double_to_float4);
 	ClassDB::bind_static_method("MathND", D_METHOD("double_to_float8", "double"), &MathND::double_to_float8);
 	ClassDB::bind_static_method("MathND", D_METHOD("double_to_float16", "double"), &MathND::double_to_float16);
+
+	ClassDB::bind_static_method("MathND", D_METHOD("quantize_to_float8", "value"), &MathND::quantize_to_float8);
+	ClassDB::bind_static_method("MathND", D_METHOD("quantize_to_float16", "value"), &MathND::quantize_to_float16);
+	ClassDB::bind_static_method("MathND", D_METHOD("has_common_int32", "a", "b"), &MathND::has_common_int32);
 }
