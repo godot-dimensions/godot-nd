@@ -364,6 +364,13 @@
 				Sets the amount of basis rows. This sets the length of all column vectors to the specified amount. If the amount is less than the current amount, the extra rows are removed. If the amount is more than the current amount, the new values are set to identity values ([code]1.0[/code] for the diagonal, [code]0.0[/code] for the rest).
 			</description>
 		</method>
+		<method name="set_uniform_scale_abs">
+			<return type="void" />
+			<param index="0" name="scale" type="float" />
+			<description>
+				Sets the scale of every basis column to the absolute value of [param scale], by normalizing each column and then scaling it by [code]abs(scale)[/code]. This does not use or apply any sign convention based on the determinant, so the sign of [param scale] is ignored.
+			</description>
+		</method>
 		<method name="to_2d" qualifiers="const">
 			<return type="Transform2D" />
 			<description>

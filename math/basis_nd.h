@@ -79,6 +79,7 @@ public:
 	void set_scale_abs(const VectorN &p_scale);
 	double get_uniform_scale() const;
 	double get_uniform_scale_abs() const;
+	void set_uniform_scale_abs(const double p_scale);
 	void scale_global(const VectorN &p_scale);
 	Ref<BasisND> scaled_global(const VectorN &p_scale) const;
 	void scale_local(const VectorN &p_scale);

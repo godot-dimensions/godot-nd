@@ -23,6 +23,7 @@
 #define GET_NODE_TYPE(m_parent, m_type, m_path) m_parent->get_node<m_type>(NodePath(m_path))
 #define InputClassEnums Input
 #define MODULE_OVERRIDE
+#define VariantUtilityFunctions UtilityFunctions
 // Note: This MUST NOT be set for module builds, only GDExtension builds, due to namespace pollution issues.
 #define USE_FUNCTIONS_FOR_VECTORS 1
 // Including the namespace helps make GDExtension code more similar to module code.

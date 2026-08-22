@@ -44,6 +44,7 @@ public:
 	// Plane comparison functions.
 	bool is_equal_approx(const Ref<PlaneND> &p_other) const;
 	bool is_equal_approx_any_side(const Ref<PlaneND> &p_other) const;
+	bool is_finite() const;
 
 	// Operators.
 	Ref<PlaneND> flipped() const;

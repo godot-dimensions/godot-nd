@@ -4,8 +4,10 @@
 
 #if GDEXTENSION
 #include <godot_cpp/variant/typed_array.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 #elif GODOT_MODULE
 #include "core/variant/typed_array.h"
+#include "core/variant/variant_utility.h"
 #endif
 
 // These are a superset of the directions found in Godot's Vector3 type.
@@ -615,6 +617,16 @@ bool VectorND::is_finite(const VectorN &p_vector) {
 	return true;
 }
 
+bool VectorND::is_uniform(const VectorN &p_vector) {
+	const int64_t dimension = p_vector.size();
+	for (int64_t i = 1; i < dimension; i++) {
+		if (!Math::is_equal_approx(p_vector[0], p_vector[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 bool VectorND::is_zero_approx(const VectorN &p_vector) {
 	const int64_t dimension = p_vector.size();
 	for (int64_t i = 0; i < dimension; i++) {
@@ -743,6 +755,15 @@ int64_t VectorND::min_axis_index(const VectorN &p_vector) {
 		}
 	}
 	return min_index;
+}
+
+VectorN VectorND::move_toward(const VectorN &p_from, const VectorN &p_to, const double p_delta) {
+	const VectorN offset = VectorND::subtract(p_to, p_from);
+	const double len = VectorND::length(offset);
+	if (len <= p_delta || len < CMP_EPSILON) {
+		return VectorND::duplicate(p_to);
+	}
+	return VectorND::add(p_from, VectorND::multiply_scalar(offset, p_delta / len));
 }
 
 double VectorND::multiply_components_together(const VectorN &p_vector) {
@@ -954,6 +975,31 @@ VectorN VectorND::project(const VectorN &p_vector, const VectorN &p_on_normal) {
 	return projected;
 }
 
+VectorN VectorND::random_in_radius(const int64_t p_dimension, const double p_radius) {
+	VectorN random_point;
+	random_point.resize(p_dimension);
+	while (true) {
+		for (int64_t i = 0; i < p_dimension; i++) {
+			random_point.set(i, VariantUtilityFunctions::randf_range(-1.0, 1.0));
+		}
+		if (VectorND::length_squared(random_point) <= 1.0) {
+			return VectorND::multiply_scalar(random_point, p_radius);
+		}
+	}
+}
+
+VectorN VectorND::random_in_range(const VectorN &p_from, const VectorN &p_to) {
+	const int64_t dimension = MAX(p_from.size(), p_to.size());
+	VectorN random_point;
+	random_point.resize(dimension);
+	for (int64_t i = 0; i < dimension; i++) {
+		const double from = likely(i < p_from.size()) ? p_from[i] : 0.0;
+		const double to = likely(i < p_to.size()) ? p_to[i] : 0.0;
+		random_point.set(i, VariantUtilityFunctions::randf_range(from, to));
+	}
+	return random_point;
+}
+
 VectorN VectorND::reflect(const VectorN &p_vector, const VectorN &p_normal) {
 	const int64_t dimension = MAX(p_vector.size(), p_normal.size());
 	const double dot_product = VectorND::dot(p_vector, p_normal);
@@ -965,6 +1011,22 @@ VectorN VectorND::reflect(const VectorN &p_vector, const VectorN &p_normal) {
 		reflected.set(i, 2.0f * dot_product * b - a);
 	}
 	return reflected;
+}
+
+VectorN VectorND::rotate_in_plane(const VectorN &p_vector, const VectorN &p_plane_from, const VectorN &p_plane_to, const double p_angle) {
+	const VectorN plane_cos = VectorND::normalized(p_plane_from);
+	const VectorN plane_sin = VectorND::normalized(VectorND::subtract(p_plane_to, VectorND::multiply_scalar(plane_cos, VectorND::dot(p_plane_from, p_plane_to))));
+	// Determine the destination plane vectors.
+	const double angle_cos = Math::cos(p_angle);
+	const double angle_sin = Math::sin(p_angle);
+	const VectorN dest_cos = VectorND::add(VectorND::multiply_scalar(plane_cos, angle_cos), VectorND::multiply_scalar(plane_sin, angle_sin));
+	const VectorN dest_sin = VectorND::add(VectorND::multiply_scalar(plane_cos, -angle_sin), VectorND::multiply_scalar(plane_sin, angle_cos));
+	// Reproject the vector onto the plane.
+	const double dot_cos = VectorND::dot(p_vector, plane_cos);
+	const double dot_sin = VectorND::dot(p_vector, plane_sin);
+	const VectorN removed = VectorND::subtract(p_vector, VectorND::add(VectorND::multiply_scalar(plane_cos, dot_cos), VectorND::multiply_scalar(plane_sin, dot_sin)));
+	const VectorN added = VectorND::add(VectorND::multiply_scalar(dest_cos, dot_cos), VectorND::multiply_scalar(dest_sin, dot_sin));
+	return VectorND::add(removed, added);
 }
 
 VectorN VectorND::round(const VectorN &p_vector) {
@@ -1220,6 +1282,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("is_equal_approx", "a", "b"), &VectorND::is_equal_approx);
 	ClassDB::bind_static_method("VectorND", D_METHOD("is_equal_exact", "a", "b"), &VectorND::is_equal_exact);
 	ClassDB::bind_static_method("VectorND", D_METHOD("is_finite", "vector"), &VectorND::is_finite);
+	ClassDB::bind_static_method("VectorND", D_METHOD("is_uniform", "vector"), &VectorND::is_uniform);
 	ClassDB::bind_static_method("VectorND", D_METHOD("is_zero_approx", "vector"), &VectorND::is_zero_approx);
 	ClassDB::bind_static_method("VectorND", D_METHOD("length", "vector"), &VectorND::length);
 	ClassDB::bind_static_method("VectorND", D_METHOD("length_squared", "vector"), &VectorND::length_squared);
@@ -1229,6 +1292,7 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("max_absolute_axis_index", "vector"), &VectorND::max_absolute_axis_index);
 	ClassDB::bind_static_method("VectorND", D_METHOD("max_axis_index", "vector"), &VectorND::max_axis_index);
 	ClassDB::bind_static_method("VectorND", D_METHOD("min_axis_index", "vector"), &VectorND::min_axis_index);
+	ClassDB::bind_static_method("VectorND", D_METHOD("move_toward", "from", "to", "delta"), &VectorND::move_toward);
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_components_together", "vector"), &VectorND::multiply_components_together);
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_vector", "a", "b", "expand"), &VectorND::multiply_vector, DEFVAL(false));
 	ClassDB::bind_static_method("VectorND", D_METHOD("multiply_scalar", "vector", "scalar"), &VectorND::multiply_scalar);
@@ -1239,7 +1303,10 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("posmod", "vector", "mod"), &VectorND::posmod);
 	ClassDB::bind_static_method("VectorND", D_METHOD("posmodv", "vector", "modv"), &VectorND::posmodv);
 	ClassDB::bind_static_method("VectorND", D_METHOD("project", "vector", "on_normal"), &VectorND::project);
+	ClassDB::bind_static_method("VectorND", D_METHOD("random_in_radius", "dimension", "radius"), &VectorND::random_in_radius, DEFVAL(1.0));
+	ClassDB::bind_static_method("VectorND", D_METHOD("random_in_range", "from", "to"), &VectorND::random_in_range);
 	ClassDB::bind_static_method("VectorND", D_METHOD("reflect", "vector", "normal"), &VectorND::reflect);
+	ClassDB::bind_static_method("VectorND", D_METHOD("rotate_in_plane", "vector", "plane_from", "plane_to", "angle"), &VectorND::rotate_in_plane);
 	ClassDB::bind_static_method("VectorND", D_METHOD("round", "vector"), &VectorND::round);
 	ClassDB::bind_static_method("VectorND", D_METHOD("sign", "vector"), &VectorND::sign);
 	ClassDB::bind_static_method("VectorND", D_METHOD("slide", "vector", "normal"), &VectorND::slide);

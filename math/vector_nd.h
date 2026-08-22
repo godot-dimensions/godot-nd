@@ -155,6 +155,7 @@ public:
 	static bool is_equal_exact(const VectorN &p_a, const VectorN &p_b);
 	static bool is_equal_exact_array(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b);
 	static bool is_finite(const VectorN &p_vector);
+	static bool is_uniform(const VectorN &p_vector);
 	static bool is_zero_approx(const VectorN &p_vector);
 	static double length(const VectorN &p_vector);
 	static double length_squared(const VectorN &p_vector);
@@ -164,6 +165,7 @@ public:
 	static int64_t max_absolute_axis_index(const VectorN &p_vector);
 	static int64_t max_axis_index(const VectorN &p_vector);
 	static int64_t min_axis_index(const VectorN &p_vector);
+	static VectorN move_toward(const VectorN &p_from, const VectorN &p_to, const double p_delta);
 	static double multiply_components_together(const VectorN &p_vector);
 	static VectorN multiply_vector(const VectorN &p_a, const VectorN &p_b, const bool p_expand = false);
 	static VectorN multiply_scalar(const VectorN &p_vector, const double p_scalar);
@@ -176,7 +178,10 @@ public:
 	static VectorN posmod(const VectorN &p_vector, const double p_mod);
 	static VectorN posmodv(const VectorN &p_vector, const VectorN &p_modv);
 	static VectorN project(const VectorN &p_vector, const VectorN &p_on_normal);
+	static VectorN random_in_radius(const int64_t p_dimension, const double p_radius = 1.0);
+	static VectorN random_in_range(const VectorN &p_from, const VectorN &p_to);
 	static VectorN reflect(const VectorN &p_vector, const VectorN &p_normal);
+	static VectorN rotate_in_plane(const VectorN &p_vector, const VectorN &p_plane_from, const VectorN &p_plane_to, const double p_angle);
 	static VectorN round(const VectorN &p_vector);
 	static VectorN sign(const VectorN &p_vector);
 	static VectorN slide(const VectorN &p_vector, const VectorN &p_normal);

@@ -260,6 +260,13 @@
 				Returns [code]true[/code] if all components of the input vector are finite numbers. Returns [code]false[/code] if any component is [constant @GDScript.NAN] or +/- [constant @GDScript.INF].
 			</description>
 		</method>
+		<method name="is_uniform" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<description>
+				Returns [code]true[/code] if all components of [param vector] are equal to each other, [code]false[/code] otherwise.
+			</description>
+		</method>
 		<method name="is_zero_approx" qualifiers="static">
 			<return type="bool" />
 			<param index="0" name="vector" type="PackedFloat64Array" />
@@ -326,6 +333,15 @@
 			<param index="0" name="vector" type="PackedFloat64Array" />
 			<description>
 				Returns the index of the component with the smallest value in the input vector (most negative).
+			</description>
+		</method>
+		<method name="move_toward" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="from" type="PackedFloat64Array" />
+			<param index="1" name="to" type="PackedFloat64Array" />
+			<param index="2" name="delta" type="float" />
+			<description>
+				Returns [param from] moved toward [param to] by the fixed [param delta] amount. Will not go past the final value. Any missing elements of [param from] or [param to] are treated as zero.
 			</description>
 		</method>
 		<method name="multiply_components_together" qualifiers="static">
@@ -407,12 +423,38 @@
 				Returns a new VectorN ([PackedFloat64Array]) that is [param vector] projected onto the vector [param on_normal].
 			</description>
 		</method>
+		<method name="random_in_radius" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="dimension" type="int" />
+			<param index="1" name="radius" type="float" default="1.0" />
+			<description>
+				Returns a random vector of the given [param dimension], uniformly distributed inside an N-dimensional hypersphere with the given [param radius], inclusive. If the radius is not specified, it defaults to [code]1.0[/code].
+			</description>
+		</method>
+		<method name="random_in_range" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="from" type="PackedFloat64Array" />
+			<param index="1" name="to" type="PackedFloat64Array" />
+			<description>
+				Returns a random vector between the two given vectors, inclusive, uniformly distributed inside the box defined by [param from] and [param to]. The returned vector's dimension is the highest dimension of [param from] and [param to], with any missing elements treated as zero.
+			</description>
+		</method>
 		<method name="reflect" qualifiers="static">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="vector" type="PackedFloat64Array" />
 			<param index="1" name="normal" type="PackedFloat64Array" />
 			<description>
 				Returns a new VectorN ([PackedFloat64Array]) that is [param vector] reflected from a hyperplane defined by the [param normal] vector.
+			</description>
+		</method>
+		<method name="rotate_in_plane" qualifiers="static">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="vector" type="PackedFloat64Array" />
+			<param index="1" name="plane_from" type="PackedFloat64Array" />
+			<param index="2" name="plane_to" type="PackedFloat64Array" />
+			<param index="3" name="angle" type="float" />
+			<description>
+				Rotates [param vector] in the plane defined by the [param plane_from] and [param plane_to] vectors by the given [param angle] in radians. The rotation happens from [param plane_from] to [param plane_to], such that a rotation of [code]TAU / 4[/code] will rotate [param plane_from] to [param plane_to]. Unlike [method TransformND.from_rotation], which only rotates in a coordinate-axis plane, this can rotate in any plane, since [param plane_from] and [param plane_to] need not be normalized or orthogonal to each other.
 			</description>
 		</method>
 		<method name="round" qualifiers="static">

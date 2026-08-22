@@ -602,6 +602,13 @@ double BasisND::get_uniform_scale_abs() const {
 	return Math::pow(all_scales, 1.0 / column_count);
 }
 
+void BasisND::set_uniform_scale_abs(const double p_scale) {
+	const double abs_scale = Math::abs(p_scale);
+	for (int i = 0; i < _columns.size(); i++) {
+		_columns.set(i, VectorND::multiply_scalar(VectorND::normalized(_columns[i]), abs_scale));
+	}
+}
+
 void BasisND::scale_global(const VectorN &p_scale) {
 	for (int i = 0; i < _columns.size(); i++) {
 		_columns.set(i, VectorND::multiply_vector(_columns[i], p_scale));
@@ -1095,6 +1102,7 @@ void BasisND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_scale_abs", "scale"), &BasisND::set_scale_abs);
 	ClassDB::bind_method(D_METHOD("get_uniform_scale"), &BasisND::get_uniform_scale);
 	ClassDB::bind_method(D_METHOD("get_uniform_scale_abs"), &BasisND::get_uniform_scale_abs);
+	ClassDB::bind_method(D_METHOD("set_uniform_scale_abs", "scale"), &BasisND::set_uniform_scale_abs);
 	ClassDB::bind_method(D_METHOD("scaled_global", "scale"), &BasisND::scaled_global);
 	ClassDB::bind_method(D_METHOD("scaled_local", "scale"), &BasisND::scaled_local);
 	ClassDB::bind_method(D_METHOD("scaled_uniform", "scale"), &BasisND::scaled_uniform);

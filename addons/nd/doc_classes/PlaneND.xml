@@ -91,6 +91,12 @@
 				[b]Note:[/b] This function is only concerned with mathematical equality, regardless of dimensions. For example, a 2D plane will be considered equal to a 3D plane with a Z of zero. If you need to ensure dimensions are equal as well, check their dimensions before calling this function.
 			</description>
 		</method>
+		<method name="is_finite" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the [PlaneND] is finite, by running [method VectorND.is_finite] on the normal and checking that the distance is also finite.
+			</description>
+		</method>
 		<method name="is_point_over" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="point" type="PackedFloat64Array" />

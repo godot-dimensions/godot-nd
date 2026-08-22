@@ -89,6 +89,10 @@ bool PlaneND::is_equal_approx_any_side(const Ref<PlaneND> &p_other) const {
 	return (VectorND::is_equal_approx(_normal, p_other->get_normal()) && Math::is_equal_approx(_distance, p_other->get_distance())) || (VectorND::is_equal_approx(_normal, VectorND::negate(p_other->get_normal())) && Math::is_equal_approx(_distance, -p_other->get_distance()));
 }
 
+bool PlaneND::is_finite() const {
+	return VectorND::is_finite(_normal) && Math::is_finite(_distance);
+}
+
 // Operators.
 
 Ref<PlaneND> PlaneND::flipped() const {
@@ -186,6 +190,7 @@ void PlaneND::_bind_methods() {
 	// Plane comparison functions.
 	ClassDB::bind_method(D_METHOD("is_equal_approx", "other"), &PlaneND::is_equal_approx);
 	ClassDB::bind_method(D_METHOD("is_equal_approx_any_side", "other"), &PlaneND::is_equal_approx_any_side);
+	ClassDB::bind_method(D_METHOD("is_finite"), &PlaneND::is_finite);
 	// Plane negation.
 	ClassDB::bind_method(D_METHOD("flipped"), &PlaneND::flipped);
 	// Constructors.

@@ -28,6 +28,65 @@ TEST_CASE("[VectorND] Limit length taxicab") {
 	CHECK_MESSAGE(limited_empty.size() == 0, "VectorND limit_length_taxicab of an empty vector should be an empty vector.");
 }
 
+TEST_CASE("[VectorND] Is uniform") {
+	CHECK_MESSAGE(VectorND::is_uniform(VectorN{ 3, 3, 3, 3 }), "VectorND is_uniform should be true when every component is equal.");
+	CHECK_MESSAGE(!VectorND::is_uniform(VectorN{ 3, 3, 3, 4 }), "VectorND is_uniform should be false when any component differs.");
+	CHECK_MESSAGE(VectorND::is_uniform(VectorN{ 5 }), "VectorND is_uniform should be true for a single-component vector.");
+	CHECK_MESSAGE(VectorND::is_uniform(VectorN()), "VectorND is_uniform should be true for an empty vector.");
+}
+
+TEST_CASE("[VectorND] Move toward") {
+	const VectorN reached = VectorND::move_toward(VectorN{ 0, 0 }, VectorN{ 1, 0 }, 5.0);
+	CHECK_MESSAGE(VectorND::is_equal_exact(reached, VectorN{ 1, 0 }), "VectorND move_toward should not overshoot the target.");
+	const VectorN partial = VectorND::move_toward(VectorN{ 0, 0 }, VectorN{ 10, 0 }, 4.0);
+	CHECK_MESSAGE(VectorND::is_equal_approx(partial, VectorN{ 4, 0 }), "VectorND move_toward should move exactly the given delta towards the target.");
+	const VectorN already_there = VectorND::move_toward(VectorN{ 1, 1 }, VectorN{ 1, 1 }, 1.0);
+	CHECK_MESSAGE(VectorND::is_equal_exact(already_there, VectorN{ 1, 1 }), "VectorND move_toward should return the target when already there.");
+	// Mismatched dimensions should be treated as zero in the missing axes.
+	const VectorN mixed_dimension = VectorND::move_toward(VectorN{ 0, 0, 0 }, VectorN{ 3, 4 }, 2.5);
+	CHECK_MESSAGE(VectorND::is_equal_approx(mixed_dimension, VectorN{ 1.5, 2.0, 0 }), "VectorND move_toward should treat a missing target element as zero.");
+}
+
+TEST_CASE("[VectorND] Random in radius") {
+	for (int trial = 0; trial < 100; trial++) {
+		const VectorN point = VectorND::random_in_radius(5, 3.0);
+		CHECK_MESSAGE(point.size() == 5, "VectorND random_in_radius should return a vector of the requested dimension.");
+		CHECK_MESSAGE(VectorND::length(point) <= 3.0 + CMP_EPSILON, "VectorND random_in_radius should never exceed the given radius.");
+	}
+	// The default radius should be 1.0.
+	for (int trial = 0; trial < 100; trial++) {
+		const VectorN point = VectorND::random_in_radius(3);
+		CHECK_MESSAGE(VectorND::length(point) <= 1.0 + CMP_EPSILON, "VectorND random_in_radius should default to a radius of 1.0.");
+	}
+}
+
+TEST_CASE("[VectorND] Random in range") {
+	const VectorN from = VectorN{ -1, 0, 5 };
+	const VectorN to = VectorN{ 1, 10, 5 };
+	for (int trial = 0; trial < 100; trial++) {
+		const VectorN point = VectorND::random_in_range(from, to);
+		CHECK_MESSAGE(point.size() == 3, "VectorND random_in_range should return a vector matching the dimension of the range.");
+		CHECK_MESSAGE((point[0] >= -1.0 && point[0] <= 1.0), "VectorND random_in_range should keep each component within its own range.");
+		CHECK_MESSAGE((point[1] >= 0.0 && point[1] <= 10.0), "VectorND random_in_range should keep each component within its own range.");
+		CHECK_MESSAGE(point[2] == doctest::Approx(5.0), "VectorND random_in_range should return a fixed value when from equals to.");
+	}
+}
+
+TEST_CASE("[VectorND] Rotate in plane") {
+	// A 90-degree rotation in the XY-plane should behave like a standard 2D rotation.
+	const VectorN rotated_x = VectorND::rotate_in_plane(VectorN{ 1, 0, 0 }, VectorN{ 1, 0, 0 }, VectorN{ 0, 1, 0 }, Math_PI * 0.5);
+	CHECK_MESSAGE(VectorND::is_equal_approx(rotated_x, VectorN{ 0, 1, 0 }), "VectorND rotate_in_plane by 90 degrees should rotate the from-axis onto the to-axis.");
+	// A vector entirely outside of the rotation plane should be unaffected.
+	const VectorN unaffected = VectorND::rotate_in_plane(VectorN{ 0, 0, 1 }, VectorN{ 1, 0, 0 }, VectorN{ 0, 1, 0 }, Math_PI * 0.5);
+	CHECK_MESSAGE(VectorND::is_equal_approx(unaffected, VectorN{ 0, 0, 1 }), "VectorND rotate_in_plane should not affect components perpendicular to the rotation plane.");
+	// A vector with both in-plane and out-of-plane components should only have its in-plane part rotated.
+	const VectorN mixed = VectorND::rotate_in_plane(VectorN{ 1, 0, 1 }, VectorN{ 1, 0, 0 }, VectorN{ 0, 1, 0 }, Math_PI * 0.5);
+	CHECK_MESSAGE(VectorND::is_equal_approx(mixed, VectorN{ 0, 1, 1 }), "VectorND rotate_in_plane should rotate only the in-plane component of the vector.");
+	// A full rotation should return the original vector.
+	const VectorN full_turn = VectorND::rotate_in_plane(VectorN{ 2, 3, 4 }, VectorN{ 1, 0, 0 }, VectorN{ 0, 1, 0 }, Math_TAU);
+	CHECK_MESSAGE(VectorND::is_equal_approx(full_turn, VectorN{ 2, 3, 4 }), "VectorND rotate_in_plane by a full turn should return the original vector.");
+}
+
 TEST_CASE("[VectorND] Perpendicular") {
 	for (int64_t vector_amount = 1; vector_amount < 20; vector_amount++) {
 		const int64_t dimension = vector_amount + 1;
