@@ -19,6 +19,7 @@ class RectND : public RefCounted {
 #ifdef MATH_CHECKS
 	static void _check_negative_size(const VectorN &p_size);
 #endif // MATH_CHECKS
+	static bool _are_motionless_intervals_separated(const double p_self_start, const double p_self_end, const double p_obstacle_start, const double p_obstacle_end);
 
 protected:
 	static void _bind_methods();

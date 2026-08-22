@@ -234,6 +234,39 @@ TEST_CASE("[RectND] Continuous Collision Depth Mixed Dimensions") {
 	CHECK_MESSAGE(VectorND::is_equal_exact(normal, VectorN{ 0, 0, 0, 0 }), "RectND continuous_collision_depth should give a zero normal when there is no collision.");
 }
 
+TEST_CASE("[RectND] Continuous Collision Touching Faces") {
+	// A player resting exactly on a surface must be able to move along it. These rects share only
+	// the plane Y=0, so they have zero-space contact and can never overlap for any amount of motion.
+	const Ref<RectND> player_rect = RectND::from_position_size(VectorN{ 0, 0, 0, 0 }, VectorN{ 1, 1, 1, 1 });
+	const Ref<RectND> floor_ahead_rect = RectND::from_position_size(VectorN{ 1, -1, 0, 0 }, VectorN{ 2, 1, 1, 1 });
+	VectorN normal;
+	double depth = player_rect->continuous_collision_depth(VectorN{ 1, 0, 0, 0 }, floor_ahead_rect, &normal);
+	CHECK_MESSAGE(depth == 1.0, "RectND continuous_collision_depth should not be stopped by a rect it only shares a face with.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(normal, VectorN{ 0, 0, 0, 0 }), "RectND continuous_collision_depth should give a zero normal when there is no collision.");
+	CHECK_MESSAGE(!player_rect->continuous_collision_overlaps(VectorN{ 1, 0, 0, 0 }, floor_ahead_rect), "RectND continuous_collision_overlaps should not overlap a rect it only shares a face with.");
+	// The same is true for motion parallel to the shared face, in which case the rects stay touching the whole time.
+	const Ref<RectND> touching_x_rect = RectND::from_position_size(VectorN{ 1, 0, 0, 0 }, VectorN{ 1, 1, 1, 1 });
+	depth = player_rect->continuous_collision_depth(VectorN{ 0, 1, 0, 0 }, touching_x_rect, &normal);
+	CHECK_MESSAGE(depth == 1.0, "RectND continuous_collision_depth should allow sliding along a shared face.");
+	CHECK_MESSAGE(!player_rect->continuous_collision_overlaps(VectorN{ 0, 1, 0, 0 }, touching_x_rect), "RectND continuous_collision_overlaps should agree with continuous_collision_depth when sliding along a shared face.");
+	// Moving into the shared face rather than along it must still collide.
+	depth = player_rect->continuous_collision_depth(VectorN{ 1, 0, 0, 0 }, touching_x_rect, &normal);
+	CHECK_MESSAGE(depth == 0.0, "RectND continuous_collision_depth should be stopped when moving directly into a touching rect.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(normal, VectorN{ -1, 0, 0, 0 }), "RectND continuous_collision_depth should give the correct normal when moving into a touching rect.");
+
+	// A zero-thickness rect must still collide with what it touches, so touching is inclusive when either rect is degenerate.
+	const Ref<RectND> flat_z_rect = RectND::from_position_size(VectorN{ 0, 0, 0, 0 }, VectorN{ 1, 1, 0, 1 });
+	const Ref<RectND> solid_rect = RectND::from_position_size(VectorN{ 3, 0, 0, 0 }, VectorN{ 1, 1, 1, 1 });
+	depth = flat_z_rect->continuous_collision_depth(VectorN{ 4, 0, 0, 0 }, solid_rect, &normal);
+	CHECK_MESSAGE(depth == doctest::Approx(0.5), "RectND continuous_collision_depth should let a zero-thickness rect collide with a solid rect.");
+	CHECK_MESSAGE(VectorND::is_equal_exact(normal, VectorN{ -1, 0, 0, 0 }), "RectND continuous_collision_depth should give the correct normal for a zero-thickness rect.");
+	// A rect with a missing size element is zero-thickness on that axis, so the same inclusive rule applies.
+	const Ref<RectND> rect_2d = RectND::from_position_size(VectorN{ 0, 0 }, VectorN{ 1, 1 });
+	const Ref<RectND> solid_ahead_rect = RectND::from_position_size(VectorN{ 3, 0, 0, 0 }, VectorN{ 1, 1, 1, 1 });
+	depth = rect_2d->continuous_collision_depth(VectorN{ 4, 0, 0, 0 }, solid_ahead_rect, &normal);
+	CHECK_MESSAGE(depth == doctest::Approx(0.5), "RectND continuous_collision_depth should let a lower-dimensional rect collide in the axes it does not define.");
+}
+
 TEST_CASE("[RectND] Continuous Collision Overlaps") {
 	const Ref<RectND> unit_rect = RectND::from_position_size(VectorN{ 0, 0, 0, 0 }, VectorN{ 1, 1, 1, 1 });
 	const Ref<RectND> offset_3w_rect = RectND::from_position_size(VectorN{ 0, 0, 0, 3 }, VectorN{ 1, 1, 1, 1 });

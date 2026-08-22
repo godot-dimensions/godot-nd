@@ -13,6 +13,18 @@ void RectND::_check_negative_size(const VectorN &p_size) {
 }
 #endif // MATH_CHECKS
 
+// Returns true if the two intervals do not overlap, for an axis with no relative motion.
+// Touching endpoints only count as overlapping when one of the intervals is a single point,
+// so that a zero-thickness shape can still collide with what it is touching, while two solid
+// rects that merely share a face are free to slide along that face instead of being stopped.
+// Note that a rect with a missing size element has a single-point interval on that axis.
+bool RectND::_are_motionless_intervals_separated(const double p_self_start, const double p_self_end, const double p_obstacle_start, const double p_obstacle_end) {
+	if (p_self_start == p_self_end || p_obstacle_start == p_obstacle_end) {
+		return p_self_start > p_obstacle_end || p_self_end < p_obstacle_start;
+	}
+	return p_self_start >= p_obstacle_end || p_self_end <= p_obstacle_start;
+}
+
 // Trivial getters and setters.
 
 VectorN RectND::get_position() const {
@@ -306,7 +318,7 @@ double RectND::continuous_collision_depth(const VectorN &p_relative_motion, cons
 	high_ratios.resize(dimension);
 	for (int i = 0; i < dimension; i++) {
 		if (relative_motion[i] == 0.0) {
-			if (self_position[i] > obstacle_end[i] || self_end[i] < obstacle_position[i]) {
+			if (_are_motionless_intervals_separated(self_position[i], self_end[i], obstacle_position[i], obstacle_end[i])) {
 				// No collision is possible in this axis, so we can return early.
 				if (r_out_normal) {
 					*r_out_normal = VectorND::zero(dimension);
@@ -369,7 +381,7 @@ bool RectND::continuous_collision_overlaps(const VectorN &p_relative_motion, con
 	double high_ratio = Math_INF;
 	for (int i = 0; i < dimension; i++) {
 		if (relative_motion[i] == 0.0) {
-			if (self_position[i] > obstacle_end[i] || self_end[i] < obstacle_position[i]) {
+			if (_are_motionless_intervals_separated(self_position[i], self_end[i], obstacle_position[i], obstacle_end[i])) {
 				// No collision is possible in this axis, so we can return early.
 				return false;
 			}
