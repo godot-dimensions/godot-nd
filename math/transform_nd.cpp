@@ -452,10 +452,20 @@ void TransformND::translate_local(const VectorN &p_translation) {
 }
 
 VectorN TransformND::xform(const VectorN &p_vector) const {
-	const int dimension = MIN(p_vector.size(), _columns.size());
-	VectorN ret = _origin;
-	for (int i = 0; i < dimension; i++) {
+	const int64_t vector_dimension = p_vector.size();
+	const int64_t column_count = _columns.size();
+	const int64_t stored_dimension = MIN(vector_dimension, column_count);
+	VectorN ret = VectorND::duplicate(_origin);
+	if (ret.size() < vector_dimension) {
+		ret.resize(vector_dimension);
+	}
+	for (int64_t i = 0; i < stored_dimension; i++) {
 		ret = VectorND::add(ret, VectorND::multiply_scalar(_columns[i], p_vector[i]));
+	}
+	// Basis columns beyond the stored ones act as identity, passing the component through,
+	// consistent with get_basis_column and xform_rect.
+	for (int64_t i = column_count; i < vector_dimension; i++) {
+		ret.set(i, ret[i] + p_vector[i]);
 	}
 	return ret;
 }
@@ -498,11 +508,22 @@ Ref<RectND> TransformND::xform_rect(const Ref<RectND> &p_rect) const {
 }
 
 VectorN TransformND::xform_basis(const VectorN &p_vector) const {
-	const int column_count = _columns.size();
-	const int dimension = MIN(p_vector.size(), column_count);
+	const int64_t vector_dimension = p_vector.size();
+	const int64_t column_count = _columns.size();
+	const int64_t stored_dimension = MIN(vector_dimension, column_count);
 	VectorN ret;
-	for (int i = 0; i < dimension; i++) {
+	for (int64_t i = 0; i < stored_dimension; i++) {
 		VectorND::multiply_scalar_and_add_in_place(_columns[i], p_vector[i], ret);
+	}
+	// Basis columns beyond the stored ones act as identity, passing the component through,
+	// consistent with get_basis_column and xform_rect.
+	if (vector_dimension > column_count) {
+		if (ret.size() < vector_dimension) {
+			ret.resize(vector_dimension);
+		}
+		for (int64_t i = column_count; i < vector_dimension; i++) {
+			ret.set(i, ret[i] + p_vector[i]);
+		}
 	}
 	return ret;
 }
