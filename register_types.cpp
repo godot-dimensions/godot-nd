@@ -86,11 +86,21 @@ inline void remove_godot_singleton(const StringName &p_singleton_name, Object *p
 	}
 }
 
+#if GDEXTENSION
+// The extension declares `set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE)`,
+// which is required to support reloading, but prevents using CORE or SERVERS initialization levels.
+#define MODULE_INITIALIZATION_LEVEL_CORE_OR_EARLIEST MODULE_INITIALIZATION_LEVEL_SCENE
+#elif GODOT_MODULE
+// The module can use CORE or SERVERS initialization levels. In modules, we want to
+// register as early as possible, so that other modules can depend on this module.
+#define MODULE_INITIALIZATION_LEVEL_CORE_OR_EARLIEST MODULE_INITIALIZATION_LEVEL_CORE
+#endif
+
 void initialize_nd_module(ModuleInitializationLevel p_level) {
-	// Note: Classes MUST be registered in inheritance order.
-	// When the inheritance doesn't matter, dependency order is used, then alphabetical order.
-	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE) {
-		// Math.
+	// Classes MUST be registered in inheritance order, then dependency order.
+	// When the inheritance and dependency doesn't matter, then alphabetical order is used.
+	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE_OR_EARLIEST) {
+		// Core math: must be first.
 		GDREGISTER_CLASS(VectorND);
 		GDREGISTER_CLASS(PlaneND);
 		GDREGISTER_CLASS(RectND);
@@ -99,16 +109,15 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(EulerND);
 		GDREGISTER_CLASS(MathND);
 		GDREGISTER_CLASS(GeometryND);
-		// Render.
-		GDREGISTER_VIRTUAL_CLASS(RenderingEngineND);
-		GDREGISTER_CLASS(RenderingServerND);
-	} else if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
-		// General.
-		GDREGISTER_CLASS(NodeND);
-		GDREGISTER_CLASS(CameraND);
 		add_godot_singleton("GeometryND", memnew(GeometryND));
 		add_godot_singleton("MathND", memnew(MathND));
 		add_godot_singleton("VectorND", memnew(VectorND));
+		// Core render.
+		GDREGISTER_VIRTUAL_CLASS(RenderingEngineND);
+		GDREGISTER_CLASS(RenderingServerND);
+		// General.
+		GDREGISTER_CLASS(NodeND);
+		GDREGISTER_CLASS(CameraND);
 		// Virtual classes.
 		GDREGISTER_VIRTUAL_CLASS(MaterialND);
 		GDREGISTER_VIRTUAL_CLASS(MeshND);
@@ -178,7 +187,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 }
 
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
-	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE_OR_EARLIEST) {
 		// Unregister and free the singletons in the opposite order of registration.
 		remove_godot_singleton("RenderingServerND", RenderingServerND::get_singleton());
 		remove_godot_singleton("VectorND", VectorND::get_singleton());
