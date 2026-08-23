@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="OrthoplexPolyMeshND" inherits="PolyMeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A ND polyhedral mesh representing an orthoplex (cross-polytope).
+	</brief_description>
+	<description>
+		OrthoplexPolyMeshND is a class for generating polyhedral meshes representing orthoplexes, also known as ND cross-polytopes. An N-dimensional orthoplex is composed of 2N vertices, plus and minus on each axis, and 2^N simplex boundary cells, one in each orthant. The full polyhedral hierarchy is generated procedurally for the mesh's dimension, including a volumetric hypervolume cell, boundary cells oriented to point outward, and flat shading vertex normals.
+		The 4D version of an orthoplex is the 16-cell or hexadecachoron, which has 8 vertices and 16 tetrahedral cells. The 3D version is the octahedron, which has 6 vertices and 8 triangular faces. The 2D version is a diamond (square rotated 45 degrees), which has 4 vertices and 4 edges. Orthoplexes exist in all dimensions, and are the dual of boxes (square/cube/hypercube).
+		The orthoplex does not have a built-in texture map. To texture map an orthoplex, convert it with [method PolyMeshND.to_array_poly_mesh] and use [method ArrayPolyMeshND.unwrap_texture_map].
+	</description>
+	<tutorials>
+		<link title="Wikipedia 16-cell / ND Orthoplex">https://en.wikipedia.org/wiki/16-cell</link>
+		<link title="Polytope Wiki Hexadecachoron">https://polytope.miraheze.org/wiki/Hexadecachoron</link>
+	</tutorials>
+	<methods>
+		<method name="from_orthoplex_cell_mesh" qualifiers="static">
+			<return type="OrthoplexPolyMeshND" />
+			<param index="0" name="cell_mesh" type="OrthoplexCellMeshND" />
+			<description>
+				Creates an orthoplex polyhedral mesh from [OrthoplexCellMeshND]. The orthoplex polyhedral mesh will have the same size and material as the cellhedral mesh.
+			</description>
+		</method>
+		<method name="from_orthoplex_wire_mesh" qualifiers="static">
+			<return type="OrthoplexPolyMeshND" />
+			<param index="0" name="wire_mesh" type="OrthoplexWireMeshND" />
+			<description>
+				Creates an orthoplex polyhedral mesh from [OrthoplexWireMeshND]. The orthoplex polyhedral mesh will have the same size and material as the wireframe mesh.
+			</description>
+		</method>
+		<method name="to_orthoplex_cell_mesh" qualifiers="const">
+			<return type="OrthoplexCellMeshND" />
+			<description>
+				Converts this orthoplex polyhedral mesh to a [OrthoplexCellMeshND]. The cellhedral mesh will have the same size and material as the polyhedral mesh.
+			</description>
+		</method>
+		<method name="to_orthoplex_wire_mesh" qualifiers="const">
+			<return type="OrthoplexWireMeshND" />
+			<description>
+				Converts this orthoplex polyhedral mesh to a [OrthoplexWireMeshND]. The wireframe mesh will have the same size and material as the polyhedral mesh.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
+			The dimension of the orthoplex mesh, which is the amount of numbers in the [member size] array. Setting this grows or shrinks the [member size] array to the given amount of dimensions. Orthoplexes with more than 10 dimensions are not supported, because the amount of generated cells grows exponentially with the dimension.
+		</member>
+		<member name="half_extents" type="PackedFloat64Array" setter="set_half_extents" getter="get_half_extents">
+			The half-extents of the orthoplex in meters, also known as just "extents". This is the "radius" of the orthoplex, the distance between each vertex and the center. This is a wrapper around [member size] for situations where you want to use the extents instead of size.
+		</member>
+		<member name="size" type="PackedFloat64Array" setter="set_size" getter="get_size" default="PackedFloat64Array()">
+			The size of the orthoplex in meters. This is the axis-aligned "diameter" size of the orthoplex in ND space, where each component is the distance between opposite vertices. This is the value that is stored internally.
+		</member>
+	</members>
+</class>

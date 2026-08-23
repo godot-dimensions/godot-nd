@@ -23,6 +23,9 @@
 #define GET_NODE_TYPE(m_parent, m_type, m_path) m_parent->get_node<m_type>(NodePath(m_path))
 #define InputClassEnums Input
 #define MODULE_OVERRIDE
+#define PROPERTY_HINT_GROUP_ENABLE PROPERTY_HINT_NONE
+#define resize_initialized resize
+#define resize_uninitialized resize
 #define VariantUtilityFunctions UtilityFunctions
 // Note: This MUST NOT be set for module builds, only GDExtension builds, due to namespace pollution issues.
 #define USE_FUNCTIONS_FOR_VECTORS 1
@@ -74,6 +77,14 @@ using namespace godot;
 #if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 5
 // In Godot 4.5 and later, namespaces were capitalized: core_bind -> CoreBind.
 #define CoreBind core_bind
+
+// In Godot 4.5 and later, the "PROPERTY_HINT_GROUP_ENABLE" property hint was added.
+#define PROPERTY_HINT_GROUP_ENABLE PROPERTY_HINT_NONE
+
+// Prior to Godot 4.5, the vector resize API did not clarify whether it was initializing new elements or not.
+// See https://github.com/godotengine/godot/pull/104522
+#define resize_initialized resize
+#define resize_uninitialized resize
 #endif
 
 #if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR > 4
@@ -84,6 +95,11 @@ using namespace godot;
 #define Math_SQRT12 Math::SQRT12
 #define Math_SQRT2 Math::SQRT2
 #define Math_TAU Math::TAU
+#endif
+
+#if GODOT_VERSION_MAJOR > 4 || (GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR >= 5)
+// While TypedDictionary is available in Godot 4.4 and later, the C++ API is incomplete, missing iterators. So we can't use it until Godot 4.5.
+#define GODOT_HAS_TYPED_DICTIONARY 1
 #endif
 
 #else

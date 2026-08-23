@@ -29,8 +29,10 @@ def get_doc_classes():
 		"WorldEnvironmentND",
 		# Mesh.
 		"ArrayCellMeshND",
+		"ArrayPolyMeshND",
 		"ArrayWireMeshND",
 		"BoxCellMeshND",
+		"BoxPolyMeshND",
 		"BoxWireMeshND",
 		"CellMaterialND",
 		"CellMeshND",
@@ -39,7 +41,10 @@ def get_doc_classes():
 		"MeshND",
 		"OFFDocumentND",
 		"OrthoplexCellMeshND",
+		"OrthoplexPolyMeshND",
 		"OrthoplexWireMeshND",
+		"PolyMaterialND",
+		"PolyMeshND",
 		"WireMaterialND",
 		"WireMeshND",
 		# Depends on mesh.

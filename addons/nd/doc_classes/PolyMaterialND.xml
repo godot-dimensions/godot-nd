@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PolyMaterialND" inherits="CellMaterialND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Polyhedral material for ND polyhedral meshes.
+	</brief_description>
+	<description>
+		PolyMaterialND is a material for ND polyhedral meshes. The normal case is to use PolyMaterialND with a [PolyMeshND]-derived class, such as [ArrayPolyMeshND].
+		PolyMaterialND extends [CellMaterialND], providing interoperability in the same way that [PolyMeshND] extends [CellMeshND]. You can use a PolyMaterialND with a [CellMeshND], which will operate under the assumption that the simplex cells within the [CellMeshND] are grouped by their starting vertex in the same way that a [CellMeshND] generated from a [PolyMeshND] would be. You can also use a [CellMaterialND] with a [PolyMeshND], which would provide control over the individual simplexes that the cells get cut up into for rendering.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="populate_albedo_color_array_for_poly_mesh">
+			<return type="void" />
+			<param index="0" name="poly_mesh" type="CellMeshND" />
+			<description>
+				Populates the [member CellMaterialND.albedo_color_array] of this material for the given [param poly_mesh] by reading the cell colors from [member poly_albedo_color_array] and duplicating them for each simplex formed by the polyhedral cells. When a [PolyMeshND] is passed in directly, each simplex is mapped to its source polyhedral cell exactly using [method PolyMeshND.get_source_poly_cell_for_simplex_cell]. This function also supports any other [CellMeshND] which has its simplexes grouped by their starting vertex.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="poly_albedo_color_array" type="PackedColorArray" setter="set_poly_albedo_color_array" getter="get_poly_albedo_color_array">
+			Array of albedo colors for the boundary cells in a polyhedral mesh. The length of this array should equal the boundary cell count of the mesh. See [method populate_albedo_color_array_for_poly_mesh] for details.
+		</member>
+	</members>
+</class>

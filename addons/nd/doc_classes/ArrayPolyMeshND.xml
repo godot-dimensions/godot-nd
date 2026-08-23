@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="ArrayPolyMeshND" inherits="PolyMeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Custom ND polyhedral mesh class.
+	</brief_description>
+	<description>
+		ArrayPolyMeshND is a class for specifying polyhedral meshes with arrays of data, including the vertices, edges, faces, cells, and optional hypervolumes. Unlike the specialized [PolyMeshND] classes such as [BoxPolyMeshND], ArrayPolyMeshND can store any polyhedral mesh, allowing users to create custom meshes with arbitrary data.
+		When generating your own polyhedral meshes, keep in mind this order:
+		- [method calculate_boundary_normals] needs to be called before [method calculate_seams], because it uses the boundary cell normals.
+		- Seams need to be defined, such as with [method calculate_seams], before calling [method collect_cells_in_island], and before [method unwrap_texture_map] if using the [constant UNWRAP_MODE_EACH_ISLAND_FILLS] or [constant UNWRAP_MODE_TILE_ISLANDS] modes, because they use the seams to determine the islands.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="append_edge_indices">
+			<return type="int" />
+			<param index="0" name="index_a" type="int" />
+			<param index="1" name="index_b" type="int" />
+			<param index="2" name="deduplicate" type="bool" default="true" />
+			<description>
+				Appends an edge connecting the two given vertex indices to the polyhedral mesh, and returns the index of the edge. The edge is stored with its vertex indices sorted in ascending order. If [param deduplicate] is [code]true[/code] (default), and an edge already exists with the same two vertices in either order, the index of the existing edge is returned instead of appending a duplicate.
+			</description>
+		</method>
+		<method name="append_edge_points">
+			<return type="int" />
+			<param index="0" name="point_a" type="PackedFloat64Array" />
+			<param index="1" name="point_b" type="PackedFloat64Array" />
+			<param index="2" name="deduplicate" type="bool" default="true" />
+			<description>
+				Appends an edge connecting the two given points to the polyhedral mesh, and returns the index of the edge. The points are appended as vertices using [method append_vertex], then the edge is appended using [method append_edge_indices], with [param deduplicate] passed to both operations.
+			</description>
+		</method>
+		<method name="append_poly_cell">
+			<return type="int" />
+			<param index="0" name="dimension" type="int" />
+			<param index="1" name="cell" type="PackedInt32Array" />
+			<param index="2" name="deduplicate" type="bool" default="true" />
+			<description>
+				Appends a polyhedral cell of the given [param dimension] to the mesh, and returns the index of the cell within its dimension. The [param cell] array contains indices of the cells of the previous dimension: edge indices for a 2D face, 2D face indices for a 3D cell, and so on. All referenced elements must already exist, and cells must be appended in order of dimension, so a mesh must have 2D faces before 3D cells can be appended. For 0D vertices and 1D edges, use [method append_vertex] and [method append_edge_indices] instead.
+				If [param deduplicate] is [code]true[/code] (default), and a cell of the same dimension already exists with the same elements in any order, the index of the existing cell is returned instead of appending a duplicate.
+				[b]Note:[/b] The order of a cell's first two elements determines the cell's orientation, and swapping them flips the cell's normal vector. The first two elements must share a common element of the previous dimension, or else the mesh is invalid.
+			</description>
+		</method>
+		<method name="append_vertex">
+			<return type="int" />
+			<param index="0" name="vertex" type="PackedFloat64Array" />
+			<param index="1" name="deduplicate_vertices" type="bool" default="true" />
+			<description>
+				Append a vertex to the polyhedral mesh. If [param deduplicate_vertices] is [code]true[/code] (default), the method will check if the vertex already exists in the [member poly_cell_vertices] array and return the index of the existing vertex. If the vertex does not exist, it will be appended to the vertices array and its index will be returned. In both cases, the returned index points to a vertex identical to the input vertex.
+			</description>
+		</method>
+		<method name="append_vertices">
+			<return type="PackedInt32Array" />
+			<param index="0" name="vertices" type="PackedFloat64Array[]" />
+			<param index="1" name="deduplicate_vertices" type="bool" default="true" />
+			<description>
+				Append an array of vertices to the polyhedral mesh, by calling [method append_vertex] for each vertex in the input array. The method will return an array of indices, where each index points to a vertex identical to the corresponding vertex in the input array.
+			</description>
+		</method>
+		<method name="calculate_boundary_normals">
+			<return type="void" />
+			<param index="0" name="normals_mode" type="int" enum="ArrayPolyMeshND.ComputeNormalsMode" default="0" />
+			<param index="1" name="keep_existing" type="bool" default="false" />
+			<description>
+				Calculates the normals of the polyhedral boundary cells. Boundary normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell.
+				If [param keep_existing] is [code]true[/code], existing normals are preserved when present, and new normals are only calculated for cells without normals or when the normal vector is zero. If [param keep_existing] is [code]false[/code], all normals are recalculated. It is recommended to keep existing normals when adding new cells to the mesh, and to recalculate all normals when modifying vertex positions or altering the cells.
+				[b]Note:[/b] In 3D, normals are determined by the triangle vertex winding order, but in ND, there is no direct equivalent. Instead, orientation is determined by the relative positions of a representative set of vertices that form a canonical span of N-1 basis vectors, with the Nth perpendicular direction being the normal vector. The order of a cell's first two members determines this orientation, and swapping them flips the normal. The direction can either be purely determined by the cell orientation, or forced to point outward, depending on the selected [param normals_mode]. See [enum ComputeNormalsMode] for details.
+			</description>
+		</method>
+		<method name="calculate_seams">
+			<return type="void" />
+			<param index="0" name="angle_threshold_radians" type="float" default="0.7853982" />
+			<param index="1" name="discard_seams_within_islands" type="bool" default="false" />
+			<description>
+				Calculates the seams of the polyhedral mesh based on the angles between the normals of adjacent boundary cells. A shared element between two boundary cells is marked as a seam when the angle between the two cells' normals exceeds [param angle_threshold_radians]. Seams are the (N-2)-dimensional borders between boundary cells: edges for 3D meshes, 2D faces for 4D meshes, and so on. Seams split the mesh into islands for texture mapping, and are treated as sharp borders by [method set_smooth_shading_normals].
+				If [param discard_seams_within_islands] is [code]true[/code], seams between two cells that still end up in the same island, such as by being connected through a path of other cells, are removed after the islands are determined.
+				This function uses the existing boundary normals when their count matches the boundary cell count, and calculates them with [method calculate_boundary_normals] otherwise. If this is a volumetric mesh with N-dimensional cells, boundary cells buried between two volumetric cells are ignored.
+			</description>
+		</method>
+		<method name="collect_all_islands">
+			<return type="PackedInt32Array[]" />
+			<description>
+				Collects all islands in the polyhedral mesh, as an array of [PackedInt32Array]s, where each [PackedInt32Array] contains the boundary cell indices of one island, as returned by [method collect_cells_in_island]. Every boundary cell is part of exactly one island.
+				Before running this function, ensure that the seams are up to date. You can set seams manually, or calculate seams based on the angles between cells using [method calculate_seams].
+			</description>
+		</method>
+		<method name="collect_cells_in_island">
+			<return type="PackedInt32Array" />
+			<param index="0" name="start_cell" type="int" />
+			<description>
+				Collects all cells in the same island as the starting cell, as an array of cell indices. Cells are considered connected if they share an element that is not marked as a seam, and the island is considered all cells connected to the first, including indirectly through other cells, traversed using a breadth-first search algorithm. The first cell will always be the first item in the returned array.
+				Before running this function, ensure that the seams are up to date. You can set seams manually, or calculate seams based on the angles between cells using [method calculate_seams].
+			</description>
+		</method>
+		<method name="deduplicate_all_elements">
+			<return type="void" />
+			<description>
+				Deduplicates all elements of the polyhedral mesh: vertices in approximately the same position, edges with the same vertices in either order, and cells of every dimension made of the same elements in any order. All indices are remapped to the kept elements, including the seams, the boundary pivot overrides, and the data bindings for normals and texture maps. The boundary normals are preserved, by swapping the first two members of any cell whose orientation-derived normal was flipped by the reordering.
+				This is useful after merging meshes with [method merge_with], such as when merging two adjacent volumetric meshes that share a boundary cell, so that the shared cell is unified and treated as an invisible internal cell.
+			</description>
+		</method>
+		<method name="delete_poly_element">
+			<return type="void" />
+			<param index="0" name="dimension" type="int" />
+			<param index="1" name="index" type="int" />
+			<description>
+				Deletes the element of the given [param dimension] at the given [param index], where dimension 0 means vertices, 1 means edges, 2 means 2D faces, and so on. Deleting an element also deletes everything that references it, cascading up through the hierarchy: deleting a vertex deletes the edges using it, which deletes the faces using those edges, and so on. All remaining indices are shifted to preserve their meaning, including the seams, the boundary pivot overrides, and the data bindings for normals and texture maps.
+			</description>
+		</method>
+		<method name="make_double_sided">
+			<return type="void" />
+			<param index="0" name="idempotent" type="bool" default="true" />
+			<description>
+				Makes the polyhedral mesh double-sided by appending a flipped copy of every boundary cell, made by swapping the first two members of each cell, so that both sides of the boundary are rendered. Existing vertex normals and texture maps are extended to cover the flipped cells, with the vertex normals negated. If this is a volumetric mesh with N-dimensional cells, the flipped cells are also added to the volumetric cells that contain their originals.
+				If [param idempotent] is [code]true[/code] (default), flipped cells that already exist in the mesh are not appended again, so calling this function multiple times has the same effect as calling it once.
+			</description>
+		</method>
+		<method name="make_single_cell_from_all_cells" qualifiers="const">
+			<return type="PackedInt32Array" />
+			<param index="0" name="cell_dimension" type="int" />
+			<description>
+				Makes a cell of the given [param cell_dimension] containing all of the mesh's cells of the previous dimension, and returns it without appending it to the mesh. For example, with a [param cell_dimension] of 3, this returns a 3D cell made of all 2D faces, and with a [param cell_dimension] equal to the mesh's dimension, this returns a volumetric hypervolume cell made of all boundary cells. The first two indices are arranged to share a common element, as required for the cell's orientation to be determinable, so the result is suitable for [method append_poly_cell].
+			</description>
+		</method>
+		<method name="merge_with">
+			<return type="void" />
+			<param index="0" name="other" type="PolyMeshND" />
+			<param index="1" name="transform" type="TransformND" default="null" />
+			<description>
+				Merges this polyhedral mesh with another polyhedral mesh. The other mesh's vertices, edges, faces, cells, and hypervolumes are added to this mesh. If [param transform] is provided, it is used to transform the other mesh's vertices, and its basis is used to transform the other mesh's normals, before adding them to this mesh. This is useful for combining meshes that are in different positions or orientations.
+				If one mesh has boundary normals, vertex normals, or texture maps that the other lacks, the missing entries are filled in, generating normals from the cell orientations where possible, so that merging two valid meshes always produces a valid mesh.
+				This method will also attempt to merge the materials of the two meshes, by calling [method MaterialND.merge_with] on this mesh's material and passing the other mesh's material as an argument. See [method MaterialND.merge_with] for more information.
+			</description>
+		</method>
+		<method name="set_flat_shading_normals">
+			<return type="void" />
+			<param index="0" name="normals_mode" type="int" enum="ArrayPolyMeshND.ComputeNormalsMode" default="0" />
+			<param index="1" name="recalculate_boundary_normals" type="bool" default="true" />
+			<description>
+				Sets the polyhedral mesh to use flat shading by setting all vertex instance normals to match their corresponding boundary cell normal. This gives the mesh a faceted appearance, where each polyhedral cell is shaded uniformly.
+				If [param recalculate_boundary_normals] is [code]true[/code], the method will first recalculate the boundary normals using [method calculate_boundary_normals] before setting the vertex instance normals.
+			</description>
+		</method>
+		<method name="set_smooth_shading_normals">
+			<return type="void" />
+			<param index="0" name="normals_mode" type="int" enum="ArrayPolyMeshND.ComputeNormalsMode" default="0" />
+			<param index="1" name="recalculate_boundary_normals" type="bool" default="true" />
+			<description>
+				Sets the polyhedral mesh to use smooth shading by setting each vertex instance normal to the normalized average of the boundary normals of all cells in the same island that use the vertex. This gives the mesh a smooth appearance, where lighting blends across adjacent cells. Seams are respected as sharp borders that are not smoothed across, so cells in different islands are shaded independently.
+				If [param recalculate_boundary_normals] is [code]true[/code], the method will first recalculate the boundary normals using [method calculate_boundary_normals] before setting the vertex instance normals.
+			</description>
+		</method>
+		<method name="transform_texture_map">
+			<return type="void" />
+			<param index="0" name="transform" type="TransformND" />
+			<description>
+				Applies a transformation to the texture coordinates of all polyhedral cells in the mesh. The transformation is applied to each vertex instance's texture coordinates in the (N-1)-dimensional texture space, allowing for operations such as translation, rotation, and scaling of the texture mapping.
+				This method is useful for adjusting the texture mapping of the mesh after unwrapping or when modifying the mesh's geometry, ensuring that the texture coordinates remain aligned with the desired appearance.
+			</description>
+		</method>
+		<method name="transform_vertices">
+			<return type="void" />
+			<param index="0" name="transform" type="TransformND" />
+			<description>
+				Applies a transformation to all vertices of the polyhedral mesh, moving the mesh's geometry while keeping the polyhedral structure intact. Normals and texture maps are not modified, so if the transform is not a rigid transformation, consider recalculating the normals afterward.
+			</description>
+		</method>
+		<method name="unwrap_texture_map">
+			<return type="void" />
+			<param index="0" name="mode" type="int" enum="ArrayPolyMeshND.UnwrapTextureMapMode" default="4" />
+			<param index="1" name="padding" type="float" default="0.0" />
+			<param index="2" name="proportional" type="bool" default="true" />
+			<param index="3" name="keep_existing" type="bool" default="false" />
+			<description>
+				Unwraps a texture map for the polyhedral mesh, generating (N-1)-dimensional texture coordinates for each vertex instance in each boundary cell. The unwrapping is done based on the selected [param mode], which determines how the unwrapping is performed. See [enum UnwrapTextureMapMode] for details.
+				If [param padding] is greater than 0.0, texture islands will have this amount of space between them in texture space, helping to prevent texture bleeding when using mipmaps or other resampling techniques.
+				If [param proportional] is [code]true[/code] (default), each island is scaled uniformly on all axes to fit into its target space, preserving the island's proportions. If [code]false[/code], each axis is scaled independently to fill the target space.
+				If [param keep_existing] is [code]true[/code], existing texture coordinates are preserved when present, and new texture coordinates are only calculated for cells without texture coordinates. When a new cell is in the same island as an existing cell, the new cell will have its texture coordinates aligned with already mapped cells. When none of the cells in an island have existing texture coordinates, a new island will be mapped. In both cases, the islands will be re-packed with the given [param mode] and [param padding].
+			</description>
+		</method>
+		<method name="unwrap_texture_map_island">
+			<return type="void" />
+			<param index="0" name="cells_in_island" type="PackedInt32Array" />
+			<param index="1" name="keep_existing" type="bool" default="false" />
+			<description>
+				Unwraps a texture map for a specific island of cells in the polyhedral mesh, generating (N-1)-dimensional texture coordinates for each vertex instance in each cell in the island. The island is unwrapped into an unbounded texture space, and any rescaling or repacking needs to be handled afterwards if desired. This function is internally called by [method unwrap_texture_map] for each island.
+				The [param cells_in_island] parameter MUST form a continuous connected island of cells, where each consecutive cell shares an element with at least one of the earlier cells in the array. If the input cells are not consecutively connected, the function will fail.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="all_poly_cell_normals" type="Dictionary[Vector2i, Array]" setter="set_all_poly_cell_normals" getter="get_all_poly_cell_normals" default="{}">
+			All normal data for this mesh, including per-boundary-cell ([member poly_cell_boundary_normals]), boundary cell vertices ([member poly_cell_vertex_normals]), and more. This is a low-level member intended for advanced use cases, the other normal-related members are recommended for most users.
+			The keys are a [Vector2i], where the X component is the geometry dimension, and the Y component is the decomposition dimension. For an N-dimensional mesh, the boundary normals use the key (N-1, N-1), and the boundary cell vertex normals use the key (N-1, 0). Each value is effectively [code]Array[Array[PackedFloat64Array]][/code], where each [PackedFloat64Array] is one N-dimensional normal vector. When X is greater than Y, this is a hierarchical structure, where the outer array has a size equal to the number of cells in the dimension X, and each inner array contains the normals for each decomposed element in that cell. When X equals Y, this is a flat structure, where the outer array has a size of 1, containing one normal per cell. Keys are not allowed to have X be less than Y.
+		</member>
+		<member name="all_poly_cell_texture_maps" type="Dictionary[Vector2i, Array]" setter="set_all_poly_cell_texture_maps" getter="get_all_poly_cell_texture_maps" default="{}">
+			All texture map data for this mesh, including boundary cell vertices ([member poly_cell_texture_map]) and more. This is a low-level member intended for advanced use cases, the other texture map member is recommended for most users.
+			The keys are a [Vector2i], where the X component is the geometry dimension, and the Y component is the decomposition dimension. For an N-dimensional mesh, the boundary cell texture map uses the key (N-1, 0). Each value is effectively [code]Array[Array[PackedFloat64Array]][/code], where each [PackedFloat64Array] is one (N-1)-dimensional texture coordinate. When X is greater than Y, this is a hierarchical structure, where the outer array has a size equal to the number of cells in the dimension X, and each inner array contains the texture coordinates for each decomposed element in that cell. Texture maps usually do not have keys where X equals Y. Keys are not allowed to have X be less than Y.
+		</member>
+		<member name="edge_indices" type="PackedInt32Array" setter="set_edge_indices" getter="get_edge_indices" default="PackedInt32Array()">
+			The flat array of edge indices. Every 2 integers defines an edge. Each integer is an index to the [member poly_cell_vertices] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
+		</member>
+		<member name="poly_cell_boundary_normals" type="PackedFloat64Array[]" setter="set_poly_cell_boundary_normals" getter="get_poly_cell_boundary_normals" default="[]">
+			The normals of the polyhedral boundary cells themselves. Boundary normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each [PackedFloat64Array] in this array is an N-dimensional normal vector for one cell, and should be normalized.
+		</member>
+		<member name="poly_cell_boundary_pivot_overrides" type="PackedInt32Array" setter="set_poly_cell_boundary_pivot_overrides" getter="get_poly_cell_boundary_pivot_overrides" default="PackedInt32Array()">
+			The overrides for the pivot vertex of each boundary cell, providing control over how the cell is decomposed into simplexes for rendering. Each integer in this array is an index into the [member poly_cell_vertices] array, specifying which vertex should be used as the pivot point for the corresponding cell when decomposing it into simplexes, or [code]-1[/code] to not override the pivot of that cell. The pivot for each boundary cell does not have to be one of the vertices on the sides, it can also be in the middle of the cell. This SHOULD be a vertex that can "see" all parts of the cell, meaning it only works for poly cells that are star-shaped.
+		</member>
+		<member name="poly_cell_indices" type="Array[]" setter="set_poly_cell_indices" getter="get_poly_cell_indices" default="[]">
+			The hierarchical polyhedral cell indices in the form of an array of arrays of [PackedInt32Array]s. This is the foundational data structure of [PolyMeshND]. Each item of the top level array holds the cells of one dimension, starting with 2D faces:
+			- The first item is an array of 2D faces. It is an array of [PackedInt32Array]s, where each [PackedInt32Array] contains the 1D edge indices that make up one 2D face.
+			- The second item is an array of 3D cells. It is an array of [PackedInt32Array]s, where each [PackedInt32Array] contains the 2D face indices that make up one 3D cell.
+			- Each following item is an array of cells of the next dimension up, where each [PackedInt32Array] contains the indices of the cells of the previous dimension that make up one cell. For a mesh of N dimensions, the (N-1)-dimensional cells are the boundary of the mesh, and the optional last item holds N-dimensional hypervolume cells made of boundary cell indices.
+			Since edges are always made of exactly 2 vertices, they are not included in this array. Edges use a simpler data structure where all edges are stored in a single [PackedInt32Array], and every 2 items represent one edge. See [member edge_indices].
+		</member>
+		<member name="poly_cell_texture_map" type="Array[]" setter="set_poly_cell_texture_map" getter="get_poly_cell_texture_map" default="[]">
+			The texture mapping of the polyhedral boundary cells. Each item in this array is an array of [PackedFloat64Array]s containing the texture space mapping for the vertex instances of the corresponding cell in the [member poly_cell_indices] array. Each [PackedFloat64Array] in these arrays defines the (N-1)-dimensional texture coordinates for the corresponding vertex instance in the cell, and is usually on the range from 0.0 to 1.0 on each axis.
+		</member>
+		<member name="poly_cell_vertex_normals" type="Array[]" setter="set_poly_cell_vertex_normals" getter="get_poly_cell_vertex_normals" default="[]">
+			The normals of the vertex instances for each polyhedral boundary cell. Each item in this array is an array of [PackedFloat64Array]s containing the normals for each vertex instance in the corresponding cell in the [member poly_cell_indices] array. Each [PackedFloat64Array] in these arrays is an N-dimensional vector that should be normalized.
+		</member>
+		<member name="poly_cell_vertices" type="PackedFloat64Array[]" setter="set_poly_cell_vertices" getter="get_poly_cell_vertices" default="[]">
+			The vertex positions of the polyhedral mesh. Each [PackedFloat64Array] in the array is a position in meters in ND space. The items in this array are referenced by the [member edge_indices] array.
+			[b]Note:[/b] The vertices returned by [method MeshND.get_vertices] may be longer than this array. This is because [method MeshND.get_vertices] returns the vertices used for decomposing the polyhedral mesh into simplexes, which may include extra virtual vertices added to keep the simplexes of adjacent cells aligned with each other. Regardless, the start of the array returned by [method MeshND.get_vertices] will always match this array, such that it is either a superset of this array, or identical to it.
+		</member>
+		<member name="seam_indices" type="PackedInt32Array" setter="set_seam_indices" getter="get_seam_indices" default="PackedInt32Array()">
+			The seams of the polyhedral mesh, as a set of indices of the (N-2)-dimensional borders between boundary cells: edge indices for 3D meshes, 2D face indices for 4D meshes, and so on. Seams split the mesh into islands for texture mapping, and are treated as sharp borders by [method set_smooth_shading_normals]. Seams can be set manually, or calculated from the angles between adjacent cells using [method calculate_seams]. The getter returns the indices sorted in ascending order.
+		</member>
+	</members>
+	<constants>
+		<constant name="COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY" value="0" enum="ComputeNormalsMode">
+			When calculating boundary normals, only use the cell orientation to determine the normal direction, preserving the existing orientation of the cells.
+		</constant>
+		<constant name="COMPUTE_NORMALS_MODE_FORCE_OUTWARD_FIX_CELL_ORIENTATION" value="1" enum="ComputeNormalsMode">
+			When calculating boundary normals, force the normals to point outward, and adjust the orientation of the cells to match. Fixing the cell orientation involves swapping the "winding order" of the cell by swapping the first two members of the cell.
+		</constant>
+		<constant name="COMPUTE_NORMALS_MODE_FORCE_OUTWARD_OVERRIDE_CELL_ORIENTATION" value="2" enum="ComputeNormalsMode">
+			When calculating boundary normals, force the normals to point outward, overriding the existing orientation of the cells. The cell data is not modified, so recalculating the normals from the cell orientation may produce inward normals again.
+		</constant>
+		<constant name="UNWRAP_MODE_AUTOMATIC" value="0" enum="UnwrapTextureMapMode">
+			Automatically choose the best unwrapping mode. If a mesh has seams defined, use [constant UNWRAP_MODE_TILE_ISLANDS], otherwise use [constant UNWRAP_MODE_TILE_CELLS].
+		</constant>
+		<constant name="UNWRAP_MODE_EACH_CELL_FILLS" value="1" enum="UnwrapTextureMapMode">
+			Each cell is unwrapped to fill the entire texture space from 0.0 to 1.0 on each axis. This is useful for objects where all cells should have the same texture, such as a tiled pattern, like a block of cobblestone in Minecraft.
+		</constant>
+		<constant name="UNWRAP_MODE_TILE_CELLS" value="2" enum="UnwrapTextureMapMode">
+			Each cell is unwrapped to fit within a tile in the texture space. The tiles are arranged in a grid that fits within the texture space from 0.0 to 1.0 on each axis, sized to fit the number of cells. For example, for a 4D mesh with 8 cells, the tiles will be arranged in a 2x2x2 grid, with each tile taking up 0.5 units in each dimension of the 3D texture space.
+		</constant>
+		<constant name="UNWRAP_MODE_EACH_ISLAND_FILLS" value="3" enum="UnwrapTextureMapMode">
+			Each island of cells connected by non-seam borders is unwrapped to fill the entire texture space from 0.0 to 1.0 on each axis, overlapping the other islands. Seams need to be defined before unwrapping with this mode, such as with [method calculate_seams].
+		</constant>
+		<constant name="UNWRAP_MODE_TILE_ISLANDS" value="4" enum="UnwrapTextureMapMode">
+			Each island of cells connected by non-seam borders is unwrapped to fit within a tile in the texture space. The tiles are arranged in a grid that fits within the texture space from 0.0 to 1.0 on each axis, sized to fit the number of islands. Seams need to be defined before unwrapping with this mode, such as with [method calculate_seams].
+		</constant>
+	</constants>
+</class>
