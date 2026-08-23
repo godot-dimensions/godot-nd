@@ -38,11 +38,13 @@ protected:
 
 class GodotNDEditorPlugin : public EditorPlugin {
 	GDCLASS(GodotNDEditorPlugin, EditorPlugin);
+
 	Ref<EditorImportPluginOFFCellND> _off_cell_nd_importer;
 	Ref<EditorImportPluginOFFSceneND> _off_scene_nd_importer;
 	Ref<EditorImportPluginOFFWireND> _off_wire_nd_importer;
 	EditorMainScreenND *_main_screen = nullptr;
 
+	static Button *_find_button_by_text(Node *p_start, const String &p_text);
 	void _add_nd_main_screen();
 	void _move_nd_main_screen_tab_button() const;
 	void _inject_nd_scene_button();

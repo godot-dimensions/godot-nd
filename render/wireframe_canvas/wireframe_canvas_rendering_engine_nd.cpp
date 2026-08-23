@@ -7,7 +7,7 @@
 #include "../rendering_server_nd.h"
 #include "wireframe_render_canvas_nd.h"
 
-Color _get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<MeshND> &p_mesh, int p_edge_index) {
+Color WireframeCanvasRenderingEngineND::_get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<MeshND> &p_mesh, int p_edge_index) {
 	if (p_material.is_null()) {
 		return Color(1.0f, 1.0f, 1.0f);
 	}

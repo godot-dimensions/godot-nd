@@ -271,7 +271,7 @@ void EditorMainScreenND::_notification(int p_what) {
 			if (_camera_settings_inspector != nullptr) {
 				_camera_settings_inspector->edit(nullptr);
 			}
-		}
+		} break;
 #endif
 	}
 }

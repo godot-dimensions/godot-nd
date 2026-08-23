@@ -8,6 +8,8 @@
 class WireframeCanvasRenderingEngineND : public RenderingEngineND {
 	GDCLASS(WireframeCanvasRenderingEngineND, RenderingEngineND);
 
+	static Color _get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<MeshND> &p_mesh, int p_edge_index);
+
 protected:
 	static void _bind_methods() {}
 

@@ -79,8 +79,11 @@ inline void add_godot_singleton(const StringName &p_singleton_name, Object *p_ob
 	CoreBind::Engine::get_singleton()->register_singleton(p_singleton_name, p_object);
 }
 
-inline void remove_godot_singleton(const StringName &p_singleton_name) {
+inline void remove_godot_singleton(const StringName &p_singleton_name, Object *p_object) {
 	CoreBind::Engine::get_singleton()->unregister_singleton(p_singleton_name);
+	if (p_object != nullptr) {
+		memdelete(p_object);
+	}
 }
 
 void initialize_nd_module(ModuleInitializationLevel p_level) {
@@ -104,29 +107,31 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(NodeND);
 		GDREGISTER_CLASS(CameraND);
 		add_godot_singleton("GeometryND", memnew(GeometryND));
+		add_godot_singleton("MathND", memnew(MathND));
 		add_godot_singleton("VectorND", memnew(VectorND));
+		// Virtual classes.
+		GDREGISTER_VIRTUAL_CLASS(MaterialND);
+		GDREGISTER_VIRTUAL_CLASS(MeshND);
+		GDREGISTER_VIRTUAL_CLASS(CellMeshND);
+		GDREGISTER_VIRTUAL_CLASS(WireMeshND);
+		// Materials.
+		GDREGISTER_CLASS(CellMaterialND);
+		GDREGISTER_CLASS(WireMaterialND);
 		// Environment.
 		GDREGISTER_VIRTUAL_CLASS(SkyMaterialND);
 		GDREGISTER_CLASS(PlainSkyMaterialND);
 		GDREGISTER_CLASS(WorldEnvironmentND);
-		// Virtual classes.
-		GDREGISTER_CLASS(MaterialND);
-		GDREGISTER_CLASS(MeshND);
-		GDREGISTER_CLASS(CellMeshND);
-		GDREGISTER_CLASS(WireMeshND);
-		// Model.
+		// Mesh.
 		GDREGISTER_CLASS(ArrayCellMeshND);
 		GDREGISTER_CLASS(ArrayWireMeshND);
 		GDREGISTER_CLASS(BoxCellMeshND);
 		GDREGISTER_CLASS(BoxWireMeshND);
 		GDREGISTER_CLASS(MeshInstanceND);
-		GDREGISTER_CLASS(OFFDocumentND);
 		GDREGISTER_CLASS(OrthoplexCellMeshND);
 		GDREGISTER_CLASS(OrthoplexWireMeshND);
-		GDREGISTER_CLASS(CellMaterialND);
-		GDREGISTER_CLASS(WireMaterialND);
 		// Depends on mesh.
 		GDREGISTER_CLASS(MarkerND);
+		GDREGISTER_CLASS(OFFDocumentND);
 		// Render.
 #if GDEXTENSION
 		GDREGISTER_CLASS(WireframeRenderCanvasND);
@@ -138,21 +143,24 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 #ifdef TOOLS_ENABLED
 	} else if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
 #ifdef GDEXTENSION
-		GDREGISTER_CLASS(EditorCameraND);
-		GDREGISTER_CLASS(EditorCameraSettingsND);
-		GDREGISTER_CLASS(EditorCreateNDSceneButton);
+		// Export and import.
 		GDREGISTER_CLASS(EditorImportPluginBaseND);
 		GDREGISTER_CLASS(EditorImportPluginOFFBaseND);
 		GDREGISTER_CLASS(EditorImportPluginOFFCellND);
 		GDREGISTER_CLASS(EditorImportPluginOFFSceneND);
 		GDREGISTER_CLASS(EditorImportPluginOFFWireND);
+		// Pieces of the editor viewport.
+		GDREGISTER_CLASS(EditorTransformSnapSettingsND);
+		GDREGISTER_CLASS(EditorCameraSettingsND);
+		GDREGISTER_CLASS(EditorCameraND);
+		GDREGISTER_CLASS(EditorCreateNDSceneButton);
 		GDREGISTER_CLASS(EditorInputSurfaceND);
-		GDREGISTER_CLASS(EditorMainScreenND);
-		GDREGISTER_CLASS(EditorMainViewportND);
 		GDREGISTER_CLASS(EditorPreviewEnvironmentND);
 		GDREGISTER_CLASS(EditorTransformGizmoND);
-		GDREGISTER_CLASS(EditorTransformSnapSettingsND);
 		GDREGISTER_CLASS(EditorViewportRotationND);
+		// Main editor plugin classes.
+		GDREGISTER_CLASS(EditorMainViewportND);
+		GDREGISTER_CLASS(EditorMainScreenND);
 		GDREGISTER_CLASS(GodotNDEditorPlugin);
 #elif GODOT_MODULE
 		EditorColorMap::add_conversion_color_pair("fff6a2", "ccc055");
@@ -171,11 +179,10 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
-		remove_godot_singleton("GeometryND");
-		remove_godot_singleton("RenderingServerND");
-		remove_godot_singleton("VectorND");
-		memdelete(GeometryND::get_singleton());
-		memdelete(RenderingServerND::get_singleton());
-		memdelete(VectorND::get_singleton());
+		// Unregister and free the singletons in the opposite order of registration.
+		remove_godot_singleton("RenderingServerND", RenderingServerND::get_singleton());
+		remove_godot_singleton("VectorND", VectorND::get_singleton());
+		remove_godot_singleton("MathND", MathND::get_singleton());
+		remove_godot_singleton("GeometryND", GeometryND::get_singleton());
 	}
 }
