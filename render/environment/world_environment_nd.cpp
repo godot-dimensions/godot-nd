@@ -8,7 +8,11 @@ void WorldEnvironmentND::_notification(int p_what) {
 			RenderingServerND::get_singleton()->register_world_environment(this);
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
-			RenderingServerND::get_singleton()->unregister_world_environment(this);
+			// The singleton is already gone if the module was uninitialized first.
+			RenderingServerND *rendering_server = RenderingServerND::get_singleton();
+			if (rendering_server != nullptr) {
+				rendering_server->unregister_world_environment(this);
+			}
 		} break;
 	}
 }

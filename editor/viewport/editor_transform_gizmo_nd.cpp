@@ -936,8 +936,21 @@ void EditorTransformGizmoND::setup(EditorMainScreenND *p_editor_main_screen, Edi
 	p_undo_redo_manager->connect(StringName("version_changed"), callable_mp(this, &EditorTransformGizmoND::_on_undo_redo_version_changed));
 }
 
-EditorTransformGizmoND::~EditorTransformGizmoND() {
+void EditorTransformGizmoND::_notification(int p_what) {
+	if (p_what == NOTIFICATION_PREDELETE) {
+		_free_snap_settings();
+	}
+}
+
+void EditorTransformGizmoND::_free_snap_settings() {
+	// The snap settings is an Object, so it needs to be freed manually.
 	if (_snap_settings != nullptr) {
 		memdelete(_snap_settings);
+		_snap_settings = nullptr;
 	}
+}
+
+EditorTransformGizmoND::~EditorTransformGizmoND() {
+	// Normally already done by NOTIFICATION_PREDELETE, this is just a last resort.
+	_free_snap_settings();
 }

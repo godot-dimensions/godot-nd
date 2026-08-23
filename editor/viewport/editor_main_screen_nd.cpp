@@ -265,6 +265,7 @@ void EditorMainScreenND::_notification(int p_what) {
 		} break;
 #if GODOT_MODULE || (GODOT_VERSION_MAJOR > 4 || (GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR >= 4))
 		case NOTIFICATION_EXIT_TREE: {
+			// Stop the inspectors from pointing at objects that are about to be freed.
 			if (_snap_settings_inspector != nullptr) {
 				_snap_settings_inspector->edit(nullptr);
 			}
@@ -273,6 +274,17 @@ void EditorMainScreenND::_notification(int p_what) {
 			}
 		} break;
 #endif
+		case NOTIFICATION_PREDELETE: {
+			_free_camera_settings();
+		} break;
+	}
+}
+
+void EditorMainScreenND::_free_camera_settings() {
+	// The camera settings is an Object, so it needs to be freed manually.
+	if (_camera_settings != nullptr) {
+		memdelete(_camera_settings);
+		_camera_settings = nullptr;
 	}
 }
 
@@ -556,7 +568,6 @@ void EditorMainScreenND::setup(EditorUndoRedoManager *p_undo_redo_manager) {
 }
 
 EditorMainScreenND::~EditorMainScreenND() {
-	if (_camera_settings != nullptr) {
-		memdelete(_camera_settings);
-	}
+	// Normally already done by NOTIFICATION_PREDELETE, this is just a last resort.
+	_free_camera_settings();
 }

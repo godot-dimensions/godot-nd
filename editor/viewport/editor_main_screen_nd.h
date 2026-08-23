@@ -102,6 +102,7 @@ private:
 
 	void _apply_nd_editor_settings();
 	int _calculate_scene_dimension(Node *p_node) const;
+	void _free_camera_settings();
 	void _on_button_toggled(const bool p_toggled_on, const int p_option);
 	void _on_selection_changed();
 	void _on_transform_settings_menu_id_pressed(const int p_id);

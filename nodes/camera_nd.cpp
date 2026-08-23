@@ -54,7 +54,11 @@ void CameraND::_notification(int p_what) {
 			RenderingServerND::get_singleton()->register_camera(this);
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
-			RenderingServerND::get_singleton()->unregister_camera(this);
+			// The singleton is already gone if the module was uninitialized first.
+			RenderingServerND *rendering_server = RenderingServerND::get_singleton();
+			if (rendering_server != nullptr) {
+				rendering_server->unregister_camera(this);
+			}
 		} break;
 	}
 }

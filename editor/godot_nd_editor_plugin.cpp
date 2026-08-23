@@ -52,6 +52,20 @@ void GodotNDEditorPlugin::_add_nd_main_screen() {
 	}
 }
 
+void GodotNDEditorPlugin::_remove_nd_main_screen() {
+	if (_main_screen == nullptr) {
+		return;
+	}
+	// The main screen is a child of Godot's editor main screen, not of this plugin,
+	// so Godot will not free it for us, and we have to do so explicitly.
+	Node *parent = _main_screen->get_parent();
+	if (parent != nullptr) {
+		parent->remove_child(_main_screen);
+	}
+	memdelete(_main_screen);
+	_main_screen = nullptr;
+}
+
 void GodotNDEditorPlugin::_move_nd_main_screen_tab_button() const {
 	Control *editor = EditorInterface::get_singleton()->get_base_control();
 	ERR_FAIL_NULL(editor);
@@ -74,6 +88,10 @@ void GodotNDEditorPlugin::_move_nd_main_screen_tab_button() const {
 }
 
 void GodotNDEditorPlugin::_inject_nd_scene_button() {
+	if (_create_nd_scene_button != nullptr || !is_inside_tree()) {
+		// Already injected, or this deferred call outlived the plugin being in the tree.
+		return;
+	}
 	Control *editor = EditorInterface::get_singleton()->get_base_control();
 	ERR_FAIL_NULL(editor);
 	// Add a "ND Scene" button above the "User Interface" button, below the "3D Scene" button.
@@ -89,6 +107,21 @@ void GodotNDEditorPlugin::_inject_nd_scene_button() {
 	button_nd->connect(StringName("pressed"), callable_mp(this, &GodotNDEditorPlugin::_create_nd_scene));
 	beginner_node_shortcuts->add_child(button_nd);
 	beginner_node_shortcuts->move_child(button_nd, user_interface_scene->get_index());
+	_create_nd_scene_button = button_nd;
+}
+
+void GodotNDEditorPlugin::_remove_nd_scene_button() {
+	if (_create_nd_scene_button == nullptr) {
+		return;
+	}
+	// Same as the main screen: this button was injected into a part of the editor
+	// that Godot owns, so this plugin is responsible for taking it back out again.
+	Node *parent = _create_nd_scene_button->get_parent();
+	if (parent != nullptr) {
+		parent->remove_child(_create_nd_scene_button);
+	}
+	memdelete(_create_nd_scene_button);
+	_create_nd_scene_button = nullptr;
 }
 
 void GodotNDEditorPlugin::_create_nd_scene() {
@@ -118,6 +151,8 @@ void GodotNDEditorPlugin::_notification(int p_what) {
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
 			// Clean up in the opposite order of NOTIFICATION_ENTER_TREE.
+			_remove_nd_scene_button();
+			_remove_nd_main_screen();
 			remove_import_plugin(_off_wire_nd_importer);
 			remove_import_plugin(_off_scene_nd_importer);
 			remove_import_plugin(_off_cell_nd_importer);
@@ -142,7 +177,9 @@ bool GodotNDEditorPlugin::GDEXTMOD_HANDLES(Object *p_object) const {
 }
 
 void GodotNDEditorPlugin::GDEXTMOD_MAKE_VISIBLE(bool p_visible) {
-	_main_screen->set_visible(p_visible);
+	if (_main_screen != nullptr) {
+		_main_screen->set_visible(p_visible);
+	}
 }
 
 void GodotNDEditorPlugin::_bind_methods() {

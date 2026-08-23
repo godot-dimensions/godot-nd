@@ -100,8 +100,11 @@ private:
 	void _end_transformation();
 	void _process_transform(const VectorN &p_local_ray_origin, const VectorN &p_local_ray_direction);
 
+	void _free_snap_settings();
+
 protected:
 	static void _bind_methods() {}
+	void _notification(int p_what);
 
 public:
 	EditorTransformSnapSettingsND *get_snap_settings() const { return _snap_settings; }

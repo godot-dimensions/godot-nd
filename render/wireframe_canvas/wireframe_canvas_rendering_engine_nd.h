@@ -2,6 +2,8 @@
 
 #include "../rendering_engine_nd.h"
 
+class WireframeRenderCanvasND;
+
 // Trivial CPU-based renderer that draws wireframes to a Control-based canvas.
 // Very inefficient, but easy to implement, and even once we have a better
 // renderer, this can still be useful for testing and debugging.
@@ -9,6 +11,7 @@ class WireframeCanvasRenderingEngineND : public RenderingEngineND {
 	GDCLASS(WireframeCanvasRenderingEngineND, RenderingEngineND);
 
 	static Color _get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<MeshND> &p_mesh, int p_edge_index);
+	static WireframeRenderCanvasND *_get_valid_render_canvas(const Viewport *p_viewport);
 
 protected:
 	static void _bind_methods() {}

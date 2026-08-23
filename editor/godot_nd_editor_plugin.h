@@ -43,11 +43,14 @@ class GodotNDEditorPlugin : public EditorPlugin {
 	Ref<EditorImportPluginOFFSceneND> _off_scene_nd_importer;
 	Ref<EditorImportPluginOFFWireND> _off_wire_nd_importer;
 	EditorMainScreenND *_main_screen = nullptr;
+	EditorCreateNDSceneButton *_create_nd_scene_button = nullptr;
 
 	static Button *_find_button_by_text(Node *p_start, const String &p_text);
 	void _add_nd_main_screen();
+	void _remove_nd_main_screen();
 	void _move_nd_main_screen_tab_button() const;
 	void _inject_nd_scene_button();
+	void _remove_nd_scene_button();
 	void _create_nd_scene();
 
 protected:

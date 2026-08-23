@@ -8,7 +8,11 @@ void MeshInstanceND::_notification(int p_what) {
 			RenderingServerND::get_singleton()->register_mesh_instance(this);
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
-			RenderingServerND::get_singleton()->unregister_mesh_instance(this);
+			// The singleton is already gone if the module was uninitialized first.
+			RenderingServerND *rendering_server = RenderingServerND::get_singleton();
+			if (rendering_server != nullptr) {
+				rendering_server->unregister_mesh_instance(this);
+			}
 		} break;
 	}
 }
