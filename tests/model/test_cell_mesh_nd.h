@@ -147,6 +147,44 @@ TEST_CASE("[CellMeshND] Signed distance to mesh") {
 		const double center_distance = orthoplex->get_signed_distance_to_mesh(VectorND::zero(3), nullptr, nullptr);
 		CHECK_MESSAGE(center_distance == doctest::Approx(-1.0 / Math::sqrt(3.0)), "The center of the orthoplex must have a signed distance of -1/sqrt(3).");
 	}
+	SUBCASE("Raycasts hit boxes with exact distances and normals") {
+		for (int dimension = 3; dimension <= 5; dimension++) {
+			Ref<BoxPolyMeshND> box;
+			box.instantiate();
+			box->set_size(VectorND::fill(dimension, 2.0));
+			box->populate_inverse_metric_cache();
+			const VectorN outside_point = VectorND::value_on_axis_with_dimension(2.0, 0, dimension);
+			const VectorN toward_box = VectorND::value_on_axis_with_dimension(-1.0, 0, dimension);
+			const VectorN away_from_box = VectorND::value_on_axis_with_dimension(1.0, 0, dimension);
+			CHECK_MESSAGE(box->raycast_intersects_fast(outside_point, toward_box), "A ray pointing at the box must intersect it.");
+			CHECK_MESSAGE(!box->raycast_intersects_fast(outside_point, away_from_box), "A ray pointing away from the box must not intersect it.");
+			CHECK_MESSAGE(!box->raycast_intersects_fast(outside_point, toward_box, 0.5), "A ray must not intersect the box beyond the maximum distance.");
+			const Dictionary hit_result = box->raycast_intersects(outside_point, toward_box);
+			REQUIRE_MESSAGE(bool(hit_result["hit"]), "A ray pointing at the box must intersect it.");
+			CHECK_MESSAGE(double(hit_result["distance"]) == doctest::Approx(1.0), "The ray must hit the box one unit away from its start.");
+			CHECK_MESSAGE(VectorND::is_equal_approx(VectorN(hit_result["normal"]), VectorND::value_on_axis_with_dimension(1.0, 0, dimension)), "The ray must hit the side facing the positive first axis.");
+			CHECK_MESSAGE(int32_t(hit_result["cell_index"]) >= 0, "The hit result must include the simplex cell index.");
+			const Dictionary miss_result = box->raycast_intersects(outside_point, away_from_box);
+			CHECK_MESSAGE(!bool(miss_result["hit"]), "A ray pointing away from the box must not intersect it.");
+			CHECK_MESSAGE(!miss_result.has("distance"), "A missed raycast must not include a distance.");
+			// A ray from inside the box must hit the far side from the inside.
+			const Dictionary inside_result = box->raycast_intersects(VectorND::zero(dimension), away_from_box);
+			REQUIRE_MESSAGE(bool(inside_result["hit"]), "A ray from inside the box must hit a side from the inside.");
+			CHECK_MESSAGE(double(inside_result["distance"]) == doctest::Approx(1.0), "The ray from the center must hit the side one unit away.");
+		}
+	}
+	SUBCASE("Raycasts require the inverse metric cache to be populated in advance") {
+		Ref<BoxPolyMeshND> box;
+		box.instantiate();
+		box->set_size(VectorND::fill(3, 2.0));
+		ERR_PRINT_OFF;
+		CHECK_MESSAGE(!box->raycast_intersects_fast(VectorN{ 2.0, 0.0, 0.0 }, VectorN{ -1.0, 0.0, 0.0 }), "Raycasts must fail safely when the closest-point cache is not populated.");
+		const Dictionary result = box->raycast_intersects(VectorN{ 2.0, 0.0, 0.0 }, VectorN{ -1.0, 0.0, 0.0 });
+		CHECK_MESSAGE(!bool(result["hit"]), "Raycasts must fail safely when the closest-point cache is not populated.");
+		ERR_PRINT_ON;
+		box->populate_inverse_metric_cache();
+		CHECK_MESSAGE(box->raycast_intersects_fast(VectorN{ 2.0, 0.0, 0.0 }, VectorN{ -1.0, 0.0, 0.0 }), "Raycasts must succeed after the closest-point cache is populated.");
+	}
 	SUBCASE("The inverse metric cache is invalidated when the mesh data changes") {
 		Ref<BoxPolyMeshND> box;
 		box.instantiate();

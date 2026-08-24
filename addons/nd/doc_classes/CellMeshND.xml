@@ -100,6 +100,32 @@
 				You are strongly encouraged to call this function in advance of any nearest-point or raycast calculations. The raycast methods require the cache to be populated, and will fail with an error if it is not. [method get_signed_distance_to_mesh] will populate the cache automatically as a fallback, but relying on that is discouraged.
 			</description>
 		</method>
+		<method name="raycast_intersects">
+			<return type="Dictionary" />
+			<param index="0" name="local_from" type="PackedFloat64Array" />
+			<param index="1" name="local_direction" type="PackedFloat64Array" />
+			<param index="2" name="max_distance" type="float" default="3.4e+38" />
+			<description>
+				Performs a raycast against the simplex cells of the mesh. The [param local_from] parameter is the starting point of the ray relative to the mesh, and the [param local_direction] parameter is the direction of the ray relative to the mesh. The returned [Dictionary] may contain the following keys:
+				- [code]"hit"[/code]: A boolean indicating whether the ray hit any part of the mesh.
+				- [code]"distance"[/code]: The distance from the starting point to the hit point.
+				- [code]"normal"[/code]: The normal at the hit point, perpendicular to the surface.
+				- [code]"cell_index"[/code]: The index of the simplex cell that was hit.
+				If the ray does not hit any part of the mesh, the returned dictionary will be [code]{"hit": false}[/code].
+				[b]Note:[/b] The [method populate_inverse_metric_cache] function MUST be called at least once before calling this method.
+			</description>
+		</method>
+		<method name="raycast_intersects_fast">
+			<return type="bool" />
+			<param index="0" name="local_from" type="PackedFloat64Array" />
+			<param index="1" name="local_direction" type="PackedFloat64Array" />
+			<param index="2" name="max_distance" type="float" default="3.4e+38" />
+			<description>
+				Performs a raycast against the simplex cells of the mesh. The [param local_from] parameter is the starting point of the ray relative to the mesh, and the [param local_direction] parameter is the direction of the ray relative to the mesh.
+				Returns immediately with [code]true[/code] if the ray intersects any part of the mesh, or [code]false[/code] if it does not. This is a faster function than [method raycast_intersects], which will keep going after the first hit, returning more information about the intersection, while this function will stop after any intersection is found.
+				[b]Note:[/b] The [method populate_inverse_metric_cache] function MUST be called at least once before calling this method.
+			</description>
+		</method>
 		<method name="to_array_cell_mesh">
 			<return type="ArrayCellMeshND" />
 			<description>

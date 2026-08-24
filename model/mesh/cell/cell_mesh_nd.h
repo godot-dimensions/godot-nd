@@ -26,6 +26,10 @@ public:
 	double get_signed_distance_to_mesh(const VectorN &p_local_point, VectorN *r_nearest_point_on_cell, int *r_simplex_cell_index);
 	double get_signed_distance_to_mesh_bind(const VectorN &p_local_point);
 
+	// Raycast.
+	bool raycast_intersects_fast(const VectorN &p_local_from, const VectorN &p_local_direction, const double p_max_distance = Math_INF);
+	Dictionary raycast_intersects(const VectorN &p_local_from, const VectorN &p_local_direction, const double p_max_distance = Math_INF);
+
 	void cell_mesh_clear_cache();
 	virtual void validate_material_for_mesh(const Ref<MaterialND> &p_material) override;
 	Ref<ArrayCellMeshND> to_array_cell_mesh();

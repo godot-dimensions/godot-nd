@@ -258,6 +258,142 @@ double CellMeshND::get_signed_distance_to_mesh_bind(const VectorN &p_local_point
 	return get_signed_distance_to_mesh(p_local_point, nullptr, nullptr);
 }
 
+// Raycast.
+
+bool CellMeshND::raycast_intersects_fast(const VectorN &p_local_from, const VectorN &p_local_direction, const double p_max_distance) {
+	ERR_FAIL_COND_V_MSG(!is_mesh_data_valid(), false, "CellMeshND: Cannot raycast on an invalid mesh.");
+	const int64_t dimension = get_dimension();
+	ERR_FAIL_COND_V_MSG(dimension < 2, false, "CellMeshND: Cannot raycast on a mesh with less than 2 dimensions.");
+	ERR_FAIL_COND_V_MSG(get_indices_per_simplex_cell() != dimension, false, "CellMeshND: Cannot raycast on a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices.");
+	const PackedInt32Array &simplex_cell_indices = get_simplex_cell_indices();
+	const int64_t simplex_count = simplex_cell_indices.size() / dimension;
+	if (simplex_count == 0) {
+		return false; // No simplex cells to raycast against.
+	}
+	const int64_t metric_size = (dimension - 1) * dimension / 2;
+	const PackedFloat64Array &inverse_metric_cache = _nearest_simplex_inverse_metric_cache;
+	ERR_FAIL_COND_V_MSG(inverse_metric_cache.size() != simplex_count * metric_size, false, "CellMeshND: Closest-point cache is invalid for this mesh. Call `populate_inverse_metric_cache()` before calling `raycast_intersects_fast()`.");
+	const Vector<VectorN> &vertices = get_vertices();
+	const Vector<VectorN> &boundary_normals = get_simplex_cell_boundary_normals();
+	const int64_t boundary_normals_count = boundary_normals.size();
+	const VectorN local_from = VectorND::with_dimension(p_local_from, dimension);
+	const VectorN local_direction = VectorND::with_dimension(p_local_direction, dimension);
+	Vector<VectorN> simplex_vertices;
+	simplex_vertices.resize(dimension);
+	// Iterate through all simplex cells to find any ray intersection.
+	for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
+		// These indices are guaranteed to be within bounds due to mesh validation.
+		for (int64_t vertex_num = 0; vertex_num < dimension; vertex_num++) {
+			simplex_vertices.set(vertex_num, VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension + vertex_num]], dimension));
+		}
+		VectorN normal;
+		if (simplex_count == boundary_normals_count) {
+			normal = boundary_normals[simplex_index];
+		} else {
+			// Fallback in case the boundary normals are not available or are mismatched.
+			Vector<VectorN> edges;
+			edges.resize(dimension - 1);
+			for (int64_t edge_index = 0; edge_index < dimension - 1; edge_index++) {
+				edges.set(edge_index, VectorND::subtract(simplex_vertices[edge_index + 1], simplex_vertices[0]));
+			}
+			normal = VectorND::normalized(VectorND::perpendicular(edges));
+		}
+		// Intersect the ray with the hyperplane of this simplex cell.
+		const double denominator = VectorND::dot(normal, local_direction);
+		if (Math::is_zero_approx(denominator)) {
+			continue; // The ray is parallel to the hyperplane of this simplex cell.
+		}
+		const double plane_intersection_factor = (VectorND::dot(normal, simplex_vertices[0]) - VectorND::dot(normal, local_from)) / denominator;
+		if (plane_intersection_factor < 0.0) {
+			continue; // No intersection with the hyperplane of this simplex cell.
+		}
+		if (plane_intersection_factor >= p_max_distance) {
+			continue; // Intersection is beyond the maximum distance.
+		}
+		// Check if this candidate intersection is inside the simplex cell.
+		const VectorN intersection_point = VectorND::add(local_from, VectorND::multiply_scalar(local_direction, plane_intersection_factor));
+		const bool hit = GeometryND::is_point_inside_simplex_barycentric(simplex_vertices, intersection_point, inverse_metric_cache, simplex_index);
+		if (hit) {
+			// For this fast version, we only care if there is any intersection, so we can return true immediately.
+			return true;
+		}
+	}
+	return false;
+}
+
+Dictionary CellMeshND::raycast_intersects(const VectorN &p_local_from, const VectorN &p_local_direction, const double p_max_distance) {
+	Dictionary result;
+	result["hit"] = false;
+	ERR_FAIL_COND_V_MSG(!is_mesh_data_valid(), result, "CellMeshND: Cannot raycast on an invalid mesh.");
+	const int64_t dimension = get_dimension();
+	ERR_FAIL_COND_V_MSG(dimension < 2, result, "CellMeshND: Cannot raycast on a mesh with less than 2 dimensions.");
+	ERR_FAIL_COND_V_MSG(get_indices_per_simplex_cell() != dimension, result, "CellMeshND: Cannot raycast on a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices.");
+	const PackedInt32Array &simplex_cell_indices = get_simplex_cell_indices();
+	const int64_t simplex_count = simplex_cell_indices.size() / dimension;
+	if (simplex_count == 0) {
+		return result; // No simplex cells to raycast against.
+	}
+	const int64_t metric_size = (dimension - 1) * dimension / 2;
+	const PackedFloat64Array &inverse_metric_cache = _nearest_simplex_inverse_metric_cache;
+	ERR_FAIL_COND_V_MSG(inverse_metric_cache.size() != simplex_count * metric_size, result, "CellMeshND: Closest-point cache is invalid for this mesh. Call `populate_inverse_metric_cache()` before calling `raycast_intersects()`.");
+	const Vector<VectorN> &vertices = get_vertices();
+	const Vector<VectorN> &boundary_normals = get_simplex_cell_boundary_normals();
+	const int64_t boundary_normals_count = boundary_normals.size();
+	const VectorN local_from = VectorND::with_dimension(p_local_from, dimension);
+	const VectorN local_direction = VectorND::with_dimension(p_local_direction, dimension);
+	Vector<VectorN> simplex_vertices;
+	simplex_vertices.resize(dimension);
+	VectorN best_hit_normal;
+	double best_distance = p_max_distance;
+	int32_t best_simplex_cell_index = -1;
+	// Iterate through all simplex cells to find the closest ray intersection.
+	for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
+		// These indices are guaranteed to be within bounds due to mesh validation.
+		for (int64_t vertex_num = 0; vertex_num < dimension; vertex_num++) {
+			simplex_vertices.set(vertex_num, VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension + vertex_num]], dimension));
+		}
+		VectorN normal;
+		if (simplex_count == boundary_normals_count) {
+			normal = boundary_normals[simplex_index];
+		} else {
+			// Fallback in case the boundary normals are not available or are mismatched.
+			Vector<VectorN> edges;
+			edges.resize(dimension - 1);
+			for (int64_t edge_index = 0; edge_index < dimension - 1; edge_index++) {
+				edges.set(edge_index, VectorND::subtract(simplex_vertices[edge_index + 1], simplex_vertices[0]));
+			}
+			normal = VectorND::normalized(VectorND::perpendicular(edges));
+		}
+		// Intersect the ray with the hyperplane of this simplex cell.
+		const double denominator = VectorND::dot(normal, local_direction);
+		if (Math::is_zero_approx(denominator)) {
+			continue; // The ray is parallel to the hyperplane of this simplex cell.
+		}
+		const double plane_intersection_factor = (VectorND::dot(normal, simplex_vertices[0]) - VectorND::dot(normal, local_from)) / denominator;
+		if (plane_intersection_factor < 0.0) {
+			continue; // No intersection with the hyperplane of this simplex cell.
+		}
+		if (plane_intersection_factor > best_distance) {
+			continue; // Worse than the best intersection found so far.
+		}
+		// Check if this candidate intersection is inside the simplex cell.
+		const VectorN intersection_point = VectorND::add(local_from, VectorND::multiply_scalar(local_direction, plane_intersection_factor));
+		const bool hit = GeometryND::is_point_inside_simplex_barycentric(simplex_vertices, intersection_point, inverse_metric_cache, simplex_index);
+		if (hit) {
+			best_hit_normal = normal;
+			best_distance = plane_intersection_factor;
+			best_simplex_cell_index = simplex_index;
+		}
+	}
+	result["hit"] = best_simplex_cell_index != -1;
+	if (best_simplex_cell_index != -1) {
+		result["distance"] = best_distance;
+		result["normal"] = best_hit_normal;
+		result["cell_index"] = best_simplex_cell_index;
+	}
+	return result;
+}
+
 void CellMeshND::cell_mesh_clear_cache() {
 	_cell_positions_cache.clear();
 	_nearest_simplex_inverse_metric_cache.clear();
@@ -511,8 +647,15 @@ Vector<VectorN> CellMeshND::get_edge_positions() {
 }
 
 void CellMeshND::_bind_methods() {
+	// Nearest point and distance.
 	ClassDB::bind_method(D_METHOD("populate_inverse_metric_cache"), &CellMeshND::populate_inverse_metric_cache);
 	ClassDB::bind_method(D_METHOD("get_signed_distance_to_mesh", "local_point"), &CellMeshND::get_signed_distance_to_mesh_bind);
+	// Raycast.
+	// TODO: These should be `Math_INF` but Godot's bindings do not like infinity,
+	// and also values above max float32 will overflow to infinity in the bindings.
+	// See https://github.com/godotengine/godot-cpp/pull/2030
+	ClassDB::bind_method(D_METHOD("raycast_intersects_fast", "local_from", "local_direction", "max_distance"), &CellMeshND::raycast_intersects_fast, DEFVAL(3.4e38));
+	ClassDB::bind_method(D_METHOD("raycast_intersects", "local_from", "local_direction", "max_distance"), &CellMeshND::raycast_intersects, DEFVAL(3.4e38));
 
 	ClassDB::bind_method(D_METHOD("cell_mesh_clear_cache"), &CellMeshND::cell_mesh_clear_cache);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_count"), &CellMeshND::get_simplex_cell_count);
