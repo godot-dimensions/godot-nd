@@ -35,7 +35,6 @@ class PolyMeshND : public CellMeshND {
 	static PackedInt32Array _get_face_edge_3_vertex_index_sequence(const int32_t p_edge1_a, const int32_t p_edge1_b, const int32_t p_edge2_a, const int32_t p_edge2_b);
 	static PackedInt32Array _get_edges_of_poly_cell(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const int64_t p_cell_dim_index, const int64_t p_which_cell);
 	static PackedInt32Array _get_vertex_indices_of_face(const PackedInt32Array &p_all_edge_indices, const PackedInt32Array &p_face_edge_indices);
-	static PackedInt32Array _triangulate_face_vertex_indices(const PackedInt32Array &p_face_vertex_indices, const int32_t p_pivot_attempt);
 	static bool _does_pivot_conflict_with_descendants(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const Vector<Vector<PackedInt32Array>> &p_level_cell_vertices, const Vector<PackedInt32Array> &p_level_pivots, const int64_t p_cell_dim_index, const int64_t p_which_cell, const int32_t p_pivot_vertex);
 	static void _impose_pivot_on_descendants(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const Vector<Vector<PackedInt32Array>> &p_level_cell_vertices, Vector<PackedInt32Array> &r_level_pivots, const int64_t p_cell_dim_index, const int64_t p_which_cell, const int32_t p_pivot_vertex);
 	void _decompose_boundary_cells_into_simplexes();

@@ -397,27 +397,6 @@ PackedInt32Array PolyMeshND::_get_vertex_indices_of_face(const PackedInt32Array 
 	return ret;
 }
 
-PackedInt32Array PolyMeshND::_triangulate_face_vertex_indices(const PackedInt32Array &p_face_vertex_indices, const int32_t p_pivot_attempt) {
-	PackedInt32Array face_triangles;
-	ERR_FAIL_COND_V(p_face_vertex_indices.size() < 3, face_triangles);
-	const int64_t vertex_count = p_face_vertex_indices.size();
-	const int64_t triangle_count = vertex_count - 2;
-	face_triangles.resize(triangle_count * 3);
-	int64_t where_pivot = p_face_vertex_indices.find(p_pivot_attempt);
-	if (where_pivot == -1) {
-		where_pivot = 0;
-	}
-	const int32_t pivot_vertex = p_face_vertex_indices[where_pivot];
-	for (int64_t i = 0; i < triangle_count; i++) {
-		const int64_t b = (where_pivot + i + 1) % vertex_count;
-		const int64_t c = (where_pivot + i + 2) % vertex_count;
-		face_triangles.set(i * 3, pivot_vertex);
-		face_triangles.set(i * 3 + 1, p_face_vertex_indices[b]);
-		face_triangles.set(i * 3 + 2, p_face_vertex_indices[c]);
-	}
-	return face_triangles;
-}
-
 bool PolyMeshND::_solve_coordinates_in_span(const Vector<VectorN> &p_span_vectors, const VectorN &p_target, VectorN &r_coordinates) {
 	const int64_t span_count = p_span_vectors.size();
 	r_coordinates = VectorND::fill(span_count, 0.0);
