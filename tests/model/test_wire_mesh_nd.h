@@ -52,6 +52,53 @@ TEST_CASE("[BoxWireMeshND] Edges and Vertices") {
 	CHECK(edge_indices == correct_edge_indices);
 }
 
+TEST_CASE("[ArrayWireMeshND] Transform vertices") {
+	Ref<ArrayWireMeshND> mesh;
+	mesh.instantiate();
+	mesh->append_edge_points(VectorN{ 0.0, 0.0, 0.0 }, VectorN{ 1.0, 0.0, 0.0 });
+	mesh->transform_vertices(TransformND::from_position(VectorN{ 1.0, 2.0, 3.0 }));
+	const Vector<VectorN> vertices = mesh->get_vertices();
+	REQUIRE(vertices.size() == 2);
+	CHECK(VectorND::is_equal_approx(vertices[0], VectorN{ 1.0, 2.0, 3.0 }));
+	CHECK(VectorND::is_equal_approx(vertices[1], VectorN{ 2.0, 2.0, 3.0 }));
+	CHECK(mesh->is_mesh_data_valid());
+}
+
+TEST_CASE("[ArrayWireMeshND] Merge meshes") {
+	Ref<ArrayWireMeshND> mesh;
+	mesh.instantiate();
+	mesh->append_edge_points(VectorN{ 0.0, 0.0, 0.0 }, VectorN{ 1.0, 0.0, 0.0 });
+	Ref<ArrayWireMeshND> other;
+	other.instantiate();
+	other->append_edge_points(VectorN{ 0.0, 0.0, 0.0 }, VectorN{ 1.0, 0.0, 0.0 });
+	mesh->merge_with(other, TransformND::from_position(VectorN{ 10.0, 0.0, 0.0 }));
+	const Vector<VectorN> vertices = mesh->get_vertices();
+	REQUIRE(vertices.size() == 4);
+	CHECK(VectorND::is_equal_approx(vertices[2], VectorN{ 10.0, 0.0, 0.0 }));
+	CHECK(VectorND::is_equal_approx(vertices[3], VectorN{ 11.0, 0.0, 0.0 }));
+	const PackedInt32Array edge_indices = mesh->get_edge_indices();
+	const PackedInt32Array correct_edge_indices = { 0, 1, 2, 3 };
+	CHECK(edge_indices == correct_edge_indices);
+	CHECK(mesh->is_mesh_data_valid());
+}
+
+TEST_CASE("[ArrayWireMeshND] Deduplicate all elements") {
+	Ref<ArrayWireMeshND> mesh;
+	mesh.instantiate();
+	mesh->append_edge_points(VectorN{ 0.0, 0.0, 0.0 }, VectorN{ 1.0, 0.0, 0.0 });
+	mesh->append_edge_points(VectorN{ 0.0, 0.0, 0.0 }, VectorN{ 0.0, 1.0, 0.0 });
+	mesh->append_vertex(VectorN{ 0.0, 0.0, 0.0 }, false); // Duplicate of vertex 0.
+	mesh->append_edge_indices(1, 3); // Becomes a duplicate of edge 0 (0, 1) after vertex dedup.
+	CHECK(mesh->get_vertices().size() == 4);
+	CHECK(mesh->get_edge_indices().size() == 6);
+	mesh->deduplicate_all_elements();
+	CHECK(mesh->get_vertices().size() == 3);
+	const PackedInt32Array edge_indices = mesh->get_edge_indices();
+	const PackedInt32Array correct_edge_indices = { 0, 1, 0, 2 };
+	CHECK(edge_indices == correct_edge_indices);
+	CHECK(mesh->is_mesh_data_valid());
+}
+
 TEST_CASE("[OrthoplexWireMeshND] Edges and Vertices") {
 	Ref<OrthoplexWireMeshND> orthoplex_wire_mesh;
 	orthoplex_wire_mesh.instantiate();

@@ -45,6 +45,7 @@ def get_doc_classes():
 		"PolyMeshBuilderND",
 		"PolyMeshND",
 		"WireMaterialND",
+		"WireMeshBuilderND",
 		"WireMeshND",
 		# Depends on mesh.
 		"MarkerND",

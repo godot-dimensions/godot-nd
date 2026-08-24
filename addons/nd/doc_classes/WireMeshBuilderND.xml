@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="WireMeshBuilderND" inherits="Object" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Functions for creating and modifying ND wireframe meshes.
+	</brief_description>
+	<description>
+		WireMeshBuilderND is a singleton for creating and modifying ND wireframe meshes. It contains all functions important enough to be included in the ND module, but too complex to be included in [ArrayWireMeshND], and not important enough to have their own dedicated types. For example, creating a subdivided box is handled by [BoxWireMeshND], not by this class.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="extrude_linear" qualifiers="static">
+			<return type="ArrayWireMeshND" />
+			<param index="0" name="input_mesh" type="ArrayWireMeshND" />
+			<param index="1" name="extrusion_vector" type="PackedFloat64Array" />
+			<description>
+				Extrudes a wireframe mesh linearly by creating 2 copies of the input mesh's data, translating one copy by the [param extrusion_vector] and the other copy by the negative of the [param extrusion_vector], and then connecting the corresponding vertices with edges.
+				This operation is similar to Blender's "Mesh → Extrude → Extrude Faces" operation (hotkey "E"), but Blender's operation extrudes the 2D faces of a 3D mesh, while this function only operates on wireframe data in N-dimensional space.
+			</description>
+		</method>
+	</methods>
+</class>

@@ -42,6 +42,27 @@
 				Append an array of vertices to the wireframe mesh, by calling [method append_vertex] for each vertex in the input array. The method will return an array of indices, where each index points to a vertex identical to the corresponding vertex in the input array.
 			</description>
 		</method>
+		<method name="deduplicate_all_elements">
+			<return type="void" />
+			<description>
+				Deduplicates all vertices and edges in the wireframe mesh, removing any duplicate vertices, updating the edge indices to point to the correct vertices, removing any duplicate edges, and ensuring that the edges have a consistent vertex ordering.
+			</description>
+		</method>
+		<method name="merge_with">
+			<return type="void" />
+			<param index="0" name="other" type="ArrayWireMeshND" />
+			<param index="1" name="transform" type="TransformND" />
+			<description>
+				Merges this wireframe mesh with another wireframe mesh. The other mesh's vertices and edges are added to this mesh. [param transform] is used to transform the other mesh's vertices before adding them to this mesh. This is useful for combining meshes that are in different positions or orientations.
+			</description>
+		</method>
+		<method name="transform_vertices">
+			<return type="void" />
+			<param index="0" name="transform" type="TransformND" />
+			<description>
+				Applies a transformation to all vertices of the wireframe mesh, moving the mesh's geometry while keeping the wireframe structure intact.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">

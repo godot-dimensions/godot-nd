@@ -2,6 +2,10 @@
 
 #include "../../../math/vector_nd.h"
 
+#if GDEXTENSION
+#include <godot_cpp/templates/hash_map.hpp>
+#endif
+
 bool ArrayWireMeshND::validate_mesh_data() {
 	const int64_t edge_indices_count = _edge_vertex_indices.size();
 	if (edge_indices_count % 2 != 0) {
@@ -64,6 +68,72 @@ PackedInt32Array ArrayWireMeshND::append_vertices_bind(const TypedArray<VectorN>
 	}
 	reset_mesh_data_validation();
 	return indices;
+}
+
+void ArrayWireMeshND::deduplicate_all_elements() {
+	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayWireMeshND: Cannot deduplicate elements of an invalid mesh.");
+	// Deduplicate vertices.
+	Vector<VectorN> output_vertices;
+	HashMap<int32_t, int32_t> vertex_index_remap;
+	for (int64_t input_vertex_index = 0; input_vertex_index < _vertices.size(); input_vertex_index++) {
+		const VectorN vertex = _vertices[input_vertex_index];
+		bool found_duplicate = false;
+		for (int64_t output_vertex_index = 0; output_vertex_index < output_vertices.size(); output_vertex_index++) {
+			if (VectorND::is_equal_approx(vertex, output_vertices[output_vertex_index])) {
+				vertex_index_remap[input_vertex_index] = (int32_t)output_vertex_index;
+				found_duplicate = true;
+				break;
+			}
+		}
+		if (!found_duplicate) {
+			vertex_index_remap[input_vertex_index] = (int32_t)output_vertices.size();
+			output_vertices.push_back(vertex);
+		}
+	}
+	// Update edges that reference those vertices.
+	for (int64_t edge_index = 0; edge_index < _edge_vertex_indices.size(); edge_index++) {
+		const int64_t input_vertex_index = _edge_vertex_indices[edge_index];
+		_edge_vertex_indices.set(edge_index, vertex_index_remap[input_vertex_index]);
+	}
+	// Deduplicate edges.
+	PackedInt32Array output_edge_vertex_indices;
+	for (int64_t input_edge_index = 0; input_edge_index < _edge_vertex_indices.size(); input_edge_index += 2) {
+		int32_t vertex_index_a = _edge_vertex_indices[input_edge_index];
+		int32_t vertex_index_b = _edge_vertex_indices[input_edge_index + 1];
+		bool found_duplicate = false;
+		for (int64_t output_edge_index = 0; output_edge_index < output_edge_vertex_indices.size(); output_edge_index += 2) {
+			const int32_t output_vertex_index_a = output_edge_vertex_indices[output_edge_index];
+			const int32_t output_vertex_index_b = output_edge_vertex_indices[output_edge_index + 1];
+			// Deduplicate edges in the same order and in the opposite order.
+			// Both orders should be considered the same edge in the PolyMeshND code.
+			if ((vertex_index_a == output_vertex_index_a && vertex_index_b == output_vertex_index_b) ||
+					(vertex_index_a == output_vertex_index_b && vertex_index_b == output_vertex_index_a)) {
+				found_duplicate = true;
+				break;
+			}
+		}
+		if (!found_duplicate) {
+			// Ensure the smaller index is first.
+			if (vertex_index_a > vertex_index_b) {
+				SWAP(vertex_index_a, vertex_index_b);
+			}
+			output_edge_vertex_indices.append(vertex_index_a);
+			output_edge_vertex_indices.append(vertex_index_b);
+		}
+	}
+	_vertices = output_vertices;
+	_edge_vertex_indices = output_edge_vertex_indices;
+	wire_mesh_clear_cache();
+	reset_mesh_data_validation();
+}
+
+void ArrayWireMeshND::transform_vertices(const Ref<TransformND> &p_transform) {
+	ERR_FAIL_COND(p_transform.is_null());
+	const int64_t vertex_count = _vertices.size();
+	for (int64_t vertex_index = 0; vertex_index < vertex_count; vertex_index++) {
+		_vertices.set(vertex_index, p_transform->xform(_vertices[vertex_index]));
+	}
+	wire_mesh_clear_cache();
 }
 
 void ArrayWireMeshND::merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<TransformND> &p_transform) {
@@ -135,6 +205,10 @@ void ArrayWireMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("append_edge_indices", "index_a", "index_b"), &ArrayWireMeshND::append_edge_indices);
 	ClassDB::bind_method(D_METHOD("append_vertex", "vertex", "deduplicate"), &ArrayWireMeshND::append_vertex, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("append_vertices", "vertices", "deduplicate"), &ArrayWireMeshND::append_vertices_bind, DEFVAL(true));
+
+	ClassDB::bind_method(D_METHOD("deduplicate_all_elements"), &ArrayWireMeshND::deduplicate_all_elements);
+	ClassDB::bind_method(D_METHOD("transform_vertices", "transform"), &ArrayWireMeshND::transform_vertices);
+	ClassDB::bind_method(D_METHOD("merge_with", "other", "transform"), &ArrayWireMeshND::merge_with);
 
 	// Only bind the setters here because the getters are already bound in WireMeshND.
 	ClassDB::bind_method(D_METHOD("set_edge_indices", "edge_indices"), &ArrayWireMeshND::set_edge_indices);
