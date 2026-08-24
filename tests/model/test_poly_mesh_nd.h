@@ -791,4 +791,160 @@ TEST_CASE("[PolyMeshND] Meshes without boundary cells") {
 	CHECK_MESSAGE(VectorND::is_equal_exact_array(mesh->get_vertices(), mesh->get_poly_cell_vertices()), "Without boundary cells, the simplex vertices are just the poly vertices.");
 	CHECK_MESSAGE(mesh->get_simplex_cell_indices().is_empty(), "Without boundary cells, there are no simplexes.");
 }
+
+TEST_CASE("[PolyMeshND] Conformed and interior cells") {
+	SUBCASE("A face with a collinear vertex chain decomposes without zero-measure simplexes") {
+		// A square face whose bottom edge is split at its midpoint, as if conformed to
+		// subdivided neighbors, making a 5-edge loop with a collinear vertex chain.
+		Ref<ArrayPolyMeshND> mesh;
+		mesh.instantiate();
+		Vector<VectorN> vertices = {
+			VectorN{ 0.0, 0.0, 0.0 },
+			VectorN{ 1.0, 0.0, 0.0 },
+			VectorN{ 2.0, 0.0, 0.0 },
+			VectorN{ 2.0, 2.0, 0.0 },
+			VectorN{ 0.0, 2.0, 0.0 },
+		};
+		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4 });
+		Vector<PackedInt32Array> faces;
+		faces.append(PackedInt32Array{ 0, 1, 2, 3, 4 });
+		mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
+		CHECK(mesh->is_poly_mesh_data_valid());
+		CHECK_MESSAGE(mesh->get_simplex_cell_indices().size() == 2 * 3, "The face must decompose into 2 simplexes, with the zero-measure one skipped.");
+		const Vector<VectorN> simplex_normals = mesh->get_simplex_cell_boundary_normals();
+		for (int64_t simplex_index = 0; simplex_index < simplex_normals.size(); simplex_index++) {
+			CHECK_MESSAGE(!VectorND::is_zero_approx(simplex_normals[simplex_index]), "Every emitted simplex must have a nonzero normal.");
+		}
+		mesh->populate_inverse_metric_cache();
+		const double sdf = mesh->get_signed_distance_to_mesh(VectorN{ 1.0, 1.0, 1.0 }, nullptr, nullptr);
+		CHECK_MESSAGE(Math::abs(sdf) == doctest::Approx(1.0), "The signed distance must work on a mesh with a conformed face.");
+	}
+	SUBCASE("A fully conformed face with all edges split decomposes without zero-measure simplexes") {
+		// A square face with all 4 edges split at their midpoints, making an 8-edge loop
+		// where every corner vertex sits on a collinear chain.
+		Ref<ArrayPolyMeshND> mesh;
+		mesh.instantiate();
+		Vector<VectorN> vertices = {
+			VectorN{ 0.0, 0.0, 0.0 },
+			VectorN{ 1.0, 0.0, 0.0 },
+			VectorN{ 2.0, 0.0, 0.0 },
+			VectorN{ 2.0, 1.0, 0.0 },
+			VectorN{ 2.0, 2.0, 0.0 },
+			VectorN{ 1.0, 2.0, 0.0 },
+			VectorN{ 0.0, 2.0, 0.0 },
+			VectorN{ 0.0, 1.0, 0.0 },
+		};
+		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 0, 7 });
+		Vector<PackedInt32Array> faces;
+		faces.append(PackedInt32Array{ 0, 1, 2, 3, 4, 5, 6, 7 });
+		mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
+		CHECK(mesh->is_poly_mesh_data_valid());
+		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+		CHECK_MESSAGE(simplex_indices.size() >= 4 * 3, "The face must decompose into at least 4 simplexes to cover its area.");
+		const Vector<VectorN> simplex_normals = mesh->get_simplex_cell_boundary_normals();
+		for (int64_t simplex_index = 0; simplex_index < simplex_normals.size(); simplex_index++) {
+			CHECK_MESSAGE(!VectorND::is_zero_approx(simplex_normals[simplex_index]), "Every emitted simplex must have a nonzero normal.");
+		}
+		mesh->populate_inverse_metric_cache();
+		const double sdf = mesh->get_signed_distance_to_mesh(VectorN{ 1.0, 1.0, 1.0 }, nullptr, nullptr);
+		CHECK_MESSAGE(Math::abs(sdf) == doctest::Approx(1.0), "The signed distance must work on a mesh with a fully conformed face.");
+	}
+	SUBCASE("A box conformed to a subdivided neighbor face stays fully functional") {
+		// A cube whose top face is subdivided into 4 sub-quads, so its 4 side faces are
+		// conformed into 5-edge loops, and its volumetric cell references 9 faces.
+		Ref<ArrayPolyMeshND> mesh;
+		mesh.instantiate();
+		Vector<VectorN> vertices = {
+			VectorN{ -1.0, -1.0, -1.0 },
+			VectorN{ 1.0, -1.0, -1.0 },
+			VectorN{ 1.0, 1.0, -1.0 },
+			VectorN{ -1.0, 1.0, -1.0 },
+			VectorN{ -1.0, -1.0, 1.0 },
+			VectorN{ 1.0, -1.0, 1.0 },
+			VectorN{ 1.0, 1.0, 1.0 },
+			VectorN{ -1.0, 1.0, 1.0 },
+			VectorN{ 0.0, -1.0, 1.0 },
+			VectorN{ 1.0, 0.0, 1.0 },
+			VectorN{ 0.0, 1.0, 1.0 },
+			VectorN{ -1.0, 0.0, 1.0 },
+			VectorN{ 0.0, 0.0, 1.0 },
+		};
+		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 0, 3, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 8, 5, 9, 6, 9, 6, 10, 7, 10, 4, 11, 7, 11, 8, 12, 9, 12, 10, 12, 11, 12 });
+		Vector<PackedInt32Array> faces;
+		faces.append(PackedInt32Array{ 0, 1, 2, 3 });
+		faces.append(PackedInt32Array{ 0, 5, 9, 8, 4 });
+		faces.append(PackedInt32Array{ 1, 6, 11, 10, 5 });
+		faces.append(PackedInt32Array{ 2, 7, 13, 12, 6 });
+		faces.append(PackedInt32Array{ 3, 4, 14, 15, 7 });
+		faces.append(PackedInt32Array{ 8, 16, 19, 14 });
+		faces.append(PackedInt32Array{ 9, 10, 17, 16 });
+		faces.append(PackedInt32Array{ 17, 11, 12, 18 });
+		faces.append(PackedInt32Array{ 19, 18, 13, 15 });
+		Vector<PackedInt32Array> volumes;
+		volumes.append(PackedInt32Array{ 0, 1, 2, 3, 4, 5, 6, 7, 8 });
+		mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces, volumes });
+		CHECK(mesh->is_poly_mesh_data_valid());
+		mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_FORCE_OUTWARD_FIX_CELL_ORIENTATION);
+		const Vector<VectorN> boundary_normals = mesh->get_poly_cell_boundary_normals();
+		REQUIRE(boundary_normals.size() == 9);
+		const VectorN pos_z = VectorN{ 0.0, 0.0, 1.0 };
+		for (int64_t face_index = 5; face_index < 9; face_index++) {
+			CHECK_MESSAGE(VectorND::is_equal_approx(boundary_normals[face_index], pos_z), "The coplanar sub-faces of the subdivided top side must all have +Z normals.");
+		}
+		const Vector<VectorN> simplex_normals = mesh->get_simplex_cell_boundary_normals();
+		for (int64_t simplex_index = 0; simplex_index < simplex_normals.size(); simplex_index++) {
+			CHECK_MESSAGE(!VectorND::is_zero_approx(simplex_normals[simplex_index]), "Every emitted simplex must have a nonzero normal.");
+		}
+		mesh->populate_inverse_metric_cache();
+		CHECK_MESSAGE(mesh->get_signed_distance_to_mesh(VectorN{ 2.0, 0.0, 0.0 }, nullptr, nullptr) == doctest::Approx(1.0), "The signed distance must be exact outside the conformed box.");
+		CHECK_MESSAGE(mesh->get_signed_distance_to_mesh(VectorN{ 0.0, 0.0, 0.0 }, nullptr, nullptr) == doctest::Approx(-1.0), "The signed distance must be exact inside the conformed box.");
+	}
+	SUBCASE("Interior boundary cells shared by two volumetric cells generate no simplexes") {
+		// Two unit cubes side by side sharing one square face, with two volumetric cells.
+		// The shared face is an interior boundary cell, which must be excluded from rendering.
+		Ref<ArrayPolyMeshND> mesh;
+		mesh.instantiate();
+		Vector<VectorN> vertices = {
+			VectorN{ 0.0, 0.0, 0.0 },
+			VectorN{ 0.0, 1.0, 0.0 },
+			VectorN{ 0.0, 0.0, 1.0 },
+			VectorN{ 0.0, 1.0, 1.0 },
+			VectorN{ 1.0, 0.0, 0.0 },
+			VectorN{ 1.0, 1.0, 0.0 },
+			VectorN{ 1.0, 0.0, 1.0 },
+			VectorN{ 1.0, 1.0, 1.0 },
+			VectorN{ 2.0, 0.0, 0.0 },
+			VectorN{ 2.0, 1.0, 0.0 },
+			VectorN{ 2.0, 0.0, 1.0 },
+			VectorN{ 2.0, 1.0, 1.0 },
+		};
+		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 3, 2, 3, 0, 2, 4, 5, 5, 7, 6, 7, 4, 6, 8, 9, 9, 11, 10, 11, 8, 10, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 9, 6, 10, 7, 11 });
+		Vector<PackedInt32Array> faces;
+		faces.append(PackedInt32Array{ 0, 1, 2, 3 }); // Left square at X = 0.
+		faces.append(PackedInt32Array{ 4, 5, 6, 7 }); // The shared middle square at X = 1.
+		faces.append(PackedInt32Array{ 8, 9, 10, 11 }); // Right square at X = 2.
+		faces.append(PackedInt32Array{ 12, 7, 14, 3 });
+		faces.append(PackedInt32Array{ 13, 5, 15, 1 });
+		faces.append(PackedInt32Array{ 12, 4, 13, 0 });
+		faces.append(PackedInt32Array{ 14, 6, 15, 2 });
+		faces.append(PackedInt32Array{ 16, 11, 18, 7 });
+		faces.append(PackedInt32Array{ 17, 9, 19, 5 });
+		faces.append(PackedInt32Array{ 16, 8, 17, 4 });
+		faces.append(PackedInt32Array{ 18, 10, 19, 6 });
+		Vector<PackedInt32Array> volumes;
+		volumes.append(PackedInt32Array{ 0, 3, 1, 4, 5, 6 });
+		volumes.append(PackedInt32Array{ 2, 7, 1, 8, 9, 10 });
+		mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces, volumes });
+		CHECK(mesh->is_poly_mesh_data_valid());
+		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+		CHECK_MESSAGE(simplex_indices.size() == 20 * 3, "Only the 10 outer faces must decompose, into 2 simplexes each.");
+		for (int32_t simplex_index = 0; simplex_index < (int32_t)(simplex_indices.size() / 3); simplex_index++) {
+			CHECK_MESSAGE(mesh->get_source_poly_cell_for_simplex_cell(simplex_index) != 1, "The interior boundary cell shared by both volumetric cells must generate no simplexes.");
+		}
+	}
+}
 } // namespace TestPolyMeshND

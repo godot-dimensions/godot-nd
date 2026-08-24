@@ -809,6 +809,12 @@ void PolyMeshND::_decompose_boundary_cells_into_simplexes() {
 				directions.set(i - 1, VectorND::direction_to(_simplex_cell_vertices_cache[new_simplex[0]], _simplex_cell_vertices_cache[new_simplex[i]]));
 			}
 			const VectorN simplex_perp = VectorND::perpendicular(directions);
+			if (VectorND::is_zero_approx(simplex_perp)) {
+				// Skip zero-measure simplexes, which have no volume to render or collide with.
+				// These arise when a cell has collinear or coplanar chains of vertices, such as
+				// a cell bordering subdivided cells, conformed by referencing their sub-elements.
+				continue;
+			}
 			bool should_flip = false;
 			if (has_cell_boundary_normal && VectorND::dot(simplex_perp, cell_boundary_normal) < 0.0) {
 				should_flip = true;
