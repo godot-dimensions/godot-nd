@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PolyMeshBuilderND" inherits="Object" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Functions for creating and modifying N-dimensional polytope meshes.
+	</brief_description>
+	<description>
+		PolyMeshBuilderND is a singleton for creating and modifying N-dimensional polytope meshes. It contains all functions important enough to be included in the ND module, but too complex to be included in [ArrayPolyMeshND], and not important enough to have their own dedicated types. For example, creating a box is handled by [BoxPolyMeshND], not by this class.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="convert_mesh_3d_to_nd_faces_only" qualifiers="static">
+			<return type="ArrayPolyMeshND" />
+			<param index="0" name="mesh_3d" type="ArrayMesh" />
+			<param index="1" name="which_surface" type="int" default="-1" />
+			<param index="2" name="deduplicate" type="bool" default="true" />
+			<description>
+				Converts a 3D [ArrayMesh] into a 3-dimensional [ArrayPolyMeshND] by copying the vertex positions, inferring the edges of faces, and translating the faces to use those edges. Since the result is a 3-dimensional mesh, the faces are its boundary cells, so the face normals become the boundary normals, the 3D mesh's vertex normals become the boundary cell vertex normals, and the 3D mesh's UVs become the 2-dimensional cell texture map.
+				If [param which_surface] is -1, then all surfaces are used, otherwise the specified surface is used. If [param deduplicate] is true, then vertices and edges will be deduplicated so that vertices with the same position will be merged into a single vertex, otherwise separate vertices and edges in the input will be kept separate.
+				The resulting mesh will only have the 2D faces brought in with as minimal modifications as possible. After conversion, the mesh can be further modified with other functions in this class, such as extruding it into a higher dimension with [method extrude_linear].
+			</description>
+		</method>
+		<method name="extrude_linear" qualifiers="static">
+			<return type="ArrayPolyMeshND" />
+			<param index="0" name="input_mesh" type="ArrayPolyMeshND" />
+			<param index="1" name="extrusion_vector" type="PackedFloat64Array" default="PackedFloat64Array()" />
+			<description>
+				Extrudes a mesh into a higher dimension by creating 2 copies of the input mesh's data, translating one copy by the [param extrusion_vector] and the other copy by the negative of the [param extrusion_vector], and then connecting the corresponding cells of each dimension into new cells one dimension higher. If [param extrusion_vector] is empty, the default is to extrude one unit along a new axis one dimension above the input mesh, such as extruding a 3-dimensional mesh along the fourth axis.
+				This operation is similar to Blender's "Mesh → Extrude → Extrude Faces" operation (hotkey "E"), but generalized to N dimensions, extruding cells of every dimension at once. Also, unlike Blender's operation, this function extrudes in both directions at once, and extrudes the entire mesh at once instead of allowing selection of which cells to extrude.
+				When the extrusion adds a dimension, the input mesh's boundary normals, boundary cell vertex normals, and cell texture maps are carried over onto the cells extruded from the input's boundary cells. Without that data, if the input mesh has volumetric cells, the new boundary cells are oriented outward using them, and [method make_boundary_normals_topologically_consistent] is used with the two copies of the input mesh's boundary cells as the authoritative references.
+				The input mesh MUST have 2D faces defined in [member ArrayPolyMeshND.poly_cell_indices] for any cells to be connected, meaning that [member ArrayPolyMeshND.poly_cell_indices] MUST have a length of at least 1, or else only the vertices and edges will be connected.
+			</description>
+		</method>
+		<method name="make_boundary_normals_topologically_consistent" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="mesh_nd" type="ArrayPolyMeshND" />
+			<param index="1" name="authoritative_boundary_cells" type="PackedInt32Array" />
+			<description>
+				Makes the boundary normals of an N-dimensional polytope mesh topologically consistent by ensuring that all boundary cells that share a common (N-2)-dimensional member have the same normal direction. The [param authoritative_boundary_cells] parameter specifies a list of boundary cell indices that are considered authoritative for determining the normal direction. Their normals will be preserved, and any adjacent non-authoritative boundary cells will be flipped if necessary to match the authoritative normals, recursively propagating in a flood-fill manner.
+				[b]Note:[/b] This function only works correctly if the input mesh has star-shaped polytope boundary cells, and if it can locate a point within the star-shaped region of that cell. For non-convex cells, you may need to set [member ArrayPolyMeshND.poly_cell_boundary_pivot_overrides] to specify where the pivot point is located in the cells.
+			</description>
+		</method>
+	</methods>
+</class>

@@ -12,6 +12,7 @@
 #include "model/test_cell_mesh_nd.h"
 #include "model/test_mesh_instance_nd.h"
 #include "model/test_mesh_nd.h"
+#include "model/test_poly_mesh_builder_nd.h"
 #include "model/test_poly_mesh_nd.h"
 #include "model/test_wire_mesh_nd.h"
 #include "nodes/test_node_nd.h"

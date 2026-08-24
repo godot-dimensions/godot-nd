@@ -43,6 +43,7 @@
 #include "model/mesh/poly/box_poly_mesh_nd.h"
 #include "model/mesh/poly/orthoplex_poly_mesh_nd.h"
 #include "model/mesh/poly/poly_material_nd.h"
+#include "model/mesh/poly/poly_mesh_builder_nd.h"
 #include "model/mesh/wire/array_wire_mesh_nd.h"
 #include "model/mesh/wire/box_wire_mesh_nd.h"
 #include "model/mesh/wire/orthoplex_wire_mesh_nd.h"
@@ -147,6 +148,8 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		// Depends on mesh.
 		GDREGISTER_CLASS(MarkerND);
 		GDREGISTER_CLASS(OFFDocumentND);
+		GDREGISTER_CLASS(PolyMeshBuilderND);
+		add_godot_singleton("PolyMeshBuilderND", memnew(PolyMeshBuilderND));
 		// Render.
 #if GDEXTENSION
 		GDREGISTER_CLASS(WireframeRenderCanvasND);
@@ -195,6 +198,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE_OR_EARLIEST) {
 		// Unregister and free the singletons in the opposite order of registration.
+		remove_godot_singleton("PolyMeshBuilderND", PolyMeshBuilderND::get_singleton());
 		remove_godot_singleton("RenderingServerND", RenderingServerND::get_singleton());
 		remove_godot_singleton("VectorND", VectorND::get_singleton());
 		remove_godot_singleton("MathND", MathND::get_singleton());
