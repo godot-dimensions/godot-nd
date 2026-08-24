@@ -1,5 +1,6 @@
 #include "cell_mesh_nd.h"
 
+#include "../../../math/geometry_nd.h"
 #include "../../../math/plane_nd.h"
 #include "../../../math/vector_nd.h"
 #include "array_cell_mesh_nd.h"
@@ -102,8 +103,164 @@ Vector<PackedInt32Array> CellMeshND::_determine_opposing_faces(const Vector<Vect
 	return opposing_faces;
 }
 
+// Nearest point and signed distance.
+
+void CellMeshND::populate_inverse_metric_cache() {
+	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "CellMeshND: Cannot populate closest-point cache for an invalid mesh.");
+	const int64_t dimension = get_dimension();
+	ERR_FAIL_COND_MSG(dimension < 2, "CellMeshND: Cannot populate closest-point cache for a mesh with less than 2 dimensions.");
+	ERR_FAIL_COND_MSG(get_indices_per_simplex_cell() != dimension, "CellMeshND: Cannot populate closest-point cache for a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices.");
+	const PackedInt32Array &simplex_cell_indices = get_simplex_cell_indices();
+	const int64_t simplex_count = simplex_cell_indices.size() / dimension;
+	const int64_t edge_count = dimension - 1;
+	const int64_t metric_size = edge_count * (edge_count + 1) / 2;
+	if (_nearest_simplex_inverse_metric_cache.size() == simplex_count * metric_size) {
+		return;
+	}
+	_nearest_simplex_inverse_metric_cache.resize(simplex_count * metric_size);
+	const Vector<VectorN> &vertices = get_vertices();
+	Vector<VectorN> edges;
+	edges.resize(edge_count);
+	VectorN metric;
+	metric.resize(metric_size);
+	for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
+		// These indices are guaranteed to be within bounds due to mesh validation.
+		const VectorN vert0 = VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension]], dimension);
+		for (int64_t edge_index = 0; edge_index < edge_count; edge_index++) {
+			const VectorN vert = VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension + edge_index + 1]], dimension);
+			edges.set(edge_index, VectorND::subtract(vert, vert0));
+		}
+		// Pack the Gram metric matrix G_ij = e_i · e_j in row-major upper-triangular order.
+		int64_t packed_index = 0;
+		for (int64_t i = 0; i < edge_count; i++) {
+			for (int64_t j = i; j < edge_count; j++) {
+				metric.set(packed_index++, VectorND::dot(edges[i], edges[j]));
+			}
+		}
+		VectorN inv_metric;
+		const bool valid = GeometryND::compute_inverse_metric(metric, inv_metric);
+		if (!valid) {
+			_nearest_simplex_inverse_metric_cache.clear();
+			ERR_PRINT("CellMeshND: Closest-point cache build failed because simplex cell " + itos(simplex_index) + " is degenerate or non-finite.");
+			return;
+		}
+		for (int64_t metric_index = 0; metric_index < metric_size; metric_index++) {
+			_nearest_simplex_inverse_metric_cache.set(simplex_index * metric_size + metric_index, inv_metric[metric_index]);
+		}
+	}
+}
+
+double CellMeshND::get_signed_distance_to_mesh(const VectorN &p_local_point, VectorN *r_nearest_point_on_cell, int *r_simplex_cell_index) {
+	ERR_FAIL_COND_V_MSG(!is_mesh_data_valid(), Math_INF, "CellMeshND: Cannot get signed distance to an invalid mesh.");
+	const int64_t dimension = get_dimension();
+	ERR_FAIL_COND_V_MSG(dimension < 2, Math_INF, "CellMeshND: Cannot get signed distance to a mesh with less than 2 dimensions.");
+	ERR_FAIL_COND_V_MSG(get_indices_per_simplex_cell() != dimension, Math_INF, "CellMeshND: Cannot get signed distance to a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices.");
+	const PackedInt32Array &simplex_cell_indices = get_simplex_cell_indices();
+	const int64_t simplex_count = simplex_cell_indices.size() / dimension;
+	const int64_t metric_size = (dimension - 1) * dimension / 2;
+	if (_nearest_simplex_inverse_metric_cache.size() != simplex_count * metric_size) {
+		populate_inverse_metric_cache();
+	}
+	ERR_FAIL_COND_V_MSG(_nearest_simplex_inverse_metric_cache.size() != simplex_count * metric_size, Math_INF, "CellMeshND: Closest-point cache is invalid for this mesh.");
+	ERR_FAIL_COND_V_MSG(simplex_count == 0, Math_INF, "CellMeshND: Cannot get signed distance to a mesh with zero simplex cells.");
+	const Vector<VectorN> &vertices = get_vertices();
+	const VectorN local_point = VectorND::with_dimension(p_local_point, dimension);
+	// Iterate over all simplex cells to find the nearest point on the mesh, keeping track of the best one.
+	// Unlike the fixed-size candidate buffer in the 4D module, this uses growable arrays, because the
+	// amount of simplex cells tied at a shared border grows with the dimension.
+	Vector<VectorN> best_candidate_points_on_cell;
+	PackedInt32Array best_candidate_cells;
+	VectorN best_point_on_cell;
+	double best_distance_sq = Math_INF;
+	int best_simplex_index = -1;
+	bool best_proj_inside = false;
+	Vector<VectorN> simplex_vertices;
+	simplex_vertices.resize(dimension);
+	// Future: This part could be accelerated with spatial partitioning, and/or accelerated with threading.
+	// But those optimizations add a lot of complexity and would only benefit larger meshes.
+	for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
+		VectorN nearest_on_cell;
+		double min_distance_sq = 0.0;
+		bool proj_inside = false;
+		for (int64_t vertex_num = 0; vertex_num < dimension; vertex_num++) {
+			simplex_vertices.set(vertex_num, VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension + vertex_num]], dimension));
+		}
+		GeometryND::get_nearest_point_on_simplex_barycentric(simplex_vertices, local_point, _nearest_simplex_inverse_metric_cache, simplex_index, nearest_on_cell, min_distance_sq, proj_inside);
+		const bool less_dist = min_distance_sq < best_distance_sq;
+		// If the projection is outside the cell, but the projected point is the same distance as what we
+		// already found, then we may have multiple candidates for the closest cell to this point.
+		// In this case, we need to collect them all for later disambiguation using the boundary normal.
+		if (!proj_inside) {
+			if (!best_proj_inside && Math::is_equal_approx(min_distance_sq, best_distance_sq)) {
+				best_candidate_points_on_cell.append(nearest_on_cell);
+				best_candidate_cells.append(simplex_index);
+			} else if (less_dist) {
+				best_candidate_points_on_cell.clear();
+				best_candidate_cells.clear();
+				best_candidate_points_on_cell.append(nearest_on_cell);
+				best_candidate_cells.append(simplex_index);
+			}
+		}
+		// If the projection is closer than what we have already found, then this is the new best point.
+		// Update the best point and distance regardless of the projection being inside or outside.
+		if (less_dist) {
+			best_point_on_cell = nearest_on_cell;
+			best_distance_sq = min_distance_sq;
+			best_simplex_index = simplex_index;
+			best_proj_inside = proj_inside;
+			if (proj_inside) {
+				// If the projection is inside, then this is the single unambiguous nearest point so far.
+				best_candidate_points_on_cell.clear();
+				best_candidate_cells.clear();
+			}
+		}
+	}
+	const Vector<VectorN> &boundary_normals = get_simplex_cell_boundary_normals();
+	ERR_FAIL_COND_V_MSG(boundary_normals.size() != simplex_count, Math_INF, "CellMeshND: Cannot get signed distance to a mesh without boundary normals for all simplex cells.");
+	if (best_candidate_cells.size() > 1) {
+		// We have multiple candidates with the same distance, so we need to disambiguate using
+		// the absolute angle to the boundary normal (these are normalized, so use the dot product).
+		double best_dot_abs = -1.0;
+		for (int64_t candidate_num = 0; candidate_num < best_candidate_cells.size(); candidate_num++) {
+			const int32_t candidate_cell = best_candidate_cells[candidate_num];
+			const VectorN candidate_point_on_cell = best_candidate_points_on_cell[candidate_num];
+			const VectorN cell_point_dir_to_target = VectorND::normalized(VectorND::subtract(local_point, candidate_point_on_cell));
+			const double dot_abs = Math::abs(VectorND::dot(cell_point_dir_to_target, boundary_normals[candidate_cell]));
+			if (dot_abs > best_dot_abs) {
+				best_dot_abs = dot_abs;
+				best_simplex_index = candidate_cell;
+				best_point_on_cell = candidate_point_on_cell;
+			}
+		}
+	}
+	// Write the outputs depending on what the caller requested.
+	if (r_nearest_point_on_cell) {
+		*r_nearest_point_on_cell = best_point_on_cell;
+	}
+	if (r_simplex_cell_index) {
+		*r_simplex_cell_index = best_simplex_index;
+	}
+	if (unlikely(best_simplex_index < 0)) {
+		// This should be impossible because we check for zero simplex cells above, but just in case.
+		return Math_INF;
+	}
+	// If we found a nearest point with a nearest cell, check its boundary normal to determine the sign of the distance.
+	const VectorN best_normal = boundary_normals[best_simplex_index];
+	const double side = VectorND::dot(VectorND::subtract(local_point, best_point_on_cell), best_normal);
+	double signed_distance = Math::sqrt(best_distance_sq);
+	if (side < 0.0) {
+		signed_distance = -signed_distance;
+	}
+	return signed_distance;
+}
+
+double CellMeshND::get_signed_distance_to_mesh_bind(const VectorN &p_local_point) {
+	return get_signed_distance_to_mesh(p_local_point, nullptr, nullptr);
+}
+
 void CellMeshND::cell_mesh_clear_cache() {
 	_cell_positions_cache.clear();
+	_nearest_simplex_inverse_metric_cache.clear();
 	_edge_positions_cache.clear();
 	_edge_indices_cache.clear();
 	mark_mesh_bounds_and_cross_section_dirty();
@@ -354,6 +511,9 @@ Vector<VectorN> CellMeshND::get_edge_positions() {
 }
 
 void CellMeshND::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("populate_inverse_metric_cache"), &CellMeshND::populate_inverse_metric_cache);
+	ClassDB::bind_method(D_METHOD("get_signed_distance_to_mesh", "local_point"), &CellMeshND::get_signed_distance_to_mesh_bind);
+
 	ClassDB::bind_method(D_METHOD("cell_mesh_clear_cache"), &CellMeshND::cell_mesh_clear_cache);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_count"), &CellMeshND::get_simplex_cell_count);
 	ClassDB::bind_method(D_METHOD("get_indices_per_simplex_cell"), &CellMeshND::get_indices_per_simplex_cell);

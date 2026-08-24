@@ -8,6 +8,7 @@ class CellMeshND : public MeshND {
 	GDCLASS(CellMeshND, MeshND);
 
 	Vector<VectorN> _cell_positions_cache;
+	PackedFloat64Array _nearest_simplex_inverse_metric_cache;
 
 	static int64_t _binomial_coefficient(const int64_t n, const int64_t k);
 	static void _generate_combinations_recursive(const PackedInt32Array &p_items, const int64_t p_count, const int64_t p_choose, const int64_t p_start, const int64_t p_depth, int &r_result_index, PackedInt32Array &r_current, Vector<PackedInt32Array> &r_result);
@@ -20,6 +21,11 @@ protected:
 	Vector<VectorN> _edge_positions_cache;
 
 public:
+	// Nearest point and signed distance.
+	void populate_inverse_metric_cache();
+	double get_signed_distance_to_mesh(const VectorN &p_local_point, VectorN *r_nearest_point_on_cell, int *r_simplex_cell_index);
+	double get_signed_distance_to_mesh_bind(const VectorN &p_local_point);
+
 	void cell_mesh_clear_cache();
 	virtual void validate_material_for_mesh(const Ref<MaterialND> &p_material) override;
 	Ref<ArrayCellMeshND> to_array_cell_mesh();
