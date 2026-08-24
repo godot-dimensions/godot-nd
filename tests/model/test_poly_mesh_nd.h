@@ -461,6 +461,256 @@ TEST_CASE("[PolyMeshND] Watertight simplex decomposition") {
 	}
 }
 
+TEST_CASE("[PolyMeshND] Box texture maps") {
+	SUBCASE("Cross tiles align with the center cell in texture and world space") {
+		// For each cross-tiled cell, the vertices shared with the center cell must have the
+		// same texture coordinates in both cells, so that the unfolding is seamless. Shared
+		// vertices are the same vertex indices, so the world coordinates match trivially.
+		for (int dimension = 3; dimension <= 5; dimension++) {
+			for (int mode = 0; mode < 2; mode++) {
+				Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
+				box->set_poly_texture_map(mode == 0 ? BoxPolyMeshND::BOX_POLY_TEXTURE_MAP_CROSS_ISLAND : BoxPolyMeshND::BOX_POLY_TEXTURE_MAP_LONG_CROSS);
+				const Vector<PackedInt32Array> cell_vertex_indices = box->get_all_boundary_cell_vertex_indices(false);
+				const Vector<Vector<VectorM>> texture_map = box->get_poly_cell_texture_map();
+				const Vector<VectorN> normals = box->get_poly_cell_boundary_normals();
+				REQUIRE(texture_map.size() == cell_vertex_indices.size());
+				// Find the center cell, facing the positive last axis, and map its texcoords.
+				const int64_t last_axis = dimension - 1;
+				int64_t center_cell = -1;
+				for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
+					if (normals[cell_index][last_axis] > 0.0) {
+						center_cell = cell_index;
+						break;
+					}
+				}
+				REQUIRE(center_cell != -1);
+				HashMap<int32_t, VectorM> center_texcoords;
+				for (int64_t i = 0; i < cell_vertex_indices[center_cell].size(); i++) {
+					center_texcoords.insert(cell_vertex_indices[center_cell][i], texture_map[center_cell][i]);
+				}
+				for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
+					if (normals[cell_index][last_axis] != 0.0) {
+						continue; // Only check the side cells of the cross, not the last axis cells.
+					}
+					int64_t shared_vertex_count = 0;
+					for (int64_t i = 0; i < cell_vertex_indices[cell_index].size(); i++) {
+						const int32_t vertex_index = cell_vertex_indices[cell_index][i];
+						if (!center_texcoords.has(vertex_index)) {
+							continue;
+						}
+						shared_vertex_count++;
+						CHECK_MESSAGE(VectorND::is_equal_approx(texture_map[cell_index][i], center_texcoords[vertex_index]), "Vertices shared with the center cell must have the same texture coordinates in both cells.");
+					}
+					CHECK_MESSAGE(shared_vertex_count == (int64_t(1) << (dimension - 2)), "Each side cell shares half of its vertices with the center cell.");
+				}
+			}
+		}
+	}
+
+	SUBCASE("The long cross negative cell connects to the positive first axis cell") {
+		for (int dimension = 3; dimension <= 5; dimension++) {
+			Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
+			box->set_poly_texture_map(BoxPolyMeshND::BOX_POLY_TEXTURE_MAP_LONG_CROSS);
+			const Vector<PackedInt32Array> cell_vertex_indices = box->get_all_boundary_cell_vertex_indices(false);
+			const Vector<Vector<VectorM>> texture_map = box->get_poly_cell_texture_map();
+			const Vector<VectorN> normals = box->get_poly_cell_boundary_normals();
+			const int64_t last_axis = dimension - 1;
+			int64_t negative_last_cell = -1;
+			int64_t positive_first_cell = -1;
+			for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
+				if (normals[cell_index][last_axis] < 0.0) {
+					negative_last_cell = cell_index;
+				} else if (normals[cell_index][0] > 0.0) {
+					positive_first_cell = cell_index;
+				}
+			}
+			REQUIRE(negative_last_cell != -1);
+			REQUIRE(positive_first_cell != -1);
+			HashMap<int32_t, VectorM> positive_first_texcoords;
+			for (int64_t i = 0; i < cell_vertex_indices[positive_first_cell].size(); i++) {
+				positive_first_texcoords.insert(cell_vertex_indices[positive_first_cell][i], texture_map[positive_first_cell][i]);
+			}
+			int64_t shared_vertex_count = 0;
+			for (int64_t i = 0; i < cell_vertex_indices[negative_last_cell].size(); i++) {
+				const int32_t vertex_index = cell_vertex_indices[negative_last_cell][i];
+				if (!positive_first_texcoords.has(vertex_index)) {
+					continue;
+				}
+				shared_vertex_count++;
+				CHECK_MESSAGE(VectorND::is_equal_approx(texture_map[negative_last_cell][i], positive_first_texcoords[vertex_index]), "The long cross's negative last cell must connect seamlessly to the positive first axis cell.");
+			}
+			CHECK(shared_vertex_count == (int64_t(1) << (dimension - 2)));
+		}
+	}
+
+	SUBCASE("Fill each side spans the full texture space with the 4D orientation conventions") {
+		Ref<BoxPolyMeshND> box = make_box_poly_mesh(4);
+		box->set_poly_texture_map(BoxPolyMeshND::BOX_POLY_TEXTURE_MAP_FILL_EACH_SIDE);
+		const Vector<PackedInt32Array> cell_vertex_indices = box->get_all_boundary_cell_vertex_indices(false);
+		const Vector<Vector<VectorM>> texture_map = box->get_poly_cell_texture_map();
+		const Vector<VectorN> normals = box->get_poly_cell_boundary_normals();
+		for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
+			for (int64_t i = 0; i < cell_vertex_indices[cell_index].size(); i++) {
+				const int32_t vertex_index = cell_vertex_indices[cell_index][i];
+				const VectorM &texcoord = texture_map[cell_index][i];
+				if (normals[cell_index][3] > 0.0 && vertex_index == 0b1111) {
+					// The positive last cell maps vertex bits directly, matching the 4D module.
+					CHECK(VectorND::is_equal_approx(texcoord, VectorM{ 1.0, 1.0, 1.0 }));
+				} else if (normals[cell_index][3] < 0.0 && vertex_index == 0b0111) {
+					// The negative last cell is mirrored on every axis, matching the 4D module.
+					CHECK(VectorND::is_equal_approx(texcoord, VectorM{ 0.0, 0.0, 0.0 }));
+				}
+				for (int64_t axis = 0; axis < 3; axis++) {
+					CHECK_MESSAGE((texcoord[axis] == 0.0 || texcoord[axis] == 1.0), "Fill each side must map every vertex to a corner of the texture space.");
+				}
+			}
+		}
+	}
+
+	SUBCASE("Texture maps are valid and within range for all modes") {
+		for (int dimension = 3; dimension <= 5; dimension++) {
+			for (int mode = 0; mode <= 2; mode++) {
+				Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
+				box->set_poly_texture_map((BoxPolyMeshND::BoxPolyTextureMap)mode);
+				const Vector<Vector<VectorM>> texture_map = box->get_poly_cell_texture_map();
+				REQUIRE(texture_map.size() == 2 * dimension);
+				for (int64_t cell_index = 0; cell_index < texture_map.size(); cell_index++) {
+					REQUIRE(texture_map[cell_index].size() == (int64_t(1) << (dimension - 1)));
+					for (int64_t i = 0; i < texture_map[cell_index].size(); i++) {
+						const VectorM &texcoord = texture_map[cell_index][i];
+						REQUIRE(texcoord.size() == dimension - 1);
+						for (int64_t axis = 0; axis < texcoord.size(); axis++) {
+							CHECK(texcoord[axis] >= 0.0);
+							CHECK(texcoord[axis] <= 1.0);
+						}
+					}
+				}
+				CHECK_MESSAGE(box->to_array_poly_mesh()->is_poly_mesh_data_valid(), "The generated texture map must be valid for the box's cells.");
+			}
+		}
+		Ref<BoxPolyMeshND> flat_box = make_box_poly_mesh(2);
+		CHECK_MESSAGE(flat_box->get_poly_cell_texture_map().is_empty(), "A 2D box has no boundary poly cells to texture map.");
+	}
+}
+
+TEST_CASE("[PolyMeshND] Orthoplex texture map") {
+	SUBCASE("Texture coordinates match the reflection construction") {
+		// A 3D orthoplex's +X +Y -Z cell maps -Z to the center reflected over the line
+		// through (1.0, 0.5) and (0.5, 1.0), which is (1.0, 1.0).
+		Ref<OrthoplexPolyMeshND> octahedron = make_orthoplex_poly_mesh(3);
+		const Vector<PackedInt32Array> cell_vertex_indices_3d = octahedron->get_all_boundary_cell_vertex_indices(false);
+		const Vector<Vector<VectorM>> texture_map_3d = octahedron->get_poly_cell_texture_map();
+		const Vector<VectorN> normals_3d = octahedron->get_poly_cell_boundary_normals();
+		for (int64_t cell_index = 0; cell_index < normals_3d.size(); cell_index++) {
+			if (normals_3d[cell_index][0] > 0.0 && normals_3d[cell_index][1] > 0.0 && normals_3d[cell_index][2] < 0.0) {
+				for (int64_t i = 0; i < cell_vertex_indices_3d[cell_index].size(); i++) {
+					const int32_t vertex_index = cell_vertex_indices_3d[cell_index][i];
+					if (vertex_index == 1) { // +X vertex.
+						CHECK(VectorND::is_equal_approx(texture_map_3d[cell_index][i], VectorM{ 1.0, 0.5 }));
+					} else if (vertex_index == 3) { // +Y vertex.
+						CHECK(VectorND::is_equal_approx(texture_map_3d[cell_index][i], VectorM{ 0.5, 1.0 }));
+					} else if (vertex_index == 4) { // -Z vertex.
+						CHECK(VectorND::is_equal_approx(texture_map_3d[cell_index][i], VectorM{ 1.0, 1.0 }));
+					}
+				}
+			}
+		}
+		// A 4D orthoplex's +X +Y +Z -W cell maps -W to the center reflected over the plane
+		// through (1.0, 0.5, 0.5), (0.5, 1.0, 0.5), and (0.5, 0.5, 1.0), which is 5/6 on each axis.
+		Ref<OrthoplexPolyMeshND> orthoplex = make_orthoplex_poly_mesh(4);
+		const Vector<PackedInt32Array> cell_vertex_indices_4d = orthoplex->get_all_boundary_cell_vertex_indices(false);
+		const Vector<Vector<VectorM>> texture_map_4d = orthoplex->get_poly_cell_texture_map();
+		const Vector<VectorN> normals_4d = orthoplex->get_poly_cell_boundary_normals();
+		for (int64_t cell_index = 0; cell_index < normals_4d.size(); cell_index++) {
+			const bool all_others_positive = normals_4d[cell_index][0] > 0.0 && normals_4d[cell_index][1] > 0.0 && normals_4d[cell_index][2] > 0.0;
+			if (!all_others_positive) {
+				continue;
+			}
+			for (int64_t i = 0; i < cell_vertex_indices_4d[cell_index].size(); i++) {
+				const int32_t vertex_index = cell_vertex_indices_4d[cell_index][i];
+				if (vertex_index == 6 && normals_4d[cell_index][3] < 0.0) { // -W vertex.
+					CHECK(VectorND::is_equal_approx(texture_map_4d[cell_index][i], VectorM{ 5.0 / 6.0, 5.0 / 6.0, 5.0 / 6.0 }));
+				} else if (vertex_index == 7 && normals_4d[cell_index][3] > 0.0) { // +W vertex.
+					CHECK(VectorND::is_equal_approx(texture_map_4d[cell_index][i], VectorM{ 0.5, 0.5, 0.5 }));
+				} else if (vertex_index == 1) { // +X vertex, same in both cells.
+					CHECK(VectorND::is_equal_approx(texture_map_4d[cell_index][i], VectorM{ 1.0, 0.5, 0.5 }));
+				}
+			}
+		}
+	}
+
+	SUBCASE("Cells sharing the same non-last signs align on their shared vertices") {
+		for (int dimension = 3; dimension <= 5; dimension++) {
+			Ref<OrthoplexPolyMeshND> orthoplex = make_orthoplex_poly_mesh(dimension);
+			const Vector<PackedInt32Array> cell_vertex_indices = orthoplex->get_all_boundary_cell_vertex_indices(false);
+			const Vector<Vector<VectorM>> texture_map = orthoplex->get_poly_cell_texture_map();
+			const Vector<VectorN> normals = orthoplex->get_poly_cell_boundary_normals();
+			const int64_t last_axis = dimension - 1;
+			for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
+				if (normals[cell_index][last_axis] < 0.0) {
+					continue;
+				}
+				// Find the partner cell with the same signs except for the negative last axis.
+				int64_t partner_cell = -1;
+				for (int64_t other_index = 0; other_index < normals.size(); other_index++) {
+					if (normals[other_index][last_axis] > 0.0) {
+						continue;
+					}
+					bool signs_match = true;
+					for (int64_t axis = 0; axis < last_axis; axis++) {
+						if ((normals[cell_index][axis] > 0.0) != (normals[other_index][axis] > 0.0)) {
+							signs_match = false;
+							break;
+						}
+					}
+					if (signs_match) {
+						partner_cell = other_index;
+						break;
+					}
+				}
+				REQUIRE(partner_cell != -1);
+				HashMap<int32_t, VectorM> cell_texcoords;
+				for (int64_t i = 0; i < cell_vertex_indices[cell_index].size(); i++) {
+					cell_texcoords.insert(cell_vertex_indices[cell_index][i], texture_map[cell_index][i]);
+				}
+				int64_t shared_vertex_count = 0;
+				for (int64_t i = 0; i < cell_vertex_indices[partner_cell].size(); i++) {
+					const int32_t vertex_index = cell_vertex_indices[partner_cell][i];
+					if (!cell_texcoords.has(vertex_index)) {
+						continue;
+					}
+					shared_vertex_count++;
+					CHECK_MESSAGE(VectorND::is_equal_approx(texture_map[partner_cell][i], cell_texcoords[vertex_index]), "The shared vertices of the positive and negative last axis cells must have the same texture coordinates.");
+				}
+				CHECK_MESSAGE(shared_vertex_count == dimension - 1, "The partner cells share every vertex except their last axis vertices.");
+			}
+		}
+	}
+
+	SUBCASE("Texture maps are valid and within range") {
+		for (int dimension = 3; dimension <= 5; dimension++) {
+			Ref<OrthoplexPolyMeshND> orthoplex = make_orthoplex_poly_mesh(dimension);
+			const Vector<Vector<VectorM>> texture_map = orthoplex->get_poly_cell_texture_map();
+			REQUIRE(texture_map.size() == (int64_t(1) << dimension));
+			for (int64_t cell_index = 0; cell_index < texture_map.size(); cell_index++) {
+				REQUIRE(texture_map[cell_index].size() == dimension);
+				for (int64_t i = 0; i < texture_map[cell_index].size(); i++) {
+					const VectorM &texcoord = texture_map[cell_index][i];
+					REQUIRE(texcoord.size() == dimension - 1);
+					for (int64_t axis = 0; axis < texcoord.size(); axis++) {
+						CHECK(texcoord[axis] >= 0.0);
+						CHECK(texcoord[axis] <= 1.0);
+					}
+				}
+			}
+			CHECK_MESSAGE(orthoplex->to_array_poly_mesh()->is_poly_mesh_data_valid(), "The generated texture map must be valid for the orthoplex's cells.");
+			CHECK_MESSAGE(!orthoplex->get_simplex_cell_texture_map().is_empty(), "The texture map must carry through to the simplex decomposition.");
+		}
+		Ref<OrthoplexPolyMeshND> diamond = make_orthoplex_poly_mesh(2);
+		CHECK_MESSAGE(diamond->get_poly_cell_texture_map().is_empty(), "A 2D orthoplex has no boundary poly cells to texture map.");
+	}
+}
+
 TEST_CASE("[PolyMeshND] Poly cell vertex indices and poly indices") {
 	Ref<BoxPolyMeshND> box = make_box_poly_mesh(4);
 	SUBCASE("Vertex indices by dimension") {

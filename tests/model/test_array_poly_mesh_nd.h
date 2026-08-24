@@ -343,6 +343,8 @@ TEST_CASE("[ArrayPolyMeshND] Unwrap texture map") {
 	SUBCASE("Unwrapping a single island only fills that island") {
 		Ref<BoxPolyMeshND> box = TestPolyMeshND::make_box_poly_mesh(4);
 		Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
+		// Clear the box's built-in texture map, so only the unwrapped island is mapped.
+		mesh->set_poly_cell_texture_map(Vector<Vector<VectorM>>());
 		mesh->unwrap_texture_map_island(PackedInt32Array{ 0 });
 		const Vector<Vector<VectorM>> texture_map = mesh->get_poly_cell_texture_map();
 		REQUIRE(texture_map.size() == 8);

@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		BoxPolyMeshND is a class for generating polyhedral meshes representing boxes of any dimension: a square in 2D, a cube in 3D, a tesseract in 4D, and so on. The full polyhedral hierarchy is generated procedurally for the mesh's dimension, including a volumetric hypervolume cell, boundary cells oriented to point outward, and flat shading vertex normals. The box is centered at the origin, and is axis-aligned by default; if you want a box facing a different direction, you can rotate the [MeshInstanceND] node the box is attached to.
-		The box does not have a built-in texture map. To texture map a box, convert it with [method PolyMeshND.to_array_poly_mesh] and use [method ArrayPolyMeshND.unwrap_texture_map].
+		The box has a built-in texture map, generated procedurally for the box's dimension by unfolding the boundary cells into the (N-1)-dimensional texture space, with multiple layouts to choose from. See [member poly_texture_map] and [enum BoxPolyTextureMap] for details. For other layouts, convert the box with [method PolyMeshND.to_array_poly_mesh] and use [method ArrayPolyMeshND.unwrap_texture_map].
 	</description>
 	<tutorials>
 		<link title="Wikipedia Hypercube">https://en.wikipedia.org/wiki/Hypercube</link>
@@ -46,8 +46,22 @@
 		<member name="half_extents" type="PackedFloat64Array" setter="set_half_extents" getter="get_half_extents">
 			The half-extents of the box mesh in meters, also known as just "extents". This is the "radius" of the box. This is a wrapper around [member size] for situations where you want to use the extents instead of size. Since the box is centered at the origin, one vertex is located at the half-extents, and the rest have some of the components negated.
 		</member>
+		<member name="poly_texture_map" type="int" setter="set_poly_texture_map" getter="get_poly_texture_map" enum="BoxPolyMeshND.BoxPolyTextureMap" default="0">
+			The type of texture map used for the texture space of the box mesh cells. This determines the cell texture map returned by [method PolyMeshND.get_poly_cell_texture_map]. Different options have different impacts on texture density, visual intuitiveness, and texture bleeding. See [enum BoxPolyTextureMap] for possible values.
+		</member>
 		<member name="size" type="PackedFloat64Array" setter="set_size" getter="get_size" default="PackedFloat64Array()">
 			The size of the box mesh in meters. This is the "diameter" size of the box in ND space, where each component is the size of the box in one of the dimensions. This is the value that is stored internally.
 		</member>
 	</members>
+	<constants>
+		<constant name="BOX_POLY_TEXTURE_MAP_CROSS_ISLAND" value="0" enum="BoxPolyTextureMap">
+			Use a cell texture map in the shape of a cross and island. The positive last axis side is the middle of the cross, spanning 0.3 to 0.6 on each texture axis, while the sides of the other axes form the arms of the cross, tiling 0.0 to 0.3 and 0.6 to 0.9. The negative last axis side is an island at 0.7 to 1.0 on each texture axis, separated from the cross. This texture map is visually intuitive, and has space between disconnected cells to avoid texture bleeding issues, but it is not as compact as possible.
+		</constant>
+		<constant name="BOX_POLY_TEXTURE_MAP_FILL_EACH_SIDE" value="1" enum="BoxPolyTextureMap">
+			Use a cell texture map that fills each side with the same texture. This means that all sides overlap each other in texture space. This can be used for boxes where all sides have the same texture, such as a Minecraft cobblestone block. The orientations match the cross unfolding and the 4D module: side cells carry the last world axis on the texture axis they face, and the negative last axis side is mirrored on every axis.
+		</constant>
+		<constant name="BOX_POLY_TEXTURE_MAP_LONG_CROSS" value="2" enum="BoxPolyTextureMap">
+			Use a cell texture map in the shape of a long cross. The positive last axis side is the middle of the cross, spanning 0.25 to 0.5 on the first texture axis and 1/3 to 2/3 on the rest, while the sides of the other axes form the arms of the cross. The negative last axis side is bolted onto the positive first axis side, at 0.75 to 1.0 on the first texture axis, keeping every side connected. This texture map is visually intuitive, but is very sparse, and only works correctly for textures with a 4x3x...x3 aspect ratio.
+		</constant>
+	</constants>
 </class>

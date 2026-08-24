@@ -9,7 +9,15 @@ void BoxPolyMeshND::_clear_caches() {
 	_box_edge_indices_cache.clear();
 	_boundary_normals_cache.clear();
 	_vertex_normals_cache.clear();
+	_texture_map_cache.clear();
 	_vertices_cache.clear();
+	poly_mesh_clear_cache();
+}
+
+void BoxPolyMeshND::set_poly_texture_map(const BoxPolyTextureMap p_map) {
+	_poly_texture_map = p_map;
+	// The position caches can be kept, but the texture map and poly caches need clearing.
+	_texture_map_cache.clear();
 	poly_mesh_clear_cache();
 }
 
@@ -180,10 +188,133 @@ Vector<Vector<VectorN>> BoxPolyMeshND::get_poly_cell_vertex_normals() {
 	return _vertex_normals_cache;
 }
 
+// Procedurally generates the texture map for the box's boundary cells, by unfolding the
+// N-cube's boundary into a cross shape in the (N-1)-dimensional texture space, like the
+// classic cross unfolding of a cube or tesseract. The cell facing the positive last axis
+// sits in the center of the cross, the cells of the other axes tile around it, unfolded
+// so that shared vertices with the center cell have identical texture coordinates, and
+// the cell facing the negative last axis is a special case placed depending on the mode.
+void BoxPolyMeshND::_generate_texture_map() {
+	_texture_map_cache.clear();
+	const int64_t dimension = _size.size();
+	if (dimension < 3) {
+		// Texture maps bind to boundary poly cells, which a 2D or lower box does not have.
+		return;
+	}
+	if (_poly_cell_indices_cache.is_empty()) {
+		_generate_poly_data();
+	}
+	const int64_t texture_dimension = dimension - 1;
+	const int64_t last_axis = dimension - 1;
+	// The ranges of the center box per texture axis, and of the negative last axis cell.
+	// The side cells tile next to the center box with the same size as the center box.
+	VectorM center_lo;
+	VectorM center_hi;
+	VectorM negative_lo;
+	VectorM negative_hi;
+	if (_poly_texture_map == BOX_POLY_TEXTURE_MAP_LONG_CROSS) {
+		center_lo = VectorND::fill(texture_dimension, 1.0 / 3.0);
+		center_hi = VectorND::fill(texture_dimension, 2.0 / 3.0);
+		negative_lo = VectorND::fill(texture_dimension, 1.0 / 3.0);
+		negative_hi = VectorND::fill(texture_dimension, 2.0 / 3.0);
+		center_lo.set(0, 0.25);
+		center_hi.set(0, 0.5);
+		negative_lo.set(0, 0.75);
+		negative_hi.set(0, 1.0);
+	} else {
+		center_lo = VectorND::fill(texture_dimension, 0.3);
+		center_hi = VectorND::fill(texture_dimension, 0.6);
+		negative_lo = VectorND::fill(texture_dimension, 0.7);
+		negative_hi = VectorND::fill(texture_dimension, 1.0);
+	}
+	const Vector<PackedInt32Array> cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices_cache, _box_edge_indices_cache, dimension - 3, false);
+	const int64_t cell_count = cell_vertex_indices.size();
+	ERR_FAIL_COND(_boundary_normals_cache.size() != cell_count);
+	_texture_map_cache.resize(cell_count);
+	for (int64_t cell_index = 0; cell_index < cell_count; cell_index++) {
+		// Determine which axis this cell faces from its outward normal.
+		const VectorN &cell_normal = _boundary_normals_cache[cell_index];
+		int64_t cell_axis = -1;
+		bool cell_positive = false;
+		for (int64_t axis = 0; axis < dimension; axis++) {
+			if (cell_normal[axis] != 0.0) {
+				cell_axis = axis;
+				cell_positive = cell_normal[axis] > 0.0;
+				break;
+			}
+		}
+		ERR_FAIL_COND(cell_axis == -1);
+		const PackedInt32Array &cell_vertices = cell_vertex_indices[cell_index];
+		Vector<VectorM> cell_texture_map;
+		cell_texture_map.resize(cell_vertices.size());
+		for (int64_t vertex_number = 0; vertex_number < cell_vertices.size(); vertex_number++) {
+			// Vertex indices are bitmasks where bit i set means the positive side of axis i.
+			const int64_t vertex_bits = cell_vertices[vertex_number];
+			const bool last_bit = (vertex_bits >> last_axis) & 1;
+			VectorM texcoord = VectorND::fill(texture_dimension, 0.0);
+			if (_poly_texture_map == BOX_POLY_TEXTURE_MAP_FILL_EACH_SIDE) {
+				// Each cell fills the whole texture space, with the same orientations as the
+				// cross unfolding: side cells carry the last world axis on the texture axis
+				// they face, and the negative last cell is mirrored on every axis.
+				for (int64_t tex_axis = 0; tex_axis < texture_dimension; tex_axis++) {
+					const bool bit = (vertex_bits >> tex_axis) & 1;
+					if (cell_axis == last_axis) {
+						texcoord.set(tex_axis, bit == cell_positive ? 1.0 : 0.0);
+					} else if (tex_axis == cell_axis) {
+						texcoord.set(tex_axis, last_bit == cell_positive ? 0.0 : 1.0);
+					} else {
+						texcoord.set(tex_axis, bit ? 1.0 : 0.0);
+					}
+				}
+			} else if (cell_axis == last_axis) {
+				if (cell_positive) {
+					// The positive last axis cell is the center box of the cross.
+					for (int64_t tex_axis = 0; tex_axis < texture_dimension; tex_axis++) {
+						const bool bit = (vertex_bits >> tex_axis) & 1;
+						texcoord.set(tex_axis, bit ? center_hi[tex_axis] : center_lo[tex_axis]);
+					}
+				} else {
+					// The negative last axis cell is a special case, mirrored on the first axis.
+					// For the cross and island mode this is a disconnected island in the corner,
+					// while for the long cross mode this connects to the positive first axis cell.
+					for (int64_t tex_axis = 0; tex_axis < texture_dimension; tex_axis++) {
+						const bool bit = (vertex_bits >> tex_axis) & 1;
+						if (tex_axis == 0) {
+							texcoord.set(tex_axis, bit ? negative_lo[tex_axis] : negative_hi[tex_axis]);
+						} else {
+							texcoord.set(tex_axis, bit ? negative_hi[tex_axis] : negative_lo[tex_axis]);
+						}
+					}
+				}
+			} else {
+				// Side cells tile next to the center box, unfolded across the shared face, so
+				// the last world axis maps onto the texture axis that the cell faces, pointing
+				// away from the center box.
+				for (int64_t tex_axis = 0; tex_axis < texture_dimension; tex_axis++) {
+					const bool bit = (vertex_bits >> tex_axis) & 1;
+					if (tex_axis == cell_axis) {
+						const double tile_size = center_hi[tex_axis] - center_lo[tex_axis];
+						if (cell_positive) {
+							texcoord.set(tex_axis, last_bit ? center_hi[tex_axis] : center_hi[tex_axis] + tile_size);
+						} else {
+							texcoord.set(tex_axis, last_bit ? center_lo[tex_axis] : center_lo[tex_axis] - tile_size);
+						}
+					} else {
+						texcoord.set(tex_axis, bit ? center_hi[tex_axis] : center_lo[tex_axis]);
+					}
+				}
+			}
+			cell_texture_map.set(vertex_number, texcoord);
+		}
+		_texture_map_cache.set(cell_index, cell_texture_map);
+	}
+}
+
 Vector<Vector<VectorM>> BoxPolyMeshND::get_poly_cell_texture_map() {
-	// Procedural box poly meshes do not have a built-in texture map for arbitrary dimensions.
-	// Use ArrayPolyMeshND's unwrap_texture_map to generate one.
-	return Vector<Vector<VectorM>>();
+	if (_texture_map_cache.is_empty()) {
+		_generate_texture_map();
+	}
+	return _texture_map_cache;
 }
 
 PackedInt32Array BoxPolyMeshND::get_edge_indices() {
@@ -264,8 +395,16 @@ void BoxPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_size", "size"), &BoxPolyMeshND::set_size);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "size", PROPERTY_HINT_NONE, "suffix:m"), "set_size", "get_size");
 
+	ClassDB::bind_method(D_METHOD("get_poly_texture_map"), &BoxPolyMeshND::get_poly_texture_map);
+	ClassDB::bind_method(D_METHOD("set_poly_texture_map", "texture_map"), &BoxPolyMeshND::set_poly_texture_map);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "poly_texture_map", PROPERTY_HINT_ENUM, "Cross and Island,Fill Each Side,Long Cross"), "set_poly_texture_map", "get_poly_texture_map");
+
 	ClassDB::bind_static_method("BoxPolyMeshND", D_METHOD("from_box_cell_mesh", "cell_mesh"), &BoxPolyMeshND::from_box_cell_mesh);
 	ClassDB::bind_static_method("BoxPolyMeshND", D_METHOD("from_box_wire_mesh", "wire_mesh"), &BoxPolyMeshND::from_box_wire_mesh);
 	ClassDB::bind_method(D_METHOD("to_box_cell_mesh"), &BoxPolyMeshND::to_box_cell_mesh);
 	ClassDB::bind_method(D_METHOD("to_box_wire_mesh"), &BoxPolyMeshND::to_box_wire_mesh);
+
+	BIND_ENUM_CONSTANT(BOX_POLY_TEXTURE_MAP_CROSS_ISLAND);
+	BIND_ENUM_CONSTANT(BOX_POLY_TEXTURE_MAP_FILL_EACH_SIDE);
+	BIND_ENUM_CONSTANT(BOX_POLY_TEXTURE_MAP_LONG_CROSS);
 }

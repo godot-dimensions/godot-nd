@@ -1331,7 +1331,10 @@ Vector<VectorN> PolyMeshND::get_simplex_cell_vertex_normals() {
 		if (simplex_count == 0 || simplex_count * dimension != _simplex_cell_indices_cache.size()) {
 			_decompose_boundary_cells_into_simplexes();
 			simplex_count = _simplex_cell_indices_source_poly_cells.size();
-			CRASH_COND_MSG(simplex_count == 0 || simplex_count * dimension != _simplex_cell_indices_cache.size(), "PolyMeshND: Simplex cell indices cache is corrupt.");
+			if (simplex_count == 0) {
+				return Vector<VectorN>(); // Nothing on the surface to compute vertex normals for.
+			}
+			CRASH_COND_MSG(simplex_count * dimension != _simplex_cell_indices_cache.size(), "PolyMeshND: Simplex cell indices cache is corrupt.");
 		}
 		const int64_t boundary_dim_index = dimension - 3;
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
@@ -1384,9 +1387,12 @@ Vector<VectorM> PolyMeshND::get_simplex_cell_texture_map() {
 		const int64_t dimension = get_dimension();
 		ERR_FAIL_COND_V(dimension < 3, Vector<VectorM>());
 		int64_t simplex_count = _simplex_cell_indices_source_poly_cells.size();
-		if (simplex_count * dimension != _simplex_cell_indices_cache.size()) {
+		if (simplex_count == 0 || simplex_count * dimension != _simplex_cell_indices_cache.size()) {
 			_decompose_boundary_cells_into_simplexes();
 			simplex_count = _simplex_cell_indices_source_poly_cells.size();
+			if (simplex_count == 0) {
+				return Vector<VectorM>(); // Nothing on the surface to texture map.
+			}
 			CRASH_COND_MSG(simplex_count * dimension != _simplex_cell_indices_cache.size(), "PolyMeshND: Simplex cell indices cache is corrupt.");
 		}
 		const int64_t boundary_dim_index = dimension - 3;

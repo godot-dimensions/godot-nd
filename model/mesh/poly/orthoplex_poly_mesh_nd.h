@@ -14,12 +14,14 @@ private:
 	PackedInt32Array _orthoplex_edge_indices_cache;
 	Vector<VectorN> _boundary_normals_cache;
 	Vector<Vector<VectorN>> _vertex_normals_cache;
+	Vector<Vector<VectorM>> _texture_map_cache;
 	Vector<VectorN> _vertices_cache;
 
 	VectorN _size;
 
 	void _clear_caches();
 	void _generate_poly_data();
+	void _generate_texture_map();
 	static int64_t _vertex_set_key(const PackedInt32Array &p_vertex_indices);
 
 protected:

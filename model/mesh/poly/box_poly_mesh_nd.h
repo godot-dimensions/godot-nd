@@ -9,17 +9,27 @@ class WireMeshND;
 class BoxPolyMeshND : public PolyMeshND {
 	GDCLASS(BoxPolyMeshND, PolyMeshND);
 
+public:
+	enum BoxPolyTextureMap {
+		BOX_POLY_TEXTURE_MAP_CROSS_ISLAND,
+		BOX_POLY_TEXTURE_MAP_FILL_EACH_SIDE,
+		BOX_POLY_TEXTURE_MAP_LONG_CROSS,
+	};
+
 private:
 	Vector<Vector<PackedInt32Array>> _poly_cell_indices_cache;
 	PackedInt32Array _box_edge_indices_cache;
 	Vector<VectorN> _boundary_normals_cache;
 	Vector<Vector<VectorN>> _vertex_normals_cache;
+	Vector<Vector<VectorM>> _texture_map_cache;
 	Vector<VectorN> _vertices_cache;
 
 	VectorN _size;
+	BoxPolyTextureMap _poly_texture_map = BOX_POLY_TEXTURE_MAP_CROSS_ISLAND;
 
 	void _clear_caches();
 	void _generate_poly_data();
+	void _generate_texture_map();
 
 protected:
 	static void _bind_methods();
@@ -35,6 +45,9 @@ public:
 
 	virtual int get_dimension() override { return _size.size(); }
 	void set_dimension(const int p_dimension);
+
+	BoxPolyTextureMap get_poly_texture_map() const { return _poly_texture_map; }
+	void set_poly_texture_map(const BoxPolyTextureMap p_map);
 
 	virtual Vector<Vector<PackedInt32Array>> get_poly_cell_indices() override;
 	virtual Vector<VectorN> get_poly_cell_vertices() override;
@@ -52,3 +65,5 @@ public:
 	virtual Ref<CellMeshND> to_cell_mesh() override;
 	virtual Ref<WireMeshND> to_wire_mesh() override;
 };
+
+VARIANT_ENUM_CAST(BoxPolyMeshND::BoxPolyTextureMap);
