@@ -329,11 +329,9 @@ void ArrayPolyMeshND::calculate_boundary_normals(const ComputeNormalsMode p_mode
 			// Normal points inward, so flip it, and optionally correct the cell orientation.
 			poly_cell_boundary_normals.set(cell_index, VectorND::negate(poly_cell_boundary_normals[cell_index]));
 			if (p_mode == COMPUTE_NORMALS_MODE_FORCE_OUTWARD_FIX_CELL_ORIENTATION) {
-				// Reverse the order of the first two members in this cell to flip its orientation.
+				// Flip this cell's orientation so it matches the outward normal.
 				PackedInt32Array cell_member_indices = boundary_cell_indices[cell_index];
-				const int32_t temp = cell_member_indices[0];
-				cell_member_indices.set(0, cell_member_indices[1]);
-				cell_member_indices.set(1, temp);
+				flip_poly_cell_orientation(cell_member_indices, boundary_dim_index);
 				boundary_cell_indices.set(cell_index, cell_member_indices);
 			}
 		}
@@ -449,9 +447,7 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 	}
 	for (int64_t cell_index = 0; cell_index < original_cell_count; cell_index++) {
 		PackedInt32Array flipped_cell_members = PackedInt32Array(cell_member_indices[cell_index]);
-		int32_t temp = flipped_cell_members[0];
-		flipped_cell_members.set(0, flipped_cell_members[1]);
-		flipped_cell_members.set(1, temp);
+		flip_poly_cell_orientation(flipped_cell_members, boundary_dim_index);
 		int32_t existing_flipped_index = -1;
 		if (p_idempotent) {
 			// Check if this flipped cell already exists before adding it, whenever idempotence is requested.
@@ -1415,12 +1411,10 @@ void ArrayPolyMeshND::deduplicate_all_elements() {
 		Vector<PackedInt32Array> all_cell_member_indices = output_poly_cell_indices[boundary_dim_index];
 		for (int64_t cell_index = 0; cell_index < recalculated_boundary_normals.size(); cell_index++) {
 			if (cell_index < remapped_boundary_normals.size() && VectorND::dot(remapped_boundary_normals[cell_index], recalculated_boundary_normals[cell_index]) < 0) {
-				// Swap the first two members in the cell to flip the normal.
+				// Flip the cell's orientation to flip the normal.
 				PackedInt32Array cell_member_indices = all_cell_member_indices[cell_index];
 				CRASH_COND(cell_member_indices.size() < 2);
-				const int32_t temp = cell_member_indices[0];
-				cell_member_indices.set(0, cell_member_indices[1]);
-				cell_member_indices.set(1, temp);
+				flip_poly_cell_orientation(cell_member_indices, boundary_dim_index);
 				all_cell_member_indices.set(cell_index, cell_member_indices);
 			}
 		}

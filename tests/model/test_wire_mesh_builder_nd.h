@@ -48,7 +48,9 @@ TEST_CASE("[WireMeshBuilderND] Extrude linear") {
 		Ref<ArrayWireMeshND> invalid;
 		invalid.instantiate();
 		invalid->set_edge_indices(PackedInt32Array{ 0, 1 }); // References vertices that do not exist.
+		ERR_PRINT_OFF; // The invalid mesh prints errors, which are expected here.
 		Ref<ArrayWireMeshND> extruded = WireMeshBuilderND::extrude_linear(invalid);
+		ERR_PRINT_ON;
 		REQUIRE(extruded.is_valid());
 		CHECK(extruded->get_vertices().is_empty());
 	}

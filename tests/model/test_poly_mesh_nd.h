@@ -792,6 +792,59 @@ TEST_CASE("[PolyMeshND] Meshes without boundary cells") {
 	CHECK_MESSAGE(mesh->get_simplex_cell_indices().is_empty(), "Without boundary cells, there are no simplexes.");
 }
 
+TEST_CASE("[PolyMeshND] Faces with unordered edges are read in walk order") {
+	// A pentagon face listing its edges in a valid but non-connected order: the first two
+	// edges share a vertex, as validation requires, but the rest are not in loop order.
+	Ref<ArrayPolyMeshND> mesh;
+	mesh.instantiate();
+	Vector<VectorN> vertices = {
+		VectorN{ 0.0, 0.0, 0.0 },
+		VectorN{ 2.0, 0.0, 0.0 },
+		VectorN{ 3.0, 2.0, 0.0 },
+		VectorN{ 1.0, 4.0, 0.0 },
+		VectorN{ -1.0, 2.0, 0.0 },
+	};
+	mesh->set_poly_cell_vertices(vertices);
+	mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4 });
+	Vector<PackedInt32Array> faces;
+	faces.append(PackedInt32Array{ 0, 4, 1, 2, 3 }); // The scrambled pentagon: AB, AE, BC, CD, DE.
+	mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
+	ERR_PRINT_OFF; // The unordered edge list prints a warning, which is expected here.
+	CHECK(mesh->is_poly_mesh_data_valid());
+	const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+	const Vector<PackedInt32Array> face_vertex_indices = mesh->get_all_face_vertex_indices();
+	ERR_PRINT_ON;
+	// The triangulated area must match the pentagon's area of 10.
+	const Vector<VectorN> simplex_vertices = mesh->get_vertices();
+	double total_area = 0.0;
+	for (int64_t simplex_start = 0; simplex_start < simplex_indices.size(); simplex_start += 3) {
+		Vector<VectorN> edges = {
+			VectorND::subtract(simplex_vertices[simplex_indices[simplex_start + 1]], simplex_vertices[simplex_indices[simplex_start]]),
+			VectorND::subtract(simplex_vertices[simplex_indices[simplex_start + 2]], simplex_vertices[simplex_indices[simplex_start]]),
+		};
+		total_area += VectorND::length(VectorND::perpendicular(edges)) / 2.0;
+	}
+	CHECK_MESSAGE(total_area == doctest::Approx(10.0), "The triangulated area must match the pentagon's area even with an unordered edge list.");
+	// The face's vertex sequence must be in boundary walk order: every cyclically
+	// consecutive pair of vertices in the sequence must be connected by an edge.
+	REQUIRE(face_vertex_indices.size() == 1);
+	const PackedInt32Array &sequence = face_vertex_indices[0];
+	REQUIRE(sequence.size() == 5);
+	const PackedInt32Array all_edges = mesh->get_edge_indices();
+	for (int64_t i = 0; i < sequence.size(); i++) {
+		const int32_t vertex_a = sequence[i];
+		const int32_t vertex_b = sequence[(i + 1) % sequence.size()];
+		bool edge_exists = false;
+		for (int64_t edge = 0; edge < all_edges.size(); edge += 2) {
+			if ((all_edges[edge] == vertex_a && all_edges[edge + 1] == vertex_b) || (all_edges[edge] == vertex_b && all_edges[edge + 1] == vertex_a)) {
+				edge_exists = true;
+				break;
+			}
+		}
+		CHECK_MESSAGE(edge_exists, "Every consecutive pair in the face's vertex sequence must be connected by an edge.");
+	}
+}
+
 TEST_CASE("[PolyMeshND] Conformed and interior cells") {
 	SUBCASE("A face with a collinear vertex chain decomposes without zero-measure simplexes") {
 		// A square face whose bottom edge is split at its midpoint, as if conformed to

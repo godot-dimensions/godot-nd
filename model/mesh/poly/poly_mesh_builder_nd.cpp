@@ -261,11 +261,9 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 				// but we can flip it the other way if it's backwards compared to the input's normal.
 				if (VectorND::dot(input_normal, cell_normal) < 0.0) {
 					per_cell_normals.set(extruded_cell_index, VectorND::negate(cell_normal));
-					// Also swap the cell's first two elements to flip its orientation.
+					// Also flip the cell's orientation to match.
 					PackedInt32Array boundary_cell = boundary_cells[extruded_cell_index];
-					int32_t temp = boundary_cell[0];
-					boundary_cell.set(0, boundary_cell[1]);
-					boundary_cell.set(1, temp);
+					PolyMeshND::flip_poly_cell_orientation(boundary_cell, output_boundary_dim_index);
 					boundary_cells.set(extruded_cell_index, boundary_cell);
 				}
 			}
@@ -317,11 +315,9 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 						const int64_t boundary_cell_index = volume_cell_boundary_indices[i];
 						const VectorN out = VectorND::subtract(boundary_average_pos[boundary_cell_index], volume_average_pos);
 						if (VectorND::dot(boundary_normals[boundary_cell_index], out) < 0.0) {
-							// This boundary cell is facing inward, so swap the first two members to flip the normal to face outward.
+							// This boundary cell is facing inward, so flip its orientation to make the normal face outward.
 							PackedInt32Array boundary_cell = boundary_cells[boundary_cell_index];
-							int32_t temp = boundary_cell[0];
-							boundary_cell.set(0, boundary_cell[1]);
-							boundary_cell.set(1, temp);
+							PolyMeshND::flip_poly_cell_orientation(boundary_cell, output_boundary_dim_index);
 							boundary_cells.set(boundary_cell_index, boundary_cell);
 						}
 					}
@@ -545,11 +541,9 @@ void PolyMeshBuilderND::make_boundary_normals_topologically_consistent(const Ref
 					should_flip_adjacent = true;
 				}
 				if (should_flip_adjacent) {
-					// This adjacent boundary cell is facing the wrong way, so swap the first two members to flip.
+					// This adjacent boundary cell is facing the wrong way, so flip its orientation.
 					PackedInt32Array adjacent_boundary_cell = boundary_cells[adjacent_cell_index];
-					int32_t temp = adjacent_boundary_cell[0];
-					adjacent_boundary_cell.set(0, adjacent_boundary_cell[1]);
-					adjacent_boundary_cell.set(1, temp);
+					PolyMeshND::flip_poly_cell_orientation(adjacent_boundary_cell, boundary_dim_index);
 					boundary_cells.set(adjacent_cell_index, adjacent_boundary_cell);
 					boundary_normals.set(adjacent_cell_index, VectorND::negate(adjacent_boundary_cell_normal));
 				}
@@ -743,6 +737,40 @@ void PolyMeshBuilderND::_subdivide_repair_first_two(SubdivisionContext &r_ctx, c
 	}
 }
 
+void PolyMeshBuilderND::_subdivide_order_face_loop(const SubdivisionContext &p_ctx, PackedInt32Array &r_members) {
+	// Reorders the given new edges into a connected loop order, as faces should have.
+	const int64_t member_count = r_members.size();
+	if (member_count < 3) {
+		return;
+	}
+	PackedInt32Array ordered = { r_members[0] };
+	int32_t current_vertex = p_ctx.new_edges[r_members[0] * 2 + 1];
+	while (ordered.size() < member_count) {
+		bool found = false;
+		for (const int32_t member : r_members) {
+			if (ordered.has(member)) {
+				continue;
+			}
+			const int32_t vertex_a = p_ctx.new_edges[member * 2];
+			const int32_t vertex_b = p_ctx.new_edges[member * 2 + 1];
+			if (vertex_a == current_vertex) {
+				current_vertex = vertex_b;
+			} else if (vertex_b == current_vertex) {
+				current_vertex = vertex_a;
+			} else {
+				continue;
+			}
+			ordered.append(member);
+			found = true;
+			break;
+		}
+		if (!found) {
+			return; // The edges do not form a closed loop, keep the original order.
+		}
+	}
+	r_members = ordered;
+}
+
 int32_t PolyMeshBuilderND::_subdivide_cone(SubdivisionContext &r_ctx, SubdivisionRefined &r_refined, const int64_t p_element_level, const int32_t p_element_index) {
 	// Cones the given new element to the refined cell's center vertex, giving an element one dimension higher.
 	const int64_t memo_key = ((p_element_level + 2) << 32) | int64_t(p_element_index);
@@ -842,6 +870,10 @@ int32_t PolyMeshBuilderND::_subdivide_internal_element(SubdivisionContext &r_ctx
 			if (_subdivide_old_element_contains(r_ctx, p_sub_dim + 1, above, p_sub_dim, p_sub_index)) {
 				members.append(_subdivide_internal_element(r_ctx, p_level, p_cell_index, p_closure_by_dim, p_sub_dim + 1, above));
 			}
+		}
+		if (internal_dim == 2) {
+			// Internal wall faces gather their edges out of order, so restore the loop order.
+			_subdivide_order_face_loop(r_ctx, members);
 		}
 		internal_index = _subdivide_append_cell(r_ctx, internal_dim - 2, members, r_ctx.internal_parent_counter--);
 		refined = r_ctx.refined_levels.write[p_level].getptr(p_cell_index);
@@ -1357,14 +1389,7 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 				continue;
 			}
 			PackedInt32Array boundary_cell = boundary_cells[i];
-			if (boundary_level == 0) {
-				// Faces must stay in walk order, so flip them by reversing the whole edge list.
-				boundary_cell.reverse();
-			} else {
-				const int32_t temp = boundary_cell[0];
-				boundary_cell.set(0, boundary_cell[1]);
-				boundary_cell.set(1, temp);
-			}
+			PolyMeshND::flip_poly_cell_orientation(boundary_cell, boundary_level);
 			boundary_cells.set(i, boundary_cell);
 			any_flipped = true;
 		}

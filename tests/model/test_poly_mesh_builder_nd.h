@@ -289,6 +289,16 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide box boundary cells") {
 		// The geometry is unchanged, so the signed distance must be unchanged.
 		CHECK_MESSAGE(mesh->get_signed_distance_to_mesh(VectorND::value_on_axis_with_dimension(2.0, 0, dimension), nullptr, nullptr) == doctest::Approx(1.0), "The subdivided box must have the same signed distances as before.");
 		CHECK_MESSAGE(mesh->get_signed_distance_to_mesh(VectorND::zero(dimension), nullptr, nullptr) == doctest::Approx(-1.0), "The subdivided box must have the same signed distances as before.");
+		// Every face must have its edges in a connected loop order, including internal walls.
+		const PackedInt32Array all_edges = mesh->get_edge_indices();
+		for (const PackedInt32Array &face : poly_cell_indices[0]) {
+			for (int64_t i = 0; i < face.size(); i++) {
+				const int32_t edge_a = face[i];
+				const int32_t edge_b = face[(i + 1) % face.size()];
+				const bool connected = all_edges[edge_a * 2] == all_edges[edge_b * 2] || all_edges[edge_a * 2] == all_edges[edge_b * 2 + 1] || all_edges[edge_a * 2 + 1] == all_edges[edge_b * 2] || all_edges[edge_a * 2 + 1] == all_edges[edge_b * 2 + 1];
+				CHECK_MESSAGE(connected, "Every face of the subdivided box must have its edges in a connected loop order.");
+			}
+		}
 		// The texture map must carry through with interpolated values for the new vertices.
 		const Vector<Vector<VectorM>> texture_map = mesh->get_poly_cell_texture_map();
 		REQUIRE(texture_map.size() == new_pieces.size());
@@ -649,9 +659,7 @@ TEST_CASE("[PolyMeshBuilderND] Make boundary normals topologically consistent") 
 		Vector<PackedInt32Array> boundary_cells = poly_cell_indices[dimension - 3];
 		for (int64_t cell_index = 1; cell_index < boundary_cells.size(); cell_index++) {
 			PackedInt32Array boundary_cell = boundary_cells[cell_index];
-			const int32_t temp = boundary_cell[0];
-			boundary_cell.set(0, boundary_cell[1]);
-			boundary_cell.set(1, temp);
+			PolyMeshND::flip_poly_cell_orientation(boundary_cell, dimension - 3);
 			boundary_cells.set(cell_index, boundary_cell);
 		}
 		poly_cell_indices.set(dimension - 3, boundary_cells);

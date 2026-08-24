@@ -74,6 +74,11 @@ protected:
 	static void _orient_cells_to_match_normals(Vector<Vector<PackedInt32Array>> &r_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const Vector<VectorN> &p_vertices, const Vector<VectorN> &p_target_normals, const int64_t p_cell_dim_index);
 
 public:
+	// Flips the orientation of a poly cell's member list. Faces are flipped by reversing the
+	// whole edge loop to keep it in a connected loop order, while higher-dimensional cells
+	// are flipped by swapping the first two members, since the rest of their order is free.
+	static void flip_poly_cell_orientation(PackedInt32Array &r_cell_members, const int64_t p_cell_dim_index);
+
 	bool is_poly_mesh_data_valid();
 	void reset_poly_mesh_data_validation();
 
