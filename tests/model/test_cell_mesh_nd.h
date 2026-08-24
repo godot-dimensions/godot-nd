@@ -1,8 +1,6 @@
 #pragma once
 
 #include "../../model/mesh/cell/array_cell_mesh_nd.h"
-#include "../../model/mesh/cell/box_cell_mesh_nd.h"
-#include "../../model/mesh/cell/orthoplex_cell_mesh_nd.h"
 
 #include "tests/test_macros.h"
 

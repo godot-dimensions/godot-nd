@@ -1,7 +1,6 @@
 #include "orthoplex_poly_mesh_nd.h"
 
 #include "../../../math/vector_nd.h"
-#include "../cell/orthoplex_cell_mesh_nd.h"
 #include "../wire/orthoplex_wire_mesh_nd.h"
 
 void OrthoplexPolyMeshND::_clear_caches() {
@@ -291,14 +290,6 @@ Vector<VectorN> OrthoplexPolyMeshND::get_vertices() {
 	return _vertices_cache;
 }
 
-Ref<OrthoplexPolyMeshND> OrthoplexPolyMeshND::from_orthoplex_cell_mesh(const Ref<OrthoplexCellMeshND> &p_cell_mesh) {
-	Ref<OrthoplexPolyMeshND> poly_mesh;
-	poly_mesh.instantiate();
-	poly_mesh->set_size(p_cell_mesh->get_size());
-	poly_mesh->set_material(p_cell_mesh->get_material());
-	return poly_mesh;
-}
-
 Ref<OrthoplexPolyMeshND> OrthoplexPolyMeshND::from_orthoplex_wire_mesh(const Ref<OrthoplexWireMeshND> &p_wire_mesh) {
 	Ref<OrthoplexPolyMeshND> poly_mesh;
 	poly_mesh.instantiate();
@@ -307,24 +298,12 @@ Ref<OrthoplexPolyMeshND> OrthoplexPolyMeshND::from_orthoplex_wire_mesh(const Ref
 	return poly_mesh;
 }
 
-Ref<OrthoplexCellMeshND> OrthoplexPolyMeshND::to_orthoplex_cell_mesh() const {
-	Ref<OrthoplexCellMeshND> cell_mesh;
-	cell_mesh.instantiate();
-	cell_mesh->set_size(_size);
-	cell_mesh->set_material(get_material());
-	return cell_mesh;
-}
-
 Ref<OrthoplexWireMeshND> OrthoplexPolyMeshND::to_orthoplex_wire_mesh() const {
 	Ref<OrthoplexWireMeshND> wire_mesh;
 	wire_mesh.instantiate();
 	wire_mesh->set_size(_size);
 	wire_mesh->set_material(get_material());
 	return wire_mesh;
-}
-
-Ref<CellMeshND> OrthoplexPolyMeshND::to_cell_mesh() {
-	return to_orthoplex_cell_mesh();
 }
 
 Ref<WireMeshND> OrthoplexPolyMeshND::to_wire_mesh() {
@@ -343,8 +322,6 @@ void OrthoplexPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_size", "size"), &OrthoplexPolyMeshND::set_size);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "size", PROPERTY_HINT_NONE, "suffix:m"), "set_size", "get_size");
 
-	ClassDB::bind_static_method("OrthoplexPolyMeshND", D_METHOD("from_orthoplex_cell_mesh", "cell_mesh"), &OrthoplexPolyMeshND::from_orthoplex_cell_mesh);
 	ClassDB::bind_static_method("OrthoplexPolyMeshND", D_METHOD("from_orthoplex_wire_mesh", "wire_mesh"), &OrthoplexPolyMeshND::from_orthoplex_wire_mesh);
-	ClassDB::bind_method(D_METHOD("to_orthoplex_cell_mesh"), &OrthoplexPolyMeshND::to_orthoplex_cell_mesh);
 	ClassDB::bind_method(D_METHOD("to_orthoplex_wire_mesh"), &OrthoplexPolyMeshND::to_orthoplex_wire_mesh);
 }

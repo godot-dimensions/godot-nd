@@ -9,28 +9,16 @@
 		The orthoplex has a built-in texture map, generated procedurally for the orthoplex's dimension. The vertex of the positive last axis maps to the center of the texture space, the vertices of the other axes map to points offset by half a unit from the center on the corresponding texture axis, and the negative last axis vertex of each cell maps to the center reflected over the hyperplane through the cell's other texture points, giving it many disconnected texture representations. For other layouts, convert the orthoplex with [method PolyMeshND.to_array_poly_mesh] and use [method ArrayPolyMeshND.unwrap_texture_map].
 	</description>
 	<tutorials>
-		<link title="Wikipedia 16-cell / ND Orthoplex">https://en.wikipedia.org/wiki/16-cell</link>
-		<link title="Polytope Wiki Hexadecachoron">https://polytope.miraheze.org/wiki/Hexadecachoron</link>
+		<link title="Wikipedia Cross-polytope / ND Orthoplex">https://en.wikipedia.org/wiki/Cross-polytope</link>
+		<link title="Wikipedia Octahedron / 3D Orthoplex">https://en.wikipedia.org/wiki/Octahedron</link>
+		<link title="Wikipedia 16-cell / 4D Orthoplex">https://en.wikipedia.org/wiki/16-cell</link>
 	</tutorials>
 	<methods>
-		<method name="from_orthoplex_cell_mesh" qualifiers="static">
-			<return type="OrthoplexPolyMeshND" />
-			<param index="0" name="cell_mesh" type="OrthoplexCellMeshND" />
-			<description>
-				Creates an orthoplex polyhedral mesh from [OrthoplexCellMeshND]. The orthoplex polyhedral mesh will have the same size and material as the cellhedral mesh.
-			</description>
-		</method>
 		<method name="from_orthoplex_wire_mesh" qualifiers="static">
 			<return type="OrthoplexPolyMeshND" />
 			<param index="0" name="wire_mesh" type="OrthoplexWireMeshND" />
 			<description>
 				Creates an orthoplex polyhedral mesh from [OrthoplexWireMeshND]. The orthoplex polyhedral mesh will have the same size and material as the wireframe mesh.
-			</description>
-		</method>
-		<method name="to_orthoplex_cell_mesh" qualifiers="const">
-			<return type="OrthoplexCellMeshND" />
-			<description>
-				Converts this orthoplex polyhedral mesh to a [OrthoplexCellMeshND]. The cellhedral mesh will have the same size and material as the polyhedral mesh.
 			</description>
 		</method>
 		<method name="to_orthoplex_wire_mesh" qualifiers="const">

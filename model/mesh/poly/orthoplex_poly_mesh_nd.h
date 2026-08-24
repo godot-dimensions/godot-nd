@@ -2,7 +2,6 @@
 
 #include "poly_mesh_nd.h"
 
-class OrthoplexCellMeshND;
 class OrthoplexWireMeshND;
 class WireMeshND;
 
@@ -48,10 +47,7 @@ public:
 	virtual PackedInt32Array get_edge_indices() override;
 	virtual Vector<VectorN> get_vertices() override;
 
-	static Ref<OrthoplexPolyMeshND> from_orthoplex_cell_mesh(const Ref<OrthoplexCellMeshND> &p_cell_mesh);
 	static Ref<OrthoplexPolyMeshND> from_orthoplex_wire_mesh(const Ref<OrthoplexWireMeshND> &p_wire_mesh);
-	Ref<OrthoplexCellMeshND> to_orthoplex_cell_mesh() const;
 	Ref<OrthoplexWireMeshND> to_orthoplex_wire_mesh() const;
-	virtual Ref<CellMeshND> to_cell_mesh() override;
 	virtual Ref<WireMeshND> to_wire_mesh() override;
 };

@@ -279,7 +279,16 @@ TEST_CASE("[PolyMeshND] Box generator produces valid oriented data") {
 		REQUIRE_MESSAGE(poly_cell_indices.size() == dimension - 1, "An N-box has poly cells from 2D faces up to the N-dimensional volume.");
 		CHECK_MESSAGE(poly_cell_indices[dimension - 3].size() == 2 * dimension, "An N-box has 2N boundary cells.");
 		REQUIRE(poly_cell_indices[dimension - 2].size() == 1);
-		CHECK_MESSAGE(poly_cell_indices[dimension - 2][0].size() == 2 * dimension, "The N-box volume contains all boundary cells.");
+		const PackedInt32Array volumetric_cell = poly_cell_indices[dimension - 2][0];
+		CHECK_MESSAGE(volumetric_cell.size() == 2 * dimension, "The N-box volume contains all boundary cells.");
+		const Vector<PackedInt32Array> boundary_cell_vertex_indices = box->get_all_boundary_cell_vertex_indices(false);
+		int64_t shared_vertex_count = 0;
+		for (const int32_t vertex_index : boundary_cell_vertex_indices[volumetric_cell[0]]) {
+			if (boundary_cell_vertex_indices[volumetric_cell[1]].has(vertex_index)) {
+				shared_vertex_count++;
+			}
+		}
+		CHECK_MESSAGE(shared_vertex_count == (int64_t(1) << (dimension - 2)), "The first two boundary cells listed in the volumetric cell must be connected, sharing a common ridge.");
 		const Vector<VectorN> generated_normals = box->get_poly_cell_boundary_normals();
 		REQUIRE(generated_normals.size() == 2 * dimension);
 		// The generated boundary cell orientations must reproduce the generated outward normals.
@@ -303,6 +312,16 @@ TEST_CASE("[PolyMeshND] Orthoplex generator produces valid oriented data") {
 		REQUIRE_MESSAGE(poly_cell_indices.size() == dimension - 1, "An N-orthoplex has poly cells from 2D faces up to the N-dimensional volume.");
 		CHECK_MESSAGE(poly_cell_indices[dimension - 3].size() == (int64_t(1) << dimension), "An N-orthoplex has 2^N boundary cells.");
 		REQUIRE(poly_cell_indices[dimension - 2].size() == 1);
+		const PackedInt32Array volumetric_cell = poly_cell_indices[dimension - 2][0];
+		CHECK_MESSAGE(volumetric_cell.size() == (int64_t(1) << dimension), "The N-orthoplex volume contains all boundary cells.");
+		const Vector<PackedInt32Array> boundary_cell_vertex_indices = orthoplex->get_all_boundary_cell_vertex_indices(false);
+		int64_t shared_vertex_count = 0;
+		for (const int32_t vertex_index : boundary_cell_vertex_indices[volumetric_cell[0]]) {
+			if (boundary_cell_vertex_indices[volumetric_cell[1]].has(vertex_index)) {
+				shared_vertex_count++;
+			}
+		}
+		CHECK_MESSAGE(shared_vertex_count == dimension - 1, "The first two boundary cells listed in the volumetric cell must be connected, sharing a common ridge.");
 		const Vector<VectorN> generated_normals = orthoplex->get_poly_cell_boundary_normals();
 		REQUIRE(generated_normals.size() == (int64_t(1) << dimension));
 		Ref<ArrayPolyMeshND> array_mesh = orthoplex->to_array_poly_mesh();

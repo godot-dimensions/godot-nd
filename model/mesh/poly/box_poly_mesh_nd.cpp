@@ -1,7 +1,6 @@
 #include "box_poly_mesh_nd.h"
 
 #include "../../../math/vector_nd.h"
-#include "../cell/box_cell_mesh_nd.h"
 #include "../wire/box_wire_mesh_nd.h"
 
 void BoxPolyMeshND::_clear_caches() {
@@ -343,14 +342,6 @@ Vector<VectorN> BoxPolyMeshND::get_vertices() {
 	return _vertices_cache;
 }
 
-Ref<BoxPolyMeshND> BoxPolyMeshND::from_box_cell_mesh(const Ref<BoxCellMeshND> &p_cell_mesh) {
-	Ref<BoxPolyMeshND> poly_mesh;
-	poly_mesh.instantiate();
-	poly_mesh->set_size(p_cell_mesh->get_size());
-	poly_mesh->set_material(p_cell_mesh->get_material());
-	return poly_mesh;
-}
-
 Ref<BoxPolyMeshND> BoxPolyMeshND::from_box_wire_mesh(const Ref<BoxWireMeshND> &p_wire_mesh) {
 	Ref<BoxPolyMeshND> poly_mesh;
 	poly_mesh.instantiate();
@@ -359,24 +350,12 @@ Ref<BoxPolyMeshND> BoxPolyMeshND::from_box_wire_mesh(const Ref<BoxWireMeshND> &p
 	return poly_mesh;
 }
 
-Ref<BoxCellMeshND> BoxPolyMeshND::to_box_cell_mesh() const {
-	Ref<BoxCellMeshND> cell_mesh;
-	cell_mesh.instantiate();
-	cell_mesh->set_size(_size);
-	cell_mesh->set_material(get_material());
-	return cell_mesh;
-}
-
 Ref<BoxWireMeshND> BoxPolyMeshND::to_box_wire_mesh() const {
 	Ref<BoxWireMeshND> wire_mesh;
 	wire_mesh.instantiate();
 	wire_mesh->set_size(_size);
 	wire_mesh->set_material(get_material());
 	return wire_mesh;
-}
-
-Ref<CellMeshND> BoxPolyMeshND::to_cell_mesh() {
-	return to_box_cell_mesh();
 }
 
 Ref<WireMeshND> BoxPolyMeshND::to_wire_mesh() {
@@ -399,9 +378,7 @@ void BoxPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_poly_texture_map", "texture_map"), &BoxPolyMeshND::set_poly_texture_map);
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "poly_texture_map", PROPERTY_HINT_ENUM, "Cross and Island,Fill Each Side,Long Cross"), "set_poly_texture_map", "get_poly_texture_map");
 
-	ClassDB::bind_static_method("BoxPolyMeshND", D_METHOD("from_box_cell_mesh", "cell_mesh"), &BoxPolyMeshND::from_box_cell_mesh);
 	ClassDB::bind_static_method("BoxPolyMeshND", D_METHOD("from_box_wire_mesh", "wire_mesh"), &BoxPolyMeshND::from_box_wire_mesh);
-	ClassDB::bind_method(D_METHOD("to_box_cell_mesh"), &BoxPolyMeshND::to_box_cell_mesh);
 	ClassDB::bind_method(D_METHOD("to_box_wire_mesh"), &BoxPolyMeshND::to_box_wire_mesh);
 
 	BIND_ENUM_CONSTANT(BOX_POLY_TEXTURE_MAP_CROSS_ISLAND);

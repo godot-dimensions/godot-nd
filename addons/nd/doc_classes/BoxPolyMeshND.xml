@@ -12,24 +12,11 @@
 		<link title="Polytope Wiki Tesseract">https://polytope.miraheze.org/wiki/Tesseract</link>
 	</tutorials>
 	<methods>
-		<method name="from_box_cell_mesh" qualifiers="static">
-			<return type="BoxPolyMeshND" />
-			<param index="0" name="cell_mesh" type="BoxCellMeshND" />
-			<description>
-				Creates a box polyhedral mesh from a [BoxCellMeshND]. The box polyhedral mesh will have the same size and material as the cellhedral mesh.
-			</description>
-		</method>
 		<method name="from_box_wire_mesh" qualifiers="static">
 			<return type="BoxPolyMeshND" />
 			<param index="0" name="wire_mesh" type="BoxWireMeshND" />
 			<description>
 				Creates a box polyhedral mesh from a [BoxWireMeshND]. The box polyhedral mesh will have the same size and material as the wireframe mesh.
-			</description>
-		</method>
-		<method name="to_box_cell_mesh" qualifiers="const">
-			<return type="BoxCellMeshND" />
-			<description>
-				Converts this box polyhedral mesh to a [BoxCellMeshND]. The cellhedral mesh will have the same size and material as the polyhedral mesh.
 			</description>
 		</method>
 		<method name="to_box_wire_mesh" qualifiers="const">

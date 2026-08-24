@@ -2,7 +2,6 @@
 
 #include "poly_mesh_nd.h"
 
-class BoxCellMeshND;
 class BoxWireMeshND;
 class WireMeshND;
 
@@ -58,11 +57,8 @@ public:
 	virtual PackedInt32Array get_edge_indices() override;
 	virtual Vector<VectorN> get_vertices() override;
 
-	static Ref<BoxPolyMeshND> from_box_cell_mesh(const Ref<BoxCellMeshND> &p_cell_mesh);
 	static Ref<BoxPolyMeshND> from_box_wire_mesh(const Ref<BoxWireMeshND> &p_wire_mesh);
-	Ref<BoxCellMeshND> to_box_cell_mesh() const;
 	Ref<BoxWireMeshND> to_box_wire_mesh() const;
-	virtual Ref<CellMeshND> to_cell_mesh() override;
 	virtual Ref<WireMeshND> to_wire_mesh() override;
 };
 

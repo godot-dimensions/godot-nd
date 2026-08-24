@@ -4,7 +4,7 @@
 		Custom ND cell mesh class.
 	</brief_description>
 	<description>
-		ArrayCellMeshND is a class for specifying cell meshes with arrays of data, including the vertices and cells. Unlike the specialized [CellMeshND] classes such as [BoxCellMeshND], ArrayCellMeshND can store any cell mesh, allowing users to create custom meshes with arbitrary data.
+		ArrayCellMeshND is a class for specifying cell meshes with arrays of data, including the vertices and cells. Unlike the specialized [CellMeshND] classes such as [BoxPolyMeshND], ArrayCellMeshND can store any cell mesh, allowing users to create custom meshes with arbitrary data.
 	</description>
 	<tutorials>
 	</tutorials>

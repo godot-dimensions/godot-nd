@@ -37,9 +37,7 @@
 
 // Model.
 #include "model/mesh/cell/array_cell_mesh_nd.h"
-#include "model/mesh/cell/box_cell_mesh_nd.h"
 #include "model/mesh/cell/cell_material_nd.h"
-#include "model/mesh/cell/orthoplex_cell_mesh_nd.h"
 #include "model/mesh/mesh_instance_nd.h"
 #include "model/mesh/poly/array_poly_mesh_nd.h"
 #include "model/mesh/poly/box_poly_mesh_nd.h"
@@ -141,11 +139,9 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(ArrayCellMeshND);
 		GDREGISTER_CLASS(ArrayPolyMeshND);
 		GDREGISTER_CLASS(ArrayWireMeshND);
-		GDREGISTER_CLASS(BoxCellMeshND);
 		GDREGISTER_CLASS(BoxPolyMeshND);
 		GDREGISTER_CLASS(BoxWireMeshND);
 		GDREGISTER_CLASS(MeshInstanceND);
-		GDREGISTER_CLASS(OrthoplexCellMeshND);
 		GDREGISTER_CLASS(OrthoplexPolyMeshND);
 		GDREGISTER_CLASS(OrthoplexWireMeshND);
 		// Depends on mesh.

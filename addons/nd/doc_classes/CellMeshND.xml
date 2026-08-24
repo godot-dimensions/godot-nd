@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		CellMeshND is the base class for all ND cell meshes. Cell meshes are defined using vertices and cells, where each cell of an N-dimensional mesh is an (N-1)-dimensional simplex defined by N vertices. Cell meshes are used to represent rendered ND objects similar to how 3D objects are represented using triangles.
-		To use CellMeshND, use one of the descendant classes, such as [ArrayCellMeshND] or [BoxCellMeshND].
+		To use CellMeshND, use one of the descendant classes, such as [ArrayCellMeshND] or [BoxPolyMeshND].
 	</description>
 	<tutorials>
 	</tutorials>
@@ -46,7 +46,7 @@
 		<method name="cell_mesh_clear_cache">
 			<return type="void" />
 			<description>
-				CellMeshND caches the edge data for performance reasons. This method clears the cache, forcing the cell mesh to recalculate the edge data the next time it is needed. You should run this method if you are making your own [CellMeshND]-derived class and you change the vertices or cells. You do not need to run this when using the built-in classes such as [ArrayCellMeshND] or [BoxCellMeshND], they will automatically clear the cache when needed.
+				CellMeshND caches the edge data for performance reasons. This method clears the cache, forcing the cell mesh to recalculate the edge data the next time it is needed. You should run this method if you are making your own [CellMeshND]-derived class and you change the vertices or cells. You do not need to run this when using the built-in classes such as [ArrayCellMeshND] or [BoxPolyMeshND], they will automatically clear the cache when needed.
 			</description>
 		</method>
 		<method name="get_indices_per_simplex_cell">
@@ -88,7 +88,7 @@
 		<method name="to_array_cell_mesh">
 			<return type="ArrayCellMeshND" />
 			<description>
-				Converts this CellMeshND to an [ArrayCellMeshND]. If the mesh is already an [ArrayCellMeshND], this method will make a copy, but this method is intended for converting subtypes such as [BoxCellMeshND]. The array mesh will have the same vertices, cells, and material as this mesh. Converting a non-array mesh to an array mesh is useful for modifying the geometry of the mesh, such as adding or removing vertices or cells.
+				Converts this CellMeshND to an [ArrayCellMeshND]. If the mesh is already an [ArrayCellMeshND], this method will make a copy, but this method is intended for converting subtypes such as [BoxPolyMeshND]. The array mesh will have the same vertices, cells, and material as this mesh. Converting a non-array mesh to an array mesh is useful for modifying the geometry of the mesh, such as adding or removing vertices or cells.
 			</description>
 		</method>
 	</methods>
