@@ -535,4 +535,39 @@ TEST_CASE("[ArrayPolyMeshND] Getters and setters") {
 		CHECK(copy->is_poly_mesh_data_valid());
 	}
 }
+
+TEST_CASE("[ArrayPolyMeshND] Make double sided preserves pentagon triangulation") {
+	// A flat pentagon face with no three collinear vertices and an area of 10. Making it
+	// double-sided adds a flipped copy, whose triangulation must still cover the pentagon.
+	Ref<ArrayPolyMeshND> mesh;
+	mesh.instantiate();
+	Vector<VectorN> vertices = {
+		VectorN{ 0.0, 0.0, 0.0 },
+		VectorN{ 2.0, 0.0, 0.0 },
+		VectorN{ 3.0, 2.0, 0.0 },
+		VectorN{ 1.0, 4.0, 0.0 },
+		VectorN{ -1.0, 2.0, 0.0 },
+	};
+	mesh->set_poly_cell_vertices(vertices);
+	mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4 });
+	Vector<PackedInt32Array> faces;
+	faces.append(PackedInt32Array{ 0, 1, 2, 3, 4 });
+	mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
+	mesh->set_poly_cell_boundary_normals(Vector<VectorN>{ VectorN{ 0.0, 0.0, 1.0 } });
+	REQUIRE(mesh->is_mesh_data_valid());
+	mesh->make_double_sided(true);
+	CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The double-sided mesh must have valid poly mesh data.");
+	REQUIRE(mesh->get_poly_cell_indices()[0].size() == 2);
+	const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+	const Vector<VectorN> simplex_vertices = mesh->get_vertices();
+	double total_area = 0.0;
+	for (int64_t simplex_start = 0; simplex_start < simplex_indices.size(); simplex_start += 3) {
+		Vector<VectorN> edges = {
+			VectorND::subtract(simplex_vertices[simplex_indices[simplex_start + 1]], simplex_vertices[simplex_indices[simplex_start]]),
+			VectorND::subtract(simplex_vertices[simplex_indices[simplex_start + 2]], simplex_vertices[simplex_indices[simplex_start]]),
+		};
+		total_area += VectorND::length(VectorND::perpendicular(edges)) / 2.0;
+	}
+	CHECK_MESSAGE(total_area == doctest::Approx(20.0), "Both sides of the pentagon must be triangulated with the full polygon area.");
+}
 } // namespace TestArrayPolyMeshND
