@@ -640,7 +640,10 @@ void RectND::_bind_methods() {
 	// Rect collision functions.
 	ClassDB::bind_method(D_METHOD("continuous_collision_depth", "relative_motion", "obstacle"), &RectND::continuous_collision_depth_bind);
 	ClassDB::bind_method(D_METHOD("continuous_collision_overlaps", "relative_motion", "obstacle"), &RectND::continuous_collision_overlaps);
-	ClassDB::bind_method(D_METHOD("raycast_intersects_dict", "from", "direction", "max_distance", "inside_is_zero"), &RectND::raycast_intersects_dict, DEFVAL(Math_INF), DEFVAL(false));
+	// TODO: These should be `Math_INF` but Godot's bindings do not like infinity,
+	// and also values above max float32 will overflow to infinity in the bindings.
+	// See https://github.com/godotengine/godot-cpp/pull/2030
+	ClassDB::bind_method(D_METHOD("raycast_intersects_dict", "from", "direction", "max_distance", "inside_is_zero"), &RectND::raycast_intersects_dict, DEFVAL(3.4e38), DEFVAL(false));
 	// Rect comparison functions.
 	ClassDB::bind_method(D_METHOD("encloses_exclusive", "other"), &RectND::encloses_exclusive);
 	ClassDB::bind_method(D_METHOD("encloses_inclusive", "other"), &RectND::encloses_inclusive);
