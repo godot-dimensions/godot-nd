@@ -977,15 +977,32 @@ VectorN VectorND::project(const VectorN &p_vector, const VectorN &p_on_normal) {
 
 VectorN VectorND::random_in_radius(const int64_t p_dimension, const double p_radius) {
 	VectorN random_point;
+	ERR_FAIL_COND_V(p_dimension < 0, random_point);
 	random_point.resize(p_dimension);
-	while (true) {
-		for (int64_t i = 0; i < p_dimension; i++) {
-			random_point.set(i, VariantUtilityFunctions::randf_range(-1.0, 1.0));
-		}
-		if (VectorND::length_squared(random_point) <= 1.0) {
-			return VectorND::multiply_scalar(random_point, p_radius);
-		}
+	if (p_dimension == 0) {
+		return random_point;
 	}
+	// A vector of independent standard normals points in a uniformly random
+	// direction, because the multivariate normal distribution is rotationally
+	// symmetric. Unlike rejection sampling in a hypercube, this needs no retries,
+	// which matters because a hypercube's volume is almost entirely in its corners
+	// at high dimensions (the acceptance rate is about 1e-70 at 100 dimensions).
+	double length_squared = 0.0;
+	for (int64_t i = 0; i < p_dimension; i++) {
+		const double normal = VariantUtilityFunctions::randfn(0.0, 1.0);
+		random_point.set(i, normal);
+		length_squared += normal * normal;
+	}
+	if (unlikely(length_squared == 0.0)) {
+		// Astronomically unlikely, but a zero vector has no direction to normalize.
+		return random_point;
+	}
+	// Normalizing gives a uniformly random point on the sphere, and scaling that by
+	// `radius * U^(1/N)` fills the volume uniformly: a uniform point in an N-ball
+	// satisfies `length <= t` with probability `(t / radius) ^ N`, which is exactly
+	// the distribution of `radius * U^(1/N)` for U uniform in [0, 1).
+	const double radial_scale = Math::pow(VariantUtilityFunctions::randf(), 1.0 / (double)p_dimension);
+	return VectorND::multiply_scalar(random_point, p_radius * radial_scale / Math::sqrt(length_squared));
 }
 
 VectorN VectorND::random_in_range(const VectorN &p_from, const VectorN &p_to) {

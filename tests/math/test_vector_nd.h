@@ -58,6 +58,47 @@ TEST_CASE("[VectorND] Random in radius") {
 		const VectorN point = VectorND::random_in_radius(3);
 		CHECK_MESSAGE(VectorND::length(point) <= 1.0 + CMP_EPSILON, "VectorND random_in_radius should default to a radius of 1.0.");
 	}
+	// A high dimension must stay just as cheap as a low one. A rejection sampler
+	// would hang forever here, because the fraction of a 100-dimensional hypercube
+	// that lies inside its inscribed hypersphere is roughly 1e-70.
+	const VectorN high_dimension = VectorND::random_in_radius(100, 2.0);
+	CHECK_MESSAGE(high_dimension.size() == 100, "VectorND random_in_radius should return a vector of the requested dimension at high dimensions.");
+	CHECK_MESSAGE(VectorND::length(high_dimension) <= 2.0 + CMP_EPSILON, "VectorND random_in_radius should never exceed the given radius at high dimensions.");
+	const VectorN zero_dimension = VectorND::random_in_radius(0);
+	CHECK_MESSAGE(zero_dimension.size() == 0, "VectorND random_in_radius of dimension zero should be an empty vector.");
+	ERR_PRINT_OFF; // A negative dimension prints an error, which is expected here.
+	const VectorN negative_dimension = VectorND::random_in_radius(-1);
+	ERR_PRINT_ON;
+	CHECK_MESSAGE(negative_dimension.size() == 0, "VectorND random_in_radius of a negative dimension should be an empty vector.");
+}
+
+TEST_CASE("[VectorND] Random in radius distribution") {
+	// The test runner reseeds the global random number generator before every test
+	// case, but seed explicitly so this stays reproducible no matter what else runs.
+	Math::seed(0x5eed4ba11);
+	constexpr int DIMENSION = 3;
+	constexpr int SAMPLE_COUNT = 4000;
+	int within_half_radius = 0;
+	double axis_sums[DIMENSION] = { 0.0, 0.0, 0.0 };
+	for (int trial = 0; trial < SAMPLE_COUNT; trial++) {
+		const VectorN point = VectorND::random_in_radius(DIMENSION);
+		if (VectorND::length(point) <= 0.5) {
+			within_half_radius++;
+		}
+		for (int i = 0; i < DIMENSION; i++) {
+			axis_sums[i] += point[i];
+		}
+	}
+	// Uniformly distributed points satisfy `length <= t` with probability `t ^ N`,
+	// so an eighth of them land within half of the radius in three dimensions. A
+	// direction-only sampler that forgot to scale the radius would score near zero
+	// here, and one that scaled linearly instead would score near a half.
+	const double half_radius_fraction = (double)within_half_radius / (double)SAMPLE_COUNT;
+	CHECK_MESSAGE(Math::abs(half_radius_fraction - 0.125) < 0.03, "VectorND random_in_radius should fill the volume uniformly rather than favoring the center or the surface.");
+	// No axis should be favored over any other, nor either sign of an axis.
+	for (int i = 0; i < DIMENSION; i++) {
+		CHECK_MESSAGE(Math::abs(axis_sums[i] / (double)SAMPLE_COUNT) < 0.05, "VectorND random_in_radius should be centered on the origin in every axis.");
+	}
 }
 
 TEST_CASE("[VectorND] Random in range") {
