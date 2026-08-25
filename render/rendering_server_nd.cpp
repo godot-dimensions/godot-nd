@@ -15,11 +15,13 @@
 #include <godot_cpp/classes/editor_interface.hpp>
 #endif // TOOLS_ENABLED
 #elif GODOT_MODULE
-#include "scene/main/scene_tree.h"
-#include "scene/main/window.h"
+#include "core/config/engine.h"
+#include "core/os/time.h"
 #ifdef TOOLS_ENABLED
 #include "editor/editor_interface.h"
 #endif // TOOLS_ENABLED
+#include "scene/main/scene_tree.h"
+#include "scene/main/window.h"
 #if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 6
 #include "servers/rendering_server.h"
 #else
