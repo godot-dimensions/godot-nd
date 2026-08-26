@@ -570,4 +570,43 @@ TEST_CASE("[ArrayPolyMeshND] Make double sided preserves pentagon triangulation"
 	}
 	CHECK_MESSAGE(total_area == doctest::Approx(20.0), "Both sides of the pentagon must be triangulated with the full polygon area.");
 }
+
+TEST_CASE("[ArrayPolyMeshND] Duplicate preserves the normals and texture map dictionaries") {
+	// A flat 4-dimensional mesh stores its normals under the per-face key, which is not
+	// covered by the high-level boundary properties, so it only survives duplication if
+	// the dictionaries are bound as properties on all Godot versions.
+	Ref<ArrayPolyMeshND> mesh;
+	mesh.instantiate();
+	Vector<VectorN> vertices = {
+		VectorN{ 0.0, 0.0, 0.0, 0.0 },
+		VectorN{ 1.0, 0.0, 0.0, 0.0 },
+		VectorN{ 0.0, 1.0, 0.0, 0.0 },
+	};
+	mesh->set_poly_cell_vertices(vertices);
+	mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 0, 2 });
+	Vector<PackedInt32Array> faces;
+	faces.append(PackedInt32Array{ 0, 1, 2 });
+	mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
+	const VectorN pos_z = VectorN{ 0.0, 0.0, 1.0, 0.0 };
+	const Vector2i per_face_key = Vector2i(2, 2);
+	const Vector2i face_to_vert_key = Vector2i(2, 0);
+	HashMap<Vector2i, Vector<Vector<VectorN>>> normals;
+	normals.insert(per_face_key, Vector<Vector<VectorN>>{ Vector<VectorN>{ pos_z } });
+	mesh->set_all_poly_cell_normals(normals);
+	HashMap<Vector2i, Vector<Vector<VectorM>>> texture_maps;
+	Vector<VectorM> face_texture_map = { VectorM{ 0.0, 0.0, 0.0 }, VectorM{ 1.0, 0.0, 0.0 }, VectorM{ 0.0, 1.0, 0.0 } };
+	texture_maps.insert(face_to_vert_key, Vector<Vector<VectorM>>{ face_texture_map });
+	mesh->set_all_poly_cell_texture_maps(texture_maps);
+	Ref<ArrayPolyMeshND> duplicated = mesh->duplicate();
+	REQUIRE(duplicated.is_valid());
+	const HashMap<Vector2i, Vector<Vector<VectorN>>> duplicated_normals = duplicated->get_all_poly_cell_normals();
+	REQUIRE_MESSAGE(duplicated_normals.has(per_face_key), "Duplicating a mesh must preserve the per-face normals.");
+	REQUIRE(duplicated_normals[per_face_key].size() == 1);
+	REQUIRE(duplicated_normals[per_face_key][0].size() == 1);
+	CHECK(VectorND::is_equal_approx(duplicated_normals[per_face_key][0][0], pos_z));
+	const HashMap<Vector2i, Vector<Vector<VectorM>>> duplicated_texture_maps = duplicated->get_all_poly_cell_texture_maps();
+	REQUIRE_MESSAGE(duplicated_texture_maps.has(face_to_vert_key), "Duplicating a mesh must preserve the face texture maps.");
+	REQUIRE(duplicated_texture_maps[face_to_vert_key].size() == 1);
+	CHECK(duplicated_texture_maps[face_to_vert_key][0].size() == 3);
+}
 } // namespace TestArrayPolyMeshND
