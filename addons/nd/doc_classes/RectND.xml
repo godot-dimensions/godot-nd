@@ -196,7 +196,7 @@
 			<return type="Dictionary" />
 			<param index="0" name="from" type="PackedFloat64Array" />
 			<param index="1" name="direction" type="PackedFloat64Array" />
-			<param index="2" name="max_distance" type="float" default="inf" />
+			<param index="2" name="max_distance" type="float" default="3.4e+38" />
 			<param index="3" name="inside_is_zero" type="bool" default="false" />
 			<description>
 				Performs a raycast against the rect. The [param from] parameter is the starting point of the ray, and the [param direction] parameter is the direction of the ray, which must be normalized. A hit is only reported if it is closer than [param max_distance], which is exclusive. If [param inside_is_zero] is [code]true[/code] and [param from] is inside the rect, the ray immediately hits at a distance of zero with a zero normal, instead of casting forward to the surface it would exit through. The returned [Dictionary] may contain the following keys:

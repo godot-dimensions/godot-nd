@@ -64,20 +64,20 @@ TEST_CASE("[ArrayCellMeshND] Bounds cache invalidation on merge") {
 	CHECK(VectorND::is_equal_exact(bounds_after_merge->get_end(), VectorN{ 6, 6, 6 }));
 }
 
-TEST_CASE("[MeshND] Cross-section mesh is lazily created and cached") {
+TEST_CASE("[MeshND] Proxy mesh 3D is lazily created and cached") {
 	Ref<ArrayWireMeshND> mesh;
 	mesh.instantiate();
 	mesh->set_name("TestMesh");
 	mesh->set_vertices(Vector<VectorN>({ VectorN{ 0, 0, 0, 0 }, VectorN{ 1, 1, 1, 1 } }));
 
-	const Ref<ArrayMesh> cross_section = mesh->get_cross_section_mesh();
-	CHECK_MESSAGE(cross_section.is_valid(), "MeshND get_cross_section_mesh should lazily instantiate the cross-section mesh.");
-	CHECK_MESSAGE(cross_section->get_name() == "TestMesh Cross-Section Mesh", "MeshND get_cross_section_mesh should name the mesh after the resource it came from.");
+	const Ref<ArrayMesh> proxy_mesh_3d = mesh->get_proxy_mesh_3d();
+	CHECK_MESSAGE(proxy_mesh_3d.is_valid(), "MeshND get_proxy_mesh_3d should lazily instantiate the proxy mesh.");
+	CHECK_MESSAGE(proxy_mesh_3d->get_name() == "TestMesh Proxy Mesh 3D", "MeshND get_proxy_mesh_3d should name the mesh after the resource it came from.");
 
 	// The same instance must be handed out on subsequent calls, both while clean and after being marked dirty.
-	CHECK_MESSAGE(mesh->get_cross_section_mesh() == cross_section, "MeshND get_cross_section_mesh should return the same instance while the cache is clean.");
+	CHECK_MESSAGE(mesh->get_proxy_mesh_3d() == proxy_mesh_3d, "MeshND get_proxy_mesh_3d should return the same instance while the cache is clean.");
 	mesh->set_vertices(Vector<VectorN>({ VectorN{ 2, 2, 2, 2 }, VectorN{ 3, 3, 3, 3 } }));
-	CHECK_MESSAGE(mesh->get_cross_section_mesh() == cross_section, "MeshND get_cross_section_mesh should reuse the same instance after being marked dirty.");
+	CHECK_MESSAGE(mesh->get_proxy_mesh_3d() == proxy_mesh_3d, "MeshND get_proxy_mesh_3d should reuse the same instance after being marked dirty.");
 }
 
 TEST_CASE("[MeshND] Bounds cache persists across multiple accesses") {

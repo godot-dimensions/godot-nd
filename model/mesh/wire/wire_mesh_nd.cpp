@@ -2,7 +2,7 @@
 
 void WireMeshND::wire_mesh_clear_cache() {
 	_edge_positions_cache.clear();
-	mark_mesh_bounds_and_cross_section_dirty();
+	mark_mesh_bounds_and_proxy_mesh_3d_dirty();
 }
 
 Vector<VectorN> WireMeshND::get_edge_positions() {

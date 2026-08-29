@@ -399,7 +399,7 @@ void CellMeshND::cell_mesh_clear_cache() {
 	_nearest_simplex_inverse_metric_cache.clear();
 	_edge_positions_cache.clear();
 	_edge_indices_cache.clear();
-	mark_mesh_bounds_and_cross_section_dirty();
+	mark_mesh_bounds_and_proxy_mesh_3d_dirty();
 }
 
 void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
