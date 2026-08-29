@@ -26,6 +26,7 @@
 #define PROPERTY_HINT_GROUP_ENABLE PROPERTY_HINT_NONE
 #define resize_initialized resize
 #define resize_uninitialized resize
+#define RSE RenderingServer
 #define VariantUtilityFunctions UtilityFunctions
 // Note: This MUST NOT be set for module builds, only GDExtension builds, due to namespace pollution issues.
 #define USE_FUNCTIONS_FOR_VECTORS 1
@@ -63,6 +64,10 @@ using namespace godot;
 // Prior to Godot 4.7, Input enums were located in the Input class,
 // but in 4.7 they were moved to a separate InputClassEnums namespace.
 #define InputClassEnums Input
+
+// Prior to Godot 4.7, RenderingServer enums were in RenderingServer,
+// but in 4.7 they were moved to a separate RenderingServerEnums (RSE) namespace.
+#define RSE RenderingServer
 #endif
 
 #if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 6
