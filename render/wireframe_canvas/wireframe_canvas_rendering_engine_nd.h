@@ -18,6 +18,8 @@ protected:
 
 public:
 	virtual String get_friendly_name() const override { return "Wireframe Canvas"; }
+	virtual bool requires_transparent_background() const override { return false; }
+	virtual bool supports_godot_rendering_method(const String &) const override { return true; }
 	virtual void setup_for_viewport() override;
 	virtual void cleanup_for_viewport() override;
 	virtual void render_frame() override;

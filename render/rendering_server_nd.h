@@ -4,7 +4,10 @@
 
 #if GDEXTENSION
 #include <godot_cpp/templates/hash_map.hpp>
+#include <godot_cpp/templates/hash_set.hpp>
 #include <godot_cpp/templates/vector.hpp>
+#elif GODOT_MODULE
+#include "core/templates/hash_set.h"
 #endif
 
 class WorldEnvironmentND;
@@ -20,6 +23,7 @@ class RenderingServerND : public Object {
 	// We could add a "WorldND" class in the future if we want to add this feature, but it's not necessary for now.
 	Vector<MeshInstanceND *> _mesh_instances;
 
+	HashSet<String> _warned_incompatible_rendering_engine_names;
 	PackedInt64Array _get_visible_mesh_instance_object_ids() const;
 	bool _are_render_frame_and_process_frame_connected = false;
 	void _render_frame();
