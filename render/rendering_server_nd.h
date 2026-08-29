@@ -24,6 +24,8 @@ class RenderingServerND : public Object {
 	Vector<MeshInstanceND *> _mesh_instances;
 
 	HashSet<String> _warned_incompatible_rendering_engine_names;
+	String _get_current_godot_rendering_method() const;
+	Ref<RenderingEngineND> _select_rendering_engine(const String &p_friendly_name, const String &p_godot_rendering_method) const;
 	PackedInt64Array _get_visible_mesh_instance_object_ids() const;
 	bool _are_render_frame_and_process_frame_connected = false;
 	void _render_frame();
