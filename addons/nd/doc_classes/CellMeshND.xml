@@ -17,22 +17,22 @@
 				Callback method that should return the boundary normals of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_boundary_normals] for details of the returned data.
 			</description>
 		</method>
-		<method name="_get_simplex_cell_texture_map" qualifiers="virtual">
-			<return type="PackedFloat64Array[]" />
+		<method name="_get_simplex_cell_normal_indices" qualifiers="virtual">
+			<return type="PackedInt32Array" />
 			<description>
-				Callback method that should return the texture coordinate mapping of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_texture_map] for details of the returned data.
+				Callback method that should return the cell normal indices of a cell mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_normal_indices] for details of the returned data.
+			</description>
+		</method>
+		<method name="_get_simplex_cell_texture_map_indices" qualifiers="virtual">
+			<return type="PackedInt32Array" />
+			<description>
+				Callback method that should return the cell texture map indices of a cell mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_texture_map_indices] for details of the returned data.
 			</description>
 		</method>
 		<method name="_get_simplex_cell_vertex_indices" qualifiers="virtual">
 			<return type="PackedInt32Array" />
 			<description>
 				Callback method that should return the cell vertex indices of a cell mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_vertex_indices] for details of the returned data.
-			</description>
-		</method>
-		<method name="_get_simplex_cell_vertex_normals" qualifiers="virtual">
-			<return type="PackedFloat64Array[]" />
-			<description>
-				Callback method that should return the vertex normals of the simplex cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_simplex_cell_vertex_normals] for details of the returned data.
 			</description>
 		</method>
 		<method name="calculate_edge_indices_from_simplex_cell_vertex_indices" qualifiers="static">
@@ -76,22 +76,22 @@
 				Gets the number of simplex cells in the cell mesh. Each simplex cell has [method get_indices_per_simplex_cell] vertex indices. Multiplying these together gives the length of the [method get_simplex_cell_vertex_indices] array.
 			</description>
 		</method>
-		<method name="get_simplex_cell_texture_map">
-			<return type="PackedFloat64Array[]" />
+		<method name="get_simplex_cell_normal_indices">
+			<return type="PackedInt32Array" />
 			<description>
-				Gets the texture coordinate mapping of the simplex cells. Each VectorN ([PackedFloat64Array]) in this array is the texture space mapping for one vertex instance in a simplex cell, meaning [method get_indices_per_simplex_cell] per cell. This array should either be the same length as the [method get_simplex_cell_vertex_indices] array, or empty for no texture coordinate mapping, or else the mesh is invalid.
+				Gets the normal indices of the simplex cells. Each integer is an index to the [method MeshND.get_normal_values] array, with one normal index per vertex instance in a simplex cell, meaning N per cell for an N-dimensional mesh. This array must either have the same length as [method get_simplex_cell_vertex_indices], or be empty for no normals, or else the mesh is invalid. Every index must be non-negative and less than the size of [method MeshND.get_normal_values].
+			</description>
+		</method>
+		<method name="get_simplex_cell_texture_map_indices">
+			<return type="PackedInt32Array" />
+			<description>
+				Gets the texture map indices of the simplex cells. Each integer is an index to the [method MeshND.get_texture_map_values] array, with one texture map index per vertex instance in a simplex cell, meaning N per cell for an N-dimensional mesh. This array must either have the same length as [method get_simplex_cell_vertex_indices], or be empty for no texture mapping, or else the mesh is invalid. Every index must be non-negative and less than the size of [method MeshND.get_texture_map_values].
 			</description>
 		</method>
 		<method name="get_simplex_cell_vertex_indices">
 			<return type="PackedInt32Array" />
 			<description>
 				Gets the vertex indices of the simplex cells. Each set of [method get_indices_per_simplex_cell] integers represents the indices of the vertices that make up a cell, for a total of [method get_simplex_cell_count] cells. The vertices can be obtained using [method MeshND.get_vertex_positions]. Integers in this array should not exceed the length of the vertices array.
-			</description>
-		</method>
-		<method name="get_simplex_cell_vertex_normals">
-			<return type="PackedFloat64Array[]" />
-			<description>
-				Gets the vertex normals of the simplex cells. Vertex normals define how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one vertex instance in a cell, meaning N per cell, and should be normalized. This array should either be the same length as the [method get_simplex_cell_vertex_indices] array, or empty for no normals, or else the mesh is invalid.
 			</description>
 		</method>
 		<method name="populate_inverse_metric_cache">

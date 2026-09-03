@@ -50,7 +50,7 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Convert 3D mesh to ND faces only") {
 	CHECK_MESSAGE(VectorND::is_equal_approx(orientation_normals[0], pos_z), "The face orientations must reproduce the stored normals.");
 	CHECK_MESSAGE(VectorND::is_equal_approx(orientation_normals[1], pos_z), "The face orientations must reproduce the stored normals.");
 	// The vertex normals and texture map must carry through from the 3D mesh data.
-	const Vector<Vector<VectorN>> vertex_normals = converted->get_poly_cell_vertex_normals();
+	const Vector<Vector<VectorN>> vertex_normals = converted->get_poly_cell_dense_normals(Vector2i(converted->get_dimension() - 1, 0));
 	REQUIRE(vertex_normals.size() == 2);
 	for (int64_t face_index = 0; face_index < vertex_normals.size(); face_index++) {
 		REQUIRE(vertex_normals[face_index].size() == 3);
@@ -59,7 +59,7 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Convert 3D mesh to ND faces only") {
 			CHECK_MESSAGE(VectorND::distance_to(vertex_normals[face_index][vert_index], pos_z) < 0.0001, "The vertex normals must carry through from the 3D mesh data.");
 		}
 	}
-	const Vector<Vector<VectorM>> texture_map = converted->get_poly_cell_texture_map();
+	const Vector<Vector<VectorM>> texture_map = converted->get_poly_cell_dense_texture_map(Vector2i(converted->get_dimension() - 1, 0));
 	REQUIRE(texture_map.size() == 2);
 	for (int64_t face_index = 0; face_index < texture_map.size(); face_index++) {
 		REQUIRE(texture_map[face_index].size() == 3);
@@ -97,12 +97,12 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear") {
 		// All faces present at the time of merging must be marked as seams.
 		CHECK_MESSAGE(extruded->get_seam_indices().size() == 4, "Both copies of the input faces must be marked as seams.");
 		// The vertex normals and texture maps must be transferred to the extruded cells.
-		const HashMap<Vector2i, Vector<Vector<VectorN>>> all_normals = extruded->get_all_poly_cell_normals();
-		CHECK_MESSAGE(all_normals.has(Vector2i(3, 0)), "The extruded cells must have vertex normals transferred from the input faces.");
-		const HashMap<Vector2i, Vector<Vector<VectorM>>> all_texture_maps = extruded->get_all_poly_cell_texture_maps();
-		REQUIRE_MESSAGE(all_texture_maps.has(Vector2i(3, 0)), "The extruded cells must have texture maps transferred from the input faces.");
-		REQUIRE_MESSAGE(all_texture_maps.has(Vector2i(2, 0)), "The face texture maps must be doubled to cover both copies of the input faces.");
-		const Vector<Vector<VectorM>> face_texture_maps = all_texture_maps[Vector2i(2, 0)];
+		const HashMap<Vector2i, Vector<PackedInt32Array>> all_normal_indices = extruded->get_all_poly_cell_normal_indices();
+		CHECK_MESSAGE(all_normal_indices.has(Vector2i(3, 0)), "The extruded cells must have vertex normals transferred from the input faces.");
+		const HashMap<Vector2i, Vector<PackedInt32Array>> all_texture_map_indices = extruded->get_all_poly_cell_texture_map_indices();
+		REQUIRE_MESSAGE(all_texture_map_indices.has(Vector2i(3, 0)), "The extruded cells must have texture maps transferred from the input faces.");
+		REQUIRE_MESSAGE(all_texture_map_indices.has(Vector2i(2, 0)), "The face texture maps must be doubled to cover both copies of the input faces.");
+		const Vector<Vector<VectorM>> face_texture_maps = extruded->get_poly_cell_dense_texture_map(Vector2i(2, 0));
 		REQUIRE(face_texture_maps.size() == 4);
 		for (int64_t vert_index = 0; vert_index < face_texture_maps[2].size(); vert_index++) {
 			REQUIRE(face_texture_maps[2][vert_index].size() == 3);
@@ -300,7 +300,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide box boundary cells") {
 			}
 		}
 		// The texture map must carry through with interpolated values for the new vertices.
-		const Vector<Vector<VectorM>> texture_map = mesh->get_poly_cell_texture_map();
+		const Vector<Vector<VectorM>> texture_map = mesh->get_poly_cell_dense_texture_map(Vector2i(mesh->get_dimension() - 1, 0));
 		REQUIRE(texture_map.size() == new_pieces.size());
 		const Vector<PackedInt32Array> cell_vertex_indices = mesh->get_all_boundary_cell_vertex_indices(false);
 		for (int64_t cell_index = 0; cell_index < texture_map.size(); cell_index++) {
@@ -515,8 +515,8 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 			const VectorN vertex = vertex_positions[cell_vertices[i]];
 			cell_texture_map.append(VectorM{ vertex[0] / 2.0, vertex[1] / 2.0 });
 		}
-		mesh->set_poly_cell_vertex_normals(Vector<Vector<VectorN>>{ cell_vertex_normals });
-		mesh->set_poly_cell_texture_map(Vector<Vector<VectorM>>{ cell_texture_map });
+		mesh->set_poly_cell_dense_normals(Vector2i(mesh->get_dimension() - 1, 0), Vector<Vector<VectorN>>{ cell_vertex_normals });
+		mesh->set_poly_cell_dense_texture_map(Vector2i(mesh->get_dimension() - 1, 0), Vector<Vector<VectorM>>{ cell_texture_map });
 		const PackedInt32Array new_pieces = PolyMeshBuilderND::subdivide_elements(mesh, 2, PackedInt32Array());
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The subdivided quad must have valid poly mesh data.");
 		CHECK_MESSAGE(new_pieces.size() == 4, "A quad must subdivide into 4 sub-quads.");
@@ -536,8 +536,8 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 		// so this relationship must also hold at the new midpoint and center vertices.
 		const Vector<VectorN> new_vertex_positions = mesh->get_poly_cell_vertex_positions();
 		const Vector<PackedInt32Array> new_cell_vertex_indices = mesh->get_all_boundary_cell_vertex_indices(false);
-		const Vector<Vector<VectorM>> new_texture_map = mesh->get_poly_cell_texture_map();
-		const Vector<Vector<VectorN>> new_vertex_normals = mesh->get_poly_cell_vertex_normals();
+		const Vector<Vector<VectorM>> new_texture_map = mesh->get_poly_cell_dense_texture_map(Vector2i(mesh->get_dimension() - 1, 0));
+		const Vector<Vector<VectorN>> new_vertex_normals = mesh->get_poly_cell_dense_normals(Vector2i(mesh->get_dimension() - 1, 0));
 		REQUIRE(new_texture_map.size() == 4);
 		REQUIRE(new_vertex_normals.size() == 4);
 		for (int64_t cell_index = 0; cell_index < 4; cell_index++) {

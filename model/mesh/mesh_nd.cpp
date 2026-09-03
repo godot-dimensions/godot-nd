@@ -176,6 +176,28 @@ Vector<VectorN> MeshND::get_vertex_positions() {
 	return vertex_positions;
 }
 
+Vector<VectorN> MeshND::get_normal_values() {
+	TypedArray<VectorN> typed_array_normals;
+	GDVIRTUAL_CALL(_get_normal_values, typed_array_normals);
+	Vector<VectorN> normals;
+	normals.resize(typed_array_normals.size());
+	for (int i = 0; i < typed_array_normals.size(); i++) {
+		normals.set(i, typed_array_normals[i]);
+	}
+	return normals;
+}
+
+Vector<VectorM> MeshND::get_texture_map_values() {
+	TypedArray<VectorM> typed_array_texture_maps;
+	GDVIRTUAL_CALL(_get_texture_map_values, typed_array_texture_maps);
+	Vector<VectorM> texture_maps;
+	texture_maps.resize(typed_array_texture_maps.size());
+	for (int i = 0; i < typed_array_texture_maps.size(); i++) {
+		texture_maps.set(i, typed_array_texture_maps[i]);
+	}
+	return texture_maps;
+}
+
 TypedArray<VectorN> MeshND::get_vertex_positions_bind() {
 	const Vector<VectorN> vertex_positions = get_vertex_positions();
 	TypedArray<VectorN> typed_array_vertex_positions;
@@ -184,6 +206,26 @@ TypedArray<VectorN> MeshND::get_vertex_positions_bind() {
 		typed_array_vertex_positions[i] = vertex_positions[i];
 	}
 	return typed_array_vertex_positions;
+}
+
+TypedArray<VectorN> MeshND::get_normal_values_bind() {
+	const Vector<VectorN> normals = get_normal_values();
+	TypedArray<VectorN> typed_array_normals;
+	typed_array_normals.resize(normals.size());
+	for (int i = 0; i < normals.size(); i++) {
+		typed_array_normals[i] = normals[i];
+	}
+	return typed_array_normals;
+}
+
+TypedArray<VectorM> MeshND::get_texture_map_values_bind() {
+	const Vector<VectorM> texture_maps = get_texture_map_values();
+	TypedArray<VectorM> typed_array_texture_maps;
+	typed_array_texture_maps.resize(texture_maps.size());
+	for (int i = 0; i < texture_maps.size(); i++) {
+		typed_array_texture_maps[i] = texture_maps[i];
+	}
+	return typed_array_texture_maps;
 }
 
 int MeshND::get_dimension() {
@@ -217,10 +259,14 @@ void MeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_edge_indices"), &MeshND::get_edge_indices);
 	ClassDB::bind_method(D_METHOD("get_edge_positions"), &MeshND::get_edge_positions_bind);
 	ClassDB::bind_method(D_METHOD("get_vertex_positions"), &MeshND::get_vertex_positions_bind);
+	ClassDB::bind_method(D_METHOD("get_normal_values"), &MeshND::get_normal_values_bind);
+	ClassDB::bind_method(D_METHOD("get_texture_map_values"), &MeshND::get_texture_map_values_bind);
 	ClassDB::bind_method(D_METHOD("get_dimension"), &MeshND::get_dimension);
 
 	GDVIRTUAL_BIND(_get_edge_indices);
 	GDVIRTUAL_BIND(_get_vertex_positions);
+	GDVIRTUAL_BIND(_get_normal_values);
+	GDVIRTUAL_BIND(_get_texture_map_values);
 	GDVIRTUAL_BIND(_validate_material_for_mesh, "material");
 	GDVIRTUAL_BIND(_validate_mesh_data);
 	GDVIRTUAL_BIND(_update_proxy_mesh_3d);

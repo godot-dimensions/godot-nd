@@ -18,9 +18,12 @@ public:
 private:
 	Vector<Vector<PackedInt32Array>> _poly_cell_indices_cache;
 	PackedInt32Array _box_edge_indices_cache;
+	// The boundary normals also serve as the normal values, since each boundary cell's
+	// vertex normals are flat shading normals that all point along the cell's normal.
 	Vector<VectorN> _boundary_normals_cache;
-	Vector<Vector<VectorN>> _vertex_normals_cache;
-	Vector<Vector<VectorM>> _texture_map_cache;
+	Vector<PackedInt32Array> _normal_indices_cache;
+	Vector<VectorM> _texture_map_values_cache;
+	Vector<PackedInt32Array> _texture_map_indices_cache;
 	Vector<VectorN> _vertices_cache;
 
 	VectorN _size;
@@ -51,8 +54,10 @@ public:
 	virtual Vector<Vector<PackedInt32Array>> get_poly_cell_indices() override;
 	virtual Vector<VectorN> get_poly_cell_vertex_positions() override;
 	virtual Vector<VectorN> get_poly_cell_boundary_normals() override;
-	virtual Vector<Vector<VectorN>> get_poly_cell_vertex_normals() override;
-	virtual Vector<Vector<VectorM>> get_poly_cell_texture_map() override;
+	virtual Vector<VectorN> get_poly_cell_normal_values() override;
+	virtual Vector<VectorM> get_poly_cell_texture_map_values() override;
+	virtual Vector<PackedInt32Array> get_poly_cell_normal_indices() override;
+	virtual Vector<PackedInt32Array> get_poly_cell_texture_map_indices() override;
 
 	virtual PackedInt32Array get_edge_indices() override;
 	virtual Vector<VectorN> get_vertex_positions() override;

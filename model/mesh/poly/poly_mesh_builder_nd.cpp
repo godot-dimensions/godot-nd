@@ -96,10 +96,11 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(const R
 		ret->set_poly_cell_boundary_normals(output_face_boundary_normals);
 	}
 	if (!output_face_vertex_normals.is_empty()) {
-		ret->set_poly_cell_vertex_normals(output_face_vertex_normals);
+		// The output mesh is 3D, so its cell-to-vertex data binding key is (2, 0).
+		ret->set_poly_cell_dense_normals(Vector2i(2, 0), output_face_vertex_normals);
 	}
 	if (!output_face_texture_maps.is_empty()) {
-		ret->set_poly_cell_texture_map(output_face_texture_maps);
+		ret->set_poly_cell_dense_texture_map(Vector2i(2, 0), output_face_texture_maps);
 	}
 	return ret;
 }
@@ -247,7 +248,12 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 		const bool has_boundary_to_extruded_cell = extrusion_adds_dimension && output_boundary_dim_index >= 0 && output_boundary_dim_index < all_cell_to_extruded_cell.size();
 		const PackedInt32Array boundary_to_extruded_cell = has_boundary_to_extruded_cell ? all_cell_to_extruded_cell[output_boundary_dim_index] : PackedInt32Array();
 		// Copy over the normals from the original boundary cells, if that data is present.
-		HashMap<Vector2i, Vector<Vector<VectorN>>> all_poly_cell_normals = ret->get_all_poly_cell_normals();
+		// This function works with dense normal and texture map data, sampled from
+		// the indexed data on read and converted back to indexed data when written.
+		HashMap<Vector2i, Vector<Vector<VectorN>>> all_poly_cell_normals;
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &normal_kv : ret->get_all_poly_cell_normal_indices()) {
+			all_poly_cell_normals.insert(normal_kv.key, ret->get_poly_cell_dense_normals(normal_kv.key));
+		}
 		if (has_boundary_to_extruded_cell && all_poly_cell_normals.has(input_per_cell_key) && all_poly_cell_normals[input_per_cell_key].size() == 1) {
 			const Vector<VectorN> &input_boundary_normals = all_poly_cell_normals[input_per_cell_key][0];
 			CRASH_COND(input_boundary_normals.size() < boundary_to_extruded_cell.size());
@@ -273,7 +279,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 			// The boundary normals themselves will be recalculated at the end of this function,
 			// but write the result back anyway for internal consistency.
 			all_poly_cell_normals.insert(output_per_cell_key, Vector<Vector<VectorN>>{ per_cell_normals });
-			ret->set_all_poly_cell_normals(all_poly_cell_normals);
+			ret->set_poly_cell_dense_normals(output_per_cell_key, Vector<Vector<VectorN>>{ per_cell_normals });
 		} else {
 			// Otherwise, if there is no data to copy over, calculate new boundary normals for the extruded cells.
 			// Ensure boundary cells are correctly oriented with outward facing normals. This only works when we
@@ -348,6 +354,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 			input_level_vert_normals.resize(input_boundary_cell_count); // Just in case the original size was smaller due to missing data. Empty entries are fine.
 			input_level_vert_normals.append_array(input_level_vert_normals); // New size will be 2x the input boundary cell count.
 			all_poly_cell_normals.insert(input_cell_to_vert_key, input_level_vert_normals);
+			ret->set_poly_cell_dense_normals(input_cell_to_vert_key, input_level_vert_normals);
 			// Now transfer the input cell vertex normals to the extruded cell vertex normals.
 			const Vector<VectorN> &per_cell_normals = ret->get_poly_cell_boundary_normals();
 			const Vector<PackedInt32Array> all_input_level_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 2, false);
@@ -379,10 +386,13 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 				cell_to_vert_normals.set(cell_index, cell_vert_normals);
 			}
 			all_poly_cell_normals.insert(output_cell_to_vert_key, cell_to_vert_normals);
-			ret->set_all_poly_cell_normals(all_poly_cell_normals);
+			ret->set_poly_cell_dense_normals(output_cell_to_vert_key, cell_to_vert_normals);
 		}
 		// Copy over the vertex texture maps from the original boundary cells, if that data is present.
-		HashMap<Vector2i, Vector<Vector<VectorM>>> all_poly_cell_texture_maps = ret->get_all_poly_cell_texture_maps();
+		HashMap<Vector2i, Vector<Vector<VectorM>>> all_poly_cell_texture_maps;
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &tex_map_kv : ret->get_all_poly_cell_texture_map_indices()) {
+			all_poly_cell_texture_maps.insert(tex_map_kv.key, ret->get_poly_cell_dense_texture_map(tex_map_kv.key));
+		}
 		if (has_boundary_to_extruded_cell && all_poly_cell_texture_maps.has(input_cell_to_vert_key)) {
 			Vector<Vector<VectorM>> input_level_texture_maps = all_poly_cell_texture_maps[input_cell_to_vert_key];
 			// This data currently only contains one copy of the input cell vertex texture maps, copy it again.
@@ -401,6 +411,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 				input_level_texture_maps.set(input_cell_index + input_boundary_cell_count, cell_vert_texture_map);
 			}
 			all_poly_cell_texture_maps.insert(input_cell_to_vert_key, input_level_texture_maps);
+			ret->set_poly_cell_dense_texture_map(input_cell_to_vert_key, input_level_texture_maps);
 			// Now transfer the input cell vertex texture maps to the extruded cell vertex texture maps.
 			const Vector<PackedInt32Array> all_input_level_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 2, false);
 			const Vector<PackedInt32Array> all_cell_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 1, false);
@@ -432,7 +443,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 				cell_to_vert_texture_maps.set(cell_index, cell_vert_texture_maps);
 			}
 			all_poly_cell_texture_maps.insert(output_cell_to_vert_key, cell_to_vert_texture_maps);
-			ret->set_all_poly_cell_texture_maps(all_poly_cell_texture_maps);
+			ret->set_poly_cell_dense_texture_map(output_cell_to_vert_key, cell_to_vert_texture_maps);
 		}
 	}
 	// Overwrite the cells and recalculate the normals again to ensure data consistency.
@@ -1230,8 +1241,16 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 			old_boundary_normals = scratch->get_poly_cell_boundary_normals();
 		}
 	}
-	const HashMap<Vector2i, Vector<Vector<VectorN>>> old_all_normals = p_input_mesh->get_all_poly_cell_normals();
-	const HashMap<Vector2i, Vector<Vector<VectorM>>> old_all_texture_maps = p_input_mesh->get_all_poly_cell_texture_maps();
+	// Subdivision works with dense normal and texture map data, sampled from
+	// the indexed data at the start and converted back to indexed at the end.
+	HashMap<Vector2i, Vector<Vector<VectorN>>> old_all_normals;
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &old_normal_kv : p_input_mesh->get_all_poly_cell_normal_indices()) {
+		old_all_normals.insert(old_normal_kv.key, p_input_mesh->get_poly_cell_dense_normals(old_normal_kv.key));
+	}
+	HashMap<Vector2i, Vector<Vector<VectorM>>> old_all_texture_maps;
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &old_tex_map_kv : p_input_mesh->get_all_poly_cell_texture_map_indices()) {
+		old_all_texture_maps.insert(old_tex_map_kv.key, p_input_mesh->get_poly_cell_dense_texture_map(old_tex_map_kv.key));
+	}
 	const HashSet<int32_t> old_seams = p_input_mesh->get_seam_indices();
 	const PackedInt32Array old_pivot_overrides = p_input_mesh->get_poly_cell_boundary_pivot_overrides();
 	// Build the new mesh data, starting with the vertices and edges.
@@ -1317,8 +1336,10 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 	p_input_mesh->set_poly_cell_vertex_positions(ctx.new_vertices);
 	p_input_mesh->set_edge_vertex_indices(ctx.new_edges);
 	p_input_mesh->set_poly_cell_indices(ctx.new_levels);
-	p_input_mesh->set_all_poly_cell_normals(HashMap<Vector2i, Vector<Vector<VectorN>>>());
-	p_input_mesh->set_all_poly_cell_texture_maps(HashMap<Vector2i, Vector<Vector<VectorM>>>());
+	p_input_mesh->set_all_poly_cell_normal_indices(HashMap<Vector2i, Vector<PackedInt32Array>>());
+	p_input_mesh->set_all_poly_cell_texture_map_indices(HashMap<Vector2i, Vector<PackedInt32Array>>());
+	p_input_mesh->set_poly_cell_normal_values(Vector<VectorN>());
+	p_input_mesh->set_poly_cell_texture_map_values(Vector<VectorM>());
 	// Remap the pivot overrides. Pieces of subdivided cells lose their parent's override.
 	const int64_t new_boundary_count = has_boundary_level ? ctx.new_levels[boundary_level].size() : 0;
 	if (has_boundary_level && !old_pivot_overrides.is_empty()) {
@@ -1485,10 +1506,10 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 				}
 			}
 			if (old_vertex_normals != nullptr) {
-				p_input_mesh->set_poly_cell_vertex_normals(new_vertex_normals);
+				p_input_mesh->set_poly_cell_dense_normals(cell_to_vert_key, new_vertex_normals);
 			}
 			if (old_texture_maps != nullptr) {
-				p_input_mesh->set_poly_cell_texture_map(new_texture_maps);
+				p_input_mesh->set_poly_cell_dense_texture_map(cell_to_vert_key, new_texture_maps);
 			}
 		}
 	}

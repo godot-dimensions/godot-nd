@@ -17,6 +17,20 @@
 				Append a vertex to the cell mesh. If [param deduplicate_vertices] is [code]true[/code], the method will check if the vertex already exists in the [member vertex_positions] array and return the index of the existing vertex. If the vertex does not exist, it will be appended to the vertices array and its index will be returned. In both cases, the returned index points to a vertex identical to the input vertex.
 			</description>
 		</method>
+		<method name="compact_normal_values">
+			<return type="void" />
+			<description>
+				Compacts the normal value pool by removing values that are not referenced by any normal index and merging identical values, remapping the simplex cell normal indices to the compacted pool. The relative order of the kept values is preserved.
+				[b]Note:[/b] This will break any existing references to the normal values outside of the simplex cell normal indices in ArrayCellMeshND. If any exist in your project, they need to be handled separately.
+			</description>
+		</method>
+		<method name="compact_texture_map_values">
+			<return type="void" />
+			<description>
+				Compacts the texture map value pool by removing values that are not referenced by any texture map index and merging identical values, remapping the simplex cell texture map indices to the compacted pool. The relative order of the kept values is preserved.
+				[b]Note:[/b] This will break any existing references to the texture map values outside of the simplex cell texture map indices in ArrayCellMeshND. If any exist in your project, they need to be handled separately.
+			</description>
+		</method>
 		<method name="merge_with">
 			<return type="void" />
 			<param index="0" name="other" type="ArrayCellMeshND" />
@@ -29,22 +43,28 @@
 	<members>
 		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
 			The dimension of the mesh, defined by the number of components in the first vertex position. Setting this resizes the first position to the new dimension, truncating or padding it with zeros as necessary. Other positions are truncated if too long, but shorter and empty positions remain compact. Setting this on a mesh without vertices does not create a vertex, so its dimension remains zero.
-			Changing the dimension clears simplex cell indices, boundary normals, vertex normals, and texture mapping, because the number of vertices per simplex cell changes. Setting the same dimension preserves the cells and truncates overlong attribute vectors without expanding compact or empty entries.
+			Changing the dimension clears simplex cell vertex, normal, and texture map indices and boundary normals, because the number of vertices per simplex cell changes. Setting the same dimension preserves the cells and truncates overlong boundary normals. Normal and texture map value pools are retained in either case, truncating values to at most N and N-1 components respectively without expanding compact or empty entries.
+		</member>
+		<member name="normal_values" type="PackedFloat64Array[]" setter="set_normal_values" getter="get_normal_values" default="[]">
+			The normal values of the cell mesh. Each VectorN ([PackedFloat64Array]) in this array is a normal vector, referenced by the items in the [member simplex_cell_normal_indices] array, and each should be normalized.
+			Each value may have at most N components, with missing trailing components treated as zero. An empty value represents a zero vector.
 		</member>
 		<member name="simplex_cell_boundary_normals" type="PackedFloat64Array[]" setter="set_simplex_cell_boundary_normals" getter="get_simplex_cell_boundary_normals" default="[]">
 			The boundary normals of the simplex cells. Boundary normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be one-Nth as long as the [member simplex_cell_vertex_indices] array, or empty for no normals, or else the mesh is invalid.
 			Each normal may have at most N components. Missing trailing components are treated as zero.
 		</member>
-		<member name="simplex_cell_texture_map" type="PackedFloat64Array[]" setter="set_simplex_cell_texture_map" getter="get_simplex_cell_texture_map" default="[]">
-			The texture coordinate mapping of the simplex cells. Each VectorN ([PackedFloat64Array]) in this array is the texture space mapping for one vertex instance in a simplex cell, meaning [method CellMeshND.get_indices_per_simplex_cell] per cell. This array should either be the same length as the [member simplex_cell_vertex_indices] array, or empty for no texture coordinate mapping, or else the mesh is invalid.
-			For an N-dimensional mesh, each texture coordinate may have at most N-1 components. Missing trailing components are treated as zero.
+		<member name="simplex_cell_normal_indices" type="PackedInt32Array" setter="set_simplex_cell_normal_indices" getter="get_simplex_cell_normal_indices" default="PackedInt32Array()">
+			The normal indices of the simplex cells. Each integer is an index to the [member normal_values] array, with one normal index per vertex instance in a simplex cell, meaning N per cell for an N-dimensional mesh. This array should either be the same length as the [member simplex_cell_vertex_indices] array, or empty for no normals, or else the mesh is invalid. Every index must be non-negative and less than the size of the value pool.
+		</member>
+		<member name="simplex_cell_texture_map_indices" type="PackedInt32Array" setter="set_simplex_cell_texture_map_indices" getter="get_simplex_cell_texture_map_indices" default="PackedInt32Array()">
+			The texture map indices of the simplex cells. Each integer is an index to the [member texture_map_values] array, with one texture map index per vertex instance in a simplex cell, meaning N per cell for an N-dimensional mesh. This array should either be the same length as the [member simplex_cell_vertex_indices] array, or empty for no texture coordinate mapping, or else the mesh is invalid. Every index must be non-negative and less than the size of the value pool.
 		</member>
 		<member name="simplex_cell_vertex_indices" type="PackedInt32Array" setter="set_simplex_cell_vertex_indices" getter="get_simplex_cell_vertex_indices" default="PackedInt32Array()">
 			The vertex indices of the simplex cells. For an N-dimensional mesh, every N integers defines a simplex cell (as returned by [method CellMeshND.get_indices_per_simplex_cell]), for a total of [method CellMeshND.get_simplex_cell_count] cells. Each integer is an index to the [member vertex_positions] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
 		</member>
-		<member name="simplex_cell_vertex_normals" type="PackedFloat64Array[]" setter="set_simplex_cell_vertex_normals" getter="get_simplex_cell_vertex_normals" default="[]">
-			The normals of the vertex indices of simplex cells. Vertex normals define how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one vertex instance in a simplex cell, meaning N per cell, and each should be normalized. This array should either be the same length as the [member simplex_cell_vertex_indices] array, or empty for no normals, or else the mesh is invalid.
-			Each normal may have at most N components. Missing trailing components are treated as zero.
+		<member name="texture_map_values" type="PackedFloat64Array[]" setter="set_texture_map_values" getter="get_texture_map_values" default="[]">
+			The texture map values of the cell mesh. Each VectorN ([PackedFloat64Array]) in this array is a position in texture space, referenced by the items in the [member simplex_cell_texture_map_indices] array.
+			Each value may have at most N-1 components, with missing trailing components treated as zero. An empty value represents a zero vector.
 		</member>
 		<member name="vertex_positions" type="PackedFloat64Array[]" setter="set_vertex_positions" getter="get_vertex_positions" default="[]">
 			The vertices of the cell mesh. Each vertex is a VectorN ([PackedFloat64Array]). The first position defines the mesh dimension; subsequent positions may omit trailing zero components, but must not exceed that dimension. Indices of cells and edges refer to the items in this array. The vertices array must be kept consistent with the cell indices array, such that each cell index points to a valid vertex index, or else the mesh is invalid.

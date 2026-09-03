@@ -7,8 +7,9 @@ void BoxPolyMeshND::_clear_caches() {
 	_poly_cell_indices_cache.clear();
 	_box_edge_indices_cache.clear();
 	_boundary_normals_cache.clear();
-	_vertex_normals_cache.clear();
-	_texture_map_cache.clear();
+	_normal_indices_cache.clear();
+	_texture_map_values_cache.clear();
+	_texture_map_indices_cache.clear();
 	_vertices_cache.clear();
 	poly_mesh_clear_cache();
 }
@@ -16,7 +17,8 @@ void BoxPolyMeshND::_clear_caches() {
 void BoxPolyMeshND::set_poly_texture_map(const BoxPolyTextureMap p_map) {
 	_poly_texture_map = p_map;
 	// The position caches can be kept, but the texture map and poly caches need clearing.
-	_texture_map_cache.clear();
+	_texture_map_values_cache.clear();
+	_texture_map_indices_cache.clear();
 	poly_mesh_clear_cache();
 }
 
@@ -51,7 +53,7 @@ void BoxPolyMeshND::_generate_poly_data() {
 	_poly_cell_indices_cache.clear();
 	_box_edge_indices_cache.clear();
 	_boundary_normals_cache.clear();
-	_vertex_normals_cache.clear();
+	_normal_indices_cache.clear();
 	const int64_t dimension = _size.size();
 	if (dimension < 1) {
 		return;
@@ -148,16 +150,17 @@ void BoxPolyMeshND::_generate_poly_data() {
 	// Orient the boundary cells so that their orientation-derived normals point outward.
 	if (dimension >= 3) {
 		_orient_cells_to_match_normals(_poly_cell_indices_cache, _box_edge_indices_cache, get_vertex_positions(), _boundary_normals_cache, dimension - 3);
-		// Flat shading vertex normals: every vertex instance of a cell uses the cell's normal.
+		// Flat shading vertex normals: every vertex instance of a cell uses the cell's normal,
+		// so every vertex instance of a cell can index the cell's boundary normal value.
 		const int64_t boundary_cell_vertex_count = int64_t(1) << (dimension - 1);
-		_vertex_normals_cache.resize(_boundary_normals_cache.size());
+		_normal_indices_cache.resize(_boundary_normals_cache.size());
 		for (int64_t cell_index = 0; cell_index < _boundary_normals_cache.size(); cell_index++) {
-			Vector<VectorN> vertex_normals_for_cell;
-			vertex_normals_for_cell.resize(boundary_cell_vertex_count);
+			PackedInt32Array normal_indices_for_cell;
+			normal_indices_for_cell.resize(boundary_cell_vertex_count);
 			for (int64_t vert_inst = 0; vert_inst < boundary_cell_vertex_count; vert_inst++) {
-				vertex_normals_for_cell.set(vert_inst, _boundary_normals_cache[cell_index]);
+				normal_indices_for_cell.set(vert_inst, cell_index);
 			}
-			_vertex_normals_cache.set(cell_index, vertex_normals_for_cell);
+			_normal_indices_cache.set(cell_index, normal_indices_for_cell);
 		}
 	}
 }
@@ -180,11 +183,18 @@ Vector<VectorN> BoxPolyMeshND::get_poly_cell_boundary_normals() {
 	return _boundary_normals_cache;
 }
 
-Vector<Vector<VectorN>> BoxPolyMeshND::get_poly_cell_vertex_normals() {
+Vector<VectorN> BoxPolyMeshND::get_poly_cell_normal_values() {
 	if (_poly_cell_indices_cache.is_empty()) {
 		_generate_poly_data();
 	}
-	return _vertex_normals_cache;
+	return _boundary_normals_cache;
+}
+
+Vector<PackedInt32Array> BoxPolyMeshND::get_poly_cell_normal_indices() {
+	if (_poly_cell_indices_cache.is_empty()) {
+		_generate_poly_data();
+	}
+	return _normal_indices_cache;
 }
 
 // Procedurally generates the texture map for the box's boundary cells, by unfolding the
@@ -194,7 +204,8 @@ Vector<Vector<VectorN>> BoxPolyMeshND::get_poly_cell_vertex_normals() {
 // so that shared vertices with the center cell have identical texture coordinates, and
 // the cell facing the negative last axis is a special case placed depending on the mode.
 void BoxPolyMeshND::_generate_texture_map() {
-	_texture_map_cache.clear();
+	_texture_map_values_cache.clear();
+	_texture_map_indices_cache.clear();
 	const int64_t dimension = _size.size();
 	if (dimension < 3) {
 		// Texture maps bind to boundary poly cells, which a 2D or lower box does not have.
@@ -229,7 +240,7 @@ void BoxPolyMeshND::_generate_texture_map() {
 	const Vector<PackedInt32Array> cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices_cache, _box_edge_indices_cache, dimension - 3, false);
 	const int64_t cell_count = cell_vertex_indices.size();
 	ERR_FAIL_COND(_boundary_normals_cache.size() != cell_count);
-	_texture_map_cache.resize(cell_count);
+	_texture_map_indices_cache.resize(cell_count);
 	for (int64_t cell_index = 0; cell_index < cell_count; cell_index++) {
 		// Determine which axis this cell faces from its outward normal.
 		const VectorN &cell_normal = _boundary_normals_cache[cell_index];
@@ -244,8 +255,8 @@ void BoxPolyMeshND::_generate_texture_map() {
 		}
 		ERR_FAIL_COND(cell_axis == -1);
 		const PackedInt32Array &cell_vertices = cell_vertex_indices[cell_index];
-		Vector<VectorM> cell_texture_map;
-		cell_texture_map.resize(cell_vertices.size());
+		PackedInt32Array cell_texture_map_indices;
+		cell_texture_map_indices.resize(cell_vertices.size());
 		for (int64_t vertex_number = 0; vertex_number < cell_vertices.size(); vertex_number++) {
 			// Vertex indices are bitmasks where bit i set means the positive side of axis i.
 			const int64_t vertex_bits = cell_vertices[vertex_number];
@@ -303,17 +314,25 @@ void BoxPolyMeshND::_generate_texture_map() {
 					}
 				}
 			}
-			cell_texture_map.set(vertex_number, texcoord);
+			// Deduplicate the texture map values, storing indices into the value pool.
+			cell_texture_map_indices.set(vertex_number, (int32_t)VectorND::array_append_deduplicate(_texture_map_values_cache, texcoord));
 		}
-		_texture_map_cache.set(cell_index, cell_texture_map);
+		_texture_map_indices_cache.set(cell_index, cell_texture_map_indices);
 	}
 }
 
-Vector<Vector<VectorM>> BoxPolyMeshND::get_poly_cell_texture_map() {
-	if (_texture_map_cache.is_empty()) {
+Vector<VectorM> BoxPolyMeshND::get_poly_cell_texture_map_values() {
+	if (_texture_map_indices_cache.is_empty()) {
 		_generate_texture_map();
 	}
-	return _texture_map_cache;
+	return _texture_map_values_cache;
+}
+
+Vector<PackedInt32Array> BoxPolyMeshND::get_poly_cell_texture_map_indices() {
+	if (_texture_map_indices_cache.is_empty()) {
+		_generate_texture_map();
+	}
+	return _texture_map_indices_cache;
 }
 
 PackedInt32Array BoxPolyMeshND::get_edge_indices() {

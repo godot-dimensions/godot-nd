@@ -17,10 +17,12 @@ class PolyMeshND : public CellMeshND {
 
 	PackedInt32Array _simplex_cell_vertex_indices_cache;
 	PackedInt32Array _simplex_cell_source_poly_cells;
+	PackedInt32Array _simplex_cell_normal_indices_cache;
+	PackedInt32Array _simplex_cell_texture_map_indices_cache;
 	Vector<VectorN> _simplex_cell_vertex_positions_cache; // Superset of the polytope cell vertices.
 	Vector<VectorN> _simplex_cell_boundary_normals_cache;
-	Vector<VectorN> _simplex_cell_vertex_normals_cache;
-	Vector<VectorM> _simplex_cell_uvw_texture_map_cache;
+	Vector<VectorN> _simplex_cell_normal_values_cache; // Superset of the polytope cell normals.
+	Vector<VectorM> _simplex_cell_texture_map_values_cache; // Superset of the polytope cell texture maps.
 	bool _is_poly_mesh_data_valid = false;
 
 	static VectorM _average_vector_m(const Vector<VectorM> &p_vector_m_array);
@@ -100,27 +102,36 @@ public:
 
 	virtual Vector<Vector<PackedInt32Array>> get_poly_cell_indices();
 	virtual Vector<VectorN> get_poly_cell_vertex_positions();
+	virtual Vector<VectorN> get_poly_cell_normal_values();
+	virtual Vector<VectorM> get_poly_cell_texture_map_values();
 	virtual Vector<VectorN> get_poly_cell_boundary_normals();
 	virtual PackedInt32Array get_poly_cell_boundary_pivot_overrides();
-	virtual Vector<Vector<VectorN>> get_poly_cell_vertex_normals();
-	virtual Vector<Vector<VectorM>> get_poly_cell_texture_map();
+	virtual Vector<PackedInt32Array> get_poly_cell_normal_indices();
+	virtual Vector<PackedInt32Array> get_poly_cell_texture_map_indices();
 	virtual HashSet<int32_t> get_seam_indices() const { return HashSet<int32_t>(); }
+
 	TypedArray<Array> get_poly_cell_indices_bind();
 	TypedArray<VectorN> get_poly_cell_vertex_positions_bind();
+	TypedArray<VectorN> get_poly_cell_normal_values_bind();
+	TypedArray<VectorM> get_poly_cell_texture_map_values_bind();
 	TypedArray<VectorN> get_poly_cell_boundary_normals_bind();
-	TypedArray<Array> get_poly_cell_vertex_normals_bind();
-	TypedArray<Array> get_poly_cell_texture_map_bind();
+	TypedArray<PackedInt32Array> get_poly_cell_normal_indices_bind();
+	TypedArray<PackedInt32Array> get_poly_cell_texture_map_indices_bind();
 
 	virtual PackedInt32Array get_simplex_cell_vertex_indices() override;
+	virtual PackedInt32Array get_simplex_cell_normal_indices() override;
+	virtual PackedInt32Array get_simplex_cell_texture_map_indices() override;
 	virtual Vector<VectorN> get_simplex_cell_boundary_normals() override;
-	virtual Vector<VectorN> get_simplex_cell_vertex_normals() override;
-	virtual Vector<VectorM> get_simplex_cell_texture_map() override;
 	virtual Vector<VectorN> get_vertex_positions() override;
+	virtual Vector<VectorN> get_normal_values() override;
+	virtual Vector<VectorM> get_texture_map_values() override;
 
 	GDVIRTUAL0R(TypedArray<Array>, _get_poly_cell_indices);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_poly_cell_vertex_positions);
+	GDVIRTUAL0R(TypedArray<VectorN>, _get_poly_cell_normal_values);
+	GDVIRTUAL0R(TypedArray<VectorM>, _get_poly_cell_texture_map_values);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_poly_cell_boundary_normals);
 	GDVIRTUAL0R(PackedInt32Array, _get_poly_cell_boundary_pivot_overrides);
-	GDVIRTUAL0R(TypedArray<Array>, _get_poly_cell_vertex_normals);
-	GDVIRTUAL0R(TypedArray<Array>, _get_poly_cell_texture_map);
+	GDVIRTUAL0R(TypedArray<PackedInt32Array>, _get_poly_cell_normal_indices);
+	GDVIRTUAL0R(TypedArray<PackedInt32Array>, _get_poly_cell_texture_map_indices);
 };

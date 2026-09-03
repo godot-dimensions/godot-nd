@@ -15,6 +15,18 @@
 				Callback method that should return the edge indices of a mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_edge_indices] for details of the returned data.
 			</description>
 		</method>
+		<method name="_get_normal_values" qualifiers="virtual">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Callback method that should return the mesh's normal value pool. Do not call this method. Override this in a custom mesh class to supply values referenced by the simplex cell normal indices. See [method get_normal_values].
+			</description>
+		</method>
+		<method name="_get_texture_map_values" qualifiers="virtual">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Callback method that should return the mesh's texture map value pool. Do not call this method. Override this in a custom mesh class to supply values referenced by the simplex cell texture map indices. See [method get_texture_map_values].
+			</description>
+		</method>
 		<method name="_get_vertex_positions" qualifiers="virtual">
 			<return type="PackedFloat64Array[]" />
 			<description>
@@ -66,6 +78,12 @@
 				Gets the edge positions of the mesh. Each VectorN ([PackedFloat64Array]) in the array is a position in meters in ND space. Edges are defined by two vertices, and the positions in this array are the positions of the vertices that make up the edges. This value is calculated from a combination of the edge indices and the vertices arrays, see [method get_edge_indices] and [method get_vertex_positions].
 			</description>
 		</method>
+		<method name="get_normal_values">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Returns the shared normal values referenced by [method CellMeshND.get_simplex_cell_normal_indices]. Each [PackedFloat64Array] is a normal vector that should be normalized and may have at most N components, with missing trailing components treated as zero. An empty value is a zero-vector fallback for missing normal data. The array may be empty when the mesh has no normals.
+			</description>
+		</method>
 		<method name="get_proxy_mesh_3d">
 			<return type="ArrayMesh" />
 			<description>
@@ -77,6 +95,12 @@
 			<return type="RectND" />
 			<description>
 				Returns the [RectND] bounds of the mesh in local space, computed by expanding a rect to include every vertex, and always including the mesh's local origin even if the mesh's geometry does not cover that point. The result is cached until [method mark_mesh_bounds_and_proxy_mesh_3d_dirty] is called, so repeated calls are cheap.
+			</description>
+		</method>
+		<method name="get_texture_map_values">
+			<return type="PackedFloat64Array[]" />
+			<description>
+				Returns the shared texture map values referenced by [method CellMeshND.get_simplex_cell_texture_map_indices]. Each [PackedFloat64Array] is a position in texture space with at most N-1 components, usually between 0.0 and 1.0 on each axis. Missing trailing components are treated as zero. An empty value is a zero-vector fallback for missing texture map data. The array may be empty when the mesh has no texture mapping.
 			</description>
 		</method>
 		<method name="get_vertex_positions">

@@ -7,8 +7,9 @@ void OrthoplexPolyMeshND::_clear_caches() {
 	_poly_cell_indices_cache.clear();
 	_orthoplex_edge_indices_cache.clear();
 	_boundary_normals_cache.clear();
-	_vertex_normals_cache.clear();
-	_texture_map_cache.clear();
+	_normal_indices_cache.clear();
+	_texture_map_values_cache.clear();
+	_texture_map_indices_cache.clear();
 	_vertices_cache.clear();
 	poly_mesh_clear_cache();
 }
@@ -54,7 +55,7 @@ void OrthoplexPolyMeshND::_generate_poly_data() {
 	_poly_cell_indices_cache.clear();
 	_orthoplex_edge_indices_cache.clear();
 	_boundary_normals_cache.clear();
-	_vertex_normals_cache.clear();
+	_normal_indices_cache.clear();
 	const int64_t dimension = _size.size();
 	if (dimension < 1) {
 		return;
@@ -176,15 +177,16 @@ void OrthoplexPolyMeshND::_generate_poly_data() {
 	_poly_cell_indices_cache.append(volumetric_level);
 	// Orient the boundary cells so that their orientation-derived normals point outward.
 	_orient_cells_to_match_normals(_poly_cell_indices_cache, _orthoplex_edge_indices_cache, get_vertex_positions(), _boundary_normals_cache, dimension - 3);
-	// Flat shading vertex normals: every vertex instance of a cell uses the cell's normal.
-	_vertex_normals_cache.resize(_boundary_normals_cache.size());
+	// Flat shading vertex normals: every vertex instance of a cell uses the cell's normal,
+	// so every vertex instance of a cell can index the cell's boundary normal value.
+	_normal_indices_cache.resize(_boundary_normals_cache.size());
 	for (int64_t cell_index = 0; cell_index < _boundary_normals_cache.size(); cell_index++) {
-		Vector<VectorN> vertex_normals_for_cell;
-		vertex_normals_for_cell.resize(dimension);
+		PackedInt32Array normal_indices_for_cell;
+		normal_indices_for_cell.resize(dimension);
 		for (int64_t vert_inst = 0; vert_inst < dimension; vert_inst++) {
-			vertex_normals_for_cell.set(vert_inst, _boundary_normals_cache[cell_index]);
+			normal_indices_for_cell.set(vert_inst, cell_index);
 		}
-		_vertex_normals_cache.set(cell_index, vertex_normals_for_cell);
+		_normal_indices_cache.set(cell_index, normal_indices_for_cell);
 	}
 }
 
@@ -206,11 +208,18 @@ Vector<VectorN> OrthoplexPolyMeshND::get_poly_cell_boundary_normals() {
 	return _boundary_normals_cache;
 }
 
-Vector<Vector<VectorN>> OrthoplexPolyMeshND::get_poly_cell_vertex_normals() {
+Vector<VectorN> OrthoplexPolyMeshND::get_poly_cell_normal_values() {
 	if (_poly_cell_indices_cache.is_empty()) {
 		_generate_poly_data();
 	}
-	return _vertex_normals_cache;
+	return _boundary_normals_cache;
+}
+
+Vector<PackedInt32Array> OrthoplexPolyMeshND::get_poly_cell_normal_indices() {
+	if (_poly_cell_indices_cache.is_empty()) {
+		_generate_poly_data();
+	}
+	return _normal_indices_cache;
 }
 
 // Procedurally generates the texture map for the orthoplex's boundary cells. The vertex of
@@ -221,7 +230,8 @@ Vector<Vector<VectorN>> OrthoplexPolyMeshND::get_poly_cell_vertex_normals() {
 // the center reflected over the hyperplane through the cell's other texture points, giving it
 // many disconnected texture representations, one adjacent to each positive side cell.
 void OrthoplexPolyMeshND::_generate_texture_map() {
-	_texture_map_cache.clear();
+	_texture_map_values_cache.clear();
+	_texture_map_indices_cache.clear();
 	const int64_t dimension = _size.size();
 	if (dimension < 3) {
 		// Texture maps bind to boundary poly cells, which a 2D or lower orthoplex does not have.
@@ -235,13 +245,13 @@ void OrthoplexPolyMeshND::_generate_texture_map() {
 	const Vector<PackedInt32Array> cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices_cache, _orthoplex_edge_indices_cache, dimension - 3, false);
 	const int64_t cell_count = cell_vertex_indices.size();
 	ERR_FAIL_COND(_boundary_normals_cache.size() != cell_count);
-	_texture_map_cache.resize(cell_count);
+	_texture_map_indices_cache.resize(cell_count);
 	for (int64_t cell_index = 0; cell_index < cell_count; cell_index++) {
 		// The signs of the cell's vertices on each axis, read from its outward normal.
 		const VectorN &cell_normal = _boundary_normals_cache[cell_index];
 		const PackedInt32Array &cell_vertices = cell_vertex_indices[cell_index];
-		Vector<VectorM> cell_texture_map;
-		cell_texture_map.resize(cell_vertices.size());
+		PackedInt32Array cell_texture_map_indices;
+		cell_texture_map_indices.resize(cell_vertices.size());
 		for (int64_t vertex_number = 0; vertex_number < cell_vertices.size(); vertex_number++) {
 			// Vertex index 2i is the negative side of axis i, and 2i + 1 is the positive side.
 			const int64_t vertex_index = cell_vertices[vertex_number];
@@ -259,17 +269,25 @@ void OrthoplexPolyMeshND::_generate_texture_map() {
 			} else {
 				texcoord.set(vertex_axis, vertex_positive ? 1.0 : 0.0);
 			}
-			cell_texture_map.set(vertex_number, texcoord);
+			// Deduplicate the texture map values, storing indices into the value pool.
+			cell_texture_map_indices.set(vertex_number, (int32_t)VectorND::array_append_deduplicate(_texture_map_values_cache, texcoord));
 		}
-		_texture_map_cache.set(cell_index, cell_texture_map);
+		_texture_map_indices_cache.set(cell_index, cell_texture_map_indices);
 	}
 }
 
-Vector<Vector<VectorM>> OrthoplexPolyMeshND::get_poly_cell_texture_map() {
-	if (_texture_map_cache.is_empty()) {
+Vector<VectorM> OrthoplexPolyMeshND::get_poly_cell_texture_map_values() {
+	if (_texture_map_indices_cache.is_empty()) {
 		_generate_texture_map();
 	}
-	return _texture_map_cache;
+	return _texture_map_values_cache;
+}
+
+Vector<PackedInt32Array> OrthoplexPolyMeshND::get_poly_cell_texture_map_indices() {
+	if (_texture_map_indices_cache.is_empty()) {
+		_generate_texture_map();
+	}
+	return _texture_map_indices_cache;
 }
 
 PackedInt32Array OrthoplexPolyMeshND::get_edge_indices() {

@@ -61,13 +61,19 @@ public:
 
 	virtual PackedInt32Array get_edge_indices();
 	virtual Vector<VectorN> get_edge_positions();
-	TypedArray<VectorN> get_edge_positions_bind();
 	virtual Vector<VectorN> get_vertex_positions();
+	virtual Vector<VectorN> get_normal_values();
+	virtual Vector<VectorM> get_texture_map_values();
+	TypedArray<VectorN> get_edge_positions_bind();
 	TypedArray<VectorN> get_vertex_positions_bind();
+	TypedArray<VectorN> get_normal_values_bind();
+	TypedArray<VectorM> get_texture_map_values_bind();
 	virtual int get_dimension();
 
 	GDVIRTUAL0R(PackedInt32Array, _get_edge_indices);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_vertex_positions);
+	GDVIRTUAL0R(TypedArray<VectorN>, _get_normal_values);
+	GDVIRTUAL0R(TypedArray<VectorM>, _get_texture_map_values);
 	GDVIRTUAL0R(bool, _validate_mesh_data);
 	GDVIRTUAL0(_update_proxy_mesh_3d);
 	GDVIRTUAL1(_validate_material_for_mesh, Ref<MaterialND>);

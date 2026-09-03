@@ -4,6 +4,7 @@
 #include "../../../../model/mesh/poly/array_poly_mesh_nd.h"
 #include "../../../../model/mesh/poly/box_poly_mesh_nd.h"
 #include "../../../../model/mesh/poly/orthoplex_poly_mesh_nd.h"
+#include "../test_mesh_data_nd.h"
 
 #include "tests/test_macros.h"
 
@@ -31,6 +32,24 @@ inline Ref<ArrayPolyMeshND> make_tetrahedron_cell_mesh(const PackedInt32Array &p
 	mesh->append_poly_cell(2, PackedInt32Array{ 3, 5, 4 }, false);
 	mesh->append_poly_cell(3, p_cell_faces, false);
 	return mesh;
+}
+
+// Samples the indexed texture map of a poly mesh into dense per-cell arrays for easy checking.
+inline Vector<Vector<VectorM>> sample_poly_cell_texture_map(const Ref<PolyMeshND> &p_mesh) {
+	const Vector<VectorM> values = p_mesh->get_poly_cell_texture_map_values();
+	const Vector<PackedInt32Array> indices = p_mesh->get_poly_cell_texture_map_indices();
+	Vector<Vector<VectorM>> dense;
+	dense.resize(indices.size());
+	for (int64_t cell_index = 0; cell_index < indices.size(); cell_index++) {
+		const PackedInt32Array &cell_indices = indices[cell_index];
+		Vector<VectorM> cell_values;
+		cell_values.resize(cell_indices.size());
+		for (int64_t i = 0; i < cell_indices.size(); i++) {
+			cell_values.set(i, values[cell_indices[i]]);
+		}
+		dense.set(cell_index, cell_values);
+	}
+	return dense;
 }
 
 inline Ref<BoxPolyMeshND> make_box_poly_mesh(const int p_dimension) {
@@ -190,16 +209,16 @@ TEST_CASE("[PolyMeshND] Validate poly mesh data") {
 			cell_normals.push_back(VectorN{ 0.0, 0.0, 0.0, 1.0 });
 		}
 		vertex_normals.push_back(cell_normals);
-		mesh->set_poly_cell_vertex_normals(vertex_normals);
+		mesh->set_poly_cell_dense_normals(Vector2i(mesh->get_dimension() - 1, 0), vertex_normals);
 		ERR_PRINT_OFF;
 		CHECK_FALSE_MESSAGE(mesh->is_poly_mesh_data_valid(), "Three vertex normals for a cell with four vertices is invalid.");
 		ERR_PRINT_ON;
 		cell_normals.push_back(VectorN{ 0.0, 0.0, 0.0, 1.0 });
 		vertex_normals.set(0, cell_normals);
-		mesh->set_poly_cell_vertex_normals(vertex_normals);
+		mesh->set_poly_cell_dense_normals(Vector2i(mesh->get_dimension() - 1, 0), vertex_normals);
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "Four vertex normals for a cell with four vertices is valid.");
 		vertex_normals.set(0, Vector<VectorN>());
-		mesh->set_poly_cell_vertex_normals(vertex_normals);
+		mesh->set_poly_cell_dense_normals(Vector2i(mesh->get_dimension() - 1, 0), vertex_normals);
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "Cells are allowed to be missing vertex normals.");
 	}
 
@@ -210,17 +229,17 @@ TEST_CASE("[PolyMeshND] Validate poly mesh data") {
 		cell_map.push_back(VectorM{ 0.0, 0.0, 0.0 });
 		cell_map.push_back(VectorM{ 1.0, 0.0, 0.0 });
 		texture_map.push_back(cell_map);
-		mesh->set_poly_cell_texture_map(texture_map);
+		mesh->set_poly_cell_dense_texture_map(Vector2i(mesh->get_dimension() - 1, 0), texture_map);
 		ERR_PRINT_OFF;
 		CHECK_FALSE_MESSAGE(mesh->is_poly_mesh_data_valid(), "Two texture map entries for a cell with four vertices is invalid.");
 		ERR_PRINT_ON;
 		cell_map.push_back(VectorM{ 0.0, 1.0, 0.0 });
 		cell_map.push_back(VectorM{ 0.0, 0.0, 1.0 });
 		texture_map.set(0, cell_map);
-		mesh->set_poly_cell_texture_map(texture_map);
+		mesh->set_poly_cell_dense_texture_map(Vector2i(mesh->get_dimension() - 1, 0), texture_map);
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "Four texture map entries for a cell with four vertices is valid.");
 		texture_map.set(0, Vector<VectorM>());
-		mesh->set_poly_cell_texture_map(texture_map);
+		mesh->set_poly_cell_dense_texture_map(Vector2i(mesh->get_dimension() - 1, 0), texture_map);
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "Cells are allowed to be missing texture map data.");
 	}
 }
@@ -387,12 +406,16 @@ TEST_CASE("[PolyMeshND] Simplex decomposition") {
 		const PackedInt32Array simplex_indices = box->get_simplex_cell_vertex_indices();
 		const int64_t simplex_count = simplex_indices.size() / 4;
 		const Vector<VectorN> cell_normals = box->get_poly_cell_boundary_normals();
-		const Vector<VectorN> simplex_vertex_normals = box->get_simplex_cell_vertex_normals();
-		REQUIRE(simplex_vertex_normals.size() == simplex_count * 4);
+		const PackedInt32Array simplex_normal_indices = box->get_simplex_cell_normal_indices();
+		const Vector<VectorN> normal_values = box->get_normal_values();
+		REQUIRE(simplex_normal_indices.size() == simplex_count * 4);
 		for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
 			const int32_t source_cell = box->get_source_poly_cell_for_simplex_cell(simplex_index);
 			for (int64_t vertex_in_simplex = 0; vertex_in_simplex < 4; vertex_in_simplex++) {
-				CHECK(VectorND::is_equal_approx(simplex_vertex_normals[simplex_index * 4 + vertex_in_simplex], cell_normals[source_cell]));
+				const int32_t normal_index = simplex_normal_indices[simplex_index * 4 + vertex_in_simplex];
+				REQUIRE(normal_index >= 0);
+				REQUIRE(normal_index < normal_values.size());
+				CHECK(VectorND::is_equal_approx(normal_values[normal_index], cell_normals[source_cell]));
 			}
 		}
 	}
@@ -490,7 +513,7 @@ TEST_CASE("[PolyMeshND] Box texture maps") {
 				Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
 				box->set_poly_texture_map(mode == 0 ? BoxPolyMeshND::BOX_POLY_TEXTURE_MAP_CROSS_ISLAND : BoxPolyMeshND::BOX_POLY_TEXTURE_MAP_LONG_CROSS);
 				const Vector<PackedInt32Array> cell_vertex_indices = box->get_all_boundary_cell_vertex_indices(false);
-				const Vector<Vector<VectorM>> texture_map = box->get_poly_cell_texture_map();
+				const Vector<Vector<VectorM>> texture_map = sample_poly_cell_texture_map(box);
 				const Vector<VectorN> normals = box->get_poly_cell_boundary_normals();
 				REQUIRE(texture_map.size() == cell_vertex_indices.size());
 				// Find the center cell, facing the positive last axis, and map its texcoords.
@@ -531,7 +554,7 @@ TEST_CASE("[PolyMeshND] Box texture maps") {
 			Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
 			box->set_poly_texture_map(BoxPolyMeshND::BOX_POLY_TEXTURE_MAP_LONG_CROSS);
 			const Vector<PackedInt32Array> cell_vertex_indices = box->get_all_boundary_cell_vertex_indices(false);
-			const Vector<Vector<VectorM>> texture_map = box->get_poly_cell_texture_map();
+			const Vector<Vector<VectorM>> texture_map = sample_poly_cell_texture_map(box);
 			const Vector<VectorN> normals = box->get_poly_cell_boundary_normals();
 			const int64_t last_axis = dimension - 1;
 			int64_t negative_last_cell = -1;
@@ -566,7 +589,7 @@ TEST_CASE("[PolyMeshND] Box texture maps") {
 		Ref<BoxPolyMeshND> box = make_box_poly_mesh(4);
 		box->set_poly_texture_map(BoxPolyMeshND::BOX_POLY_TEXTURE_MAP_FILL_EACH_SIDE);
 		const Vector<PackedInt32Array> cell_vertex_indices = box->get_all_boundary_cell_vertex_indices(false);
-		const Vector<Vector<VectorM>> texture_map = box->get_poly_cell_texture_map();
+		const Vector<Vector<VectorM>> texture_map = sample_poly_cell_texture_map(box);
 		const Vector<VectorN> normals = box->get_poly_cell_boundary_normals();
 		for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
 			for (int64_t i = 0; i < cell_vertex_indices[cell_index].size(); i++) {
@@ -591,7 +614,7 @@ TEST_CASE("[PolyMeshND] Box texture maps") {
 			for (int mode = 0; mode <= 2; mode++) {
 				Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
 				box->set_poly_texture_map((BoxPolyMeshND::BoxPolyTextureMap)mode);
-				const Vector<Vector<VectorM>> texture_map = box->get_poly_cell_texture_map();
+				const Vector<Vector<VectorM>> texture_map = sample_poly_cell_texture_map(box);
 				REQUIRE(texture_map.size() == 2 * dimension);
 				for (int64_t cell_index = 0; cell_index < texture_map.size(); cell_index++) {
 					REQUIRE(texture_map[cell_index].size() == (int64_t(1) << (dimension - 1)));
@@ -608,7 +631,7 @@ TEST_CASE("[PolyMeshND] Box texture maps") {
 			}
 		}
 		Ref<BoxPolyMeshND> flat_box = make_box_poly_mesh(2);
-		CHECK_MESSAGE(flat_box->get_poly_cell_texture_map().is_empty(), "A 2D box has no boundary poly cells to texture map.");
+		CHECK_MESSAGE(sample_poly_cell_texture_map(flat_box).is_empty(), "A 2D box has no boundary poly cells to texture map.");
 	}
 }
 
@@ -618,7 +641,7 @@ TEST_CASE("[PolyMeshND] Orthoplex texture map") {
 		// through (1.0, 0.5) and (0.5, 1.0), which is (1.0, 1.0).
 		Ref<OrthoplexPolyMeshND> octahedron = make_orthoplex_poly_mesh(3);
 		const Vector<PackedInt32Array> cell_vertex_indices_3d = octahedron->get_all_boundary_cell_vertex_indices(false);
-		const Vector<Vector<VectorM>> texture_map_3d = octahedron->get_poly_cell_texture_map();
+		const Vector<Vector<VectorM>> texture_map_3d = sample_poly_cell_texture_map(octahedron);
 		const Vector<VectorN> normals_3d = octahedron->get_poly_cell_boundary_normals();
 		for (int64_t cell_index = 0; cell_index < normals_3d.size(); cell_index++) {
 			if (normals_3d[cell_index][0] > 0.0 && normals_3d[cell_index][1] > 0.0 && normals_3d[cell_index][2] < 0.0) {
@@ -638,7 +661,7 @@ TEST_CASE("[PolyMeshND] Orthoplex texture map") {
 		// through (1.0, 0.5, 0.5), (0.5, 1.0, 0.5), and (0.5, 0.5, 1.0), which is 5/6 on each axis.
 		Ref<OrthoplexPolyMeshND> orthoplex = make_orthoplex_poly_mesh(4);
 		const Vector<PackedInt32Array> cell_vertex_indices_4d = orthoplex->get_all_boundary_cell_vertex_indices(false);
-		const Vector<Vector<VectorM>> texture_map_4d = orthoplex->get_poly_cell_texture_map();
+		const Vector<Vector<VectorM>> texture_map_4d = sample_poly_cell_texture_map(orthoplex);
 		const Vector<VectorN> normals_4d = orthoplex->get_poly_cell_boundary_normals();
 		for (int64_t cell_index = 0; cell_index < normals_4d.size(); cell_index++) {
 			const bool all_others_positive = normals_4d[cell_index][0] > 0.0 && normals_4d[cell_index][1] > 0.0 && normals_4d[cell_index][2] > 0.0;
@@ -662,7 +685,7 @@ TEST_CASE("[PolyMeshND] Orthoplex texture map") {
 		for (int dimension = 3; dimension <= 5; dimension++) {
 			Ref<OrthoplexPolyMeshND> orthoplex = make_orthoplex_poly_mesh(dimension);
 			const Vector<PackedInt32Array> cell_vertex_indices = orthoplex->get_all_boundary_cell_vertex_indices(false);
-			const Vector<Vector<VectorM>> texture_map = orthoplex->get_poly_cell_texture_map();
+			const Vector<Vector<VectorM>> texture_map = sample_poly_cell_texture_map(orthoplex);
 			const Vector<VectorN> normals = orthoplex->get_poly_cell_boundary_normals();
 			const int64_t last_axis = dimension - 1;
 			for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
@@ -709,7 +732,7 @@ TEST_CASE("[PolyMeshND] Orthoplex texture map") {
 	SUBCASE("Texture maps are valid and within range") {
 		for (int dimension = 3; dimension <= 5; dimension++) {
 			Ref<OrthoplexPolyMeshND> orthoplex = make_orthoplex_poly_mesh(dimension);
-			const Vector<Vector<VectorM>> texture_map = orthoplex->get_poly_cell_texture_map();
+			const Vector<Vector<VectorM>> texture_map = sample_poly_cell_texture_map(orthoplex);
 			REQUIRE(texture_map.size() == (int64_t(1) << dimension));
 			for (int64_t cell_index = 0; cell_index < texture_map.size(); cell_index++) {
 				REQUIRE(texture_map[cell_index].size() == dimension);
@@ -723,10 +746,10 @@ TEST_CASE("[PolyMeshND] Orthoplex texture map") {
 				}
 			}
 			CHECK_MESSAGE(orthoplex->to_array_poly_mesh()->is_poly_mesh_data_valid(), "The generated texture map must be valid for the orthoplex's cells.");
-			CHECK_MESSAGE(!orthoplex->get_simplex_cell_texture_map().is_empty(), "The texture map must carry through to the simplex decomposition.");
+			CHECK_MESSAGE(!orthoplex->get_simplex_cell_texture_map_indices().is_empty(), "The texture map must carry through to the simplex decomposition.");
 		}
 		Ref<OrthoplexPolyMeshND> diamond = make_orthoplex_poly_mesh(2);
-		CHECK_MESSAGE(diamond->get_poly_cell_texture_map().is_empty(), "A 2D orthoplex has no boundary poly cells to texture map.");
+		CHECK_MESSAGE(sample_poly_cell_texture_map(diamond).is_empty(), "A 2D orthoplex has no boundary poly cells to texture map.");
 	}
 }
 
@@ -1017,8 +1040,8 @@ inline Ref<ArrayPolyMeshND> make_attributed_array_mesh(const int p_dimension) {
 		normals.append(cell_normals);
 		texture_maps.append(cell_texture_map);
 	}
-	mesh->set_poly_cell_vertex_normals(normals);
-	mesh->set_poly_cell_texture_map(texture_maps);
+	TestMeshDataND::set_poly_normals(mesh, normals);
+	TestMeshDataND::set_poly_texture_map(mesh, texture_maps);
 	mesh->poly_mesh_clear_cache();
 	return mesh;
 }
@@ -1031,34 +1054,36 @@ TEST_CASE("[PolyMeshND] Derived attributes are independent of the first getter")
 			const Ref<ArrayPolyMeshND> base = make_attributed_array_mesh(dimension);
 			if (presence == 4) {
 				// Full outer arrays with empty per-cell entries also mean no attributes.
-				auto normals = base->get_poly_cell_vertex_normals();
-				auto texture_map = base->get_poly_cell_texture_map();
+				auto normals = TestMeshDataND::get_poly_normals(base);
+				auto texture_map = TestMeshDataND::get_poly_texture_map(base);
 				for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
 					normals.set(cell_index, Vector<VectorN>());
 					texture_map.set(cell_index, Vector<VectorM>());
 				}
-				base->set_poly_cell_vertex_normals(normals);
-				base->set_poly_cell_texture_map(texture_map);
+				TestMeshDataND::set_poly_normals(base, normals);
+				TestMeshDataND::set_poly_texture_map(base, texture_map);
 			} else {
 				if (!(presence & 1)) {
-					base->set_poly_cell_vertex_normals(Vector<Vector<VectorN>>());
+					TestMeshDataND::set_poly_normals(base, Vector<Vector<VectorN>>());
 				}
 				if (!(presence & 2)) {
-					base->set_poly_cell_texture_map(Vector<Vector<VectorM>>());
+					TestMeshDataND::set_poly_texture_map(base, Vector<Vector<VectorM>>());
 				}
 			}
 			Ref<ArrayPolyMeshND> reference = base->duplicate();
 			const PackedInt32Array expected_indices = reference->get_simplex_cell_vertex_indices();
 			const Vector<VectorN> expected_positions = reference->get_vertex_positions();
 			const Vector<VectorN> expected_boundary_normals = reference->get_simplex_cell_boundary_normals();
-			const Vector<VectorN> expected_normals = reference->get_simplex_cell_vertex_normals();
-			const Vector<VectorM> expected_texture_map = reference->get_simplex_cell_texture_map();
+			const Vector<VectorN> expected_normals = TestMeshDataND::get_simplex_normals(reference);
+			const Vector<VectorM> expected_texture_map = TestMeshDataND::get_simplex_texture_map(reference);
+			const Vector<VectorN> expected_normal_values = reference->get_normal_values();
+			const Vector<VectorM> expected_texture_map_values = reference->get_texture_map_values();
 			REQUIRE(!expected_indices.is_empty());
 			REQUIRE(expected_normals.size() == ((presence & 1) ? expected_indices.size() : 0));
 			REQUIRE(expected_texture_map.size() == ((presence & 2) ? expected_indices.size() : 0));
 			const auto source_cell_vertices = base->get_all_boundary_cell_vertex_indices(false);
-			const auto source_normals = base->get_poly_cell_vertex_normals();
-			const auto source_texture_map = base->get_poly_cell_texture_map();
+			const auto source_normals = TestMeshDataND::get_poly_normals(base);
+			const auto source_texture_map = TestMeshDataND::get_poly_texture_map(base);
 			const auto source_boundary_normals = base->get_poly_cell_boundary_normals();
 			REQUIRE(expected_boundary_normals.size() == expected_indices.size() / dimension);
 			for (int64_t i = 0; i < expected_indices.size(); i++) {
@@ -1080,7 +1105,7 @@ TEST_CASE("[PolyMeshND] Derived attributes are independent of the first getter")
 					CHECK(expected_texture_map[i] == source_texcoord);
 				}
 			}
-			for (int first_getter = 0; first_getter < 5; first_getter++) {
+			for (int first_getter = 0; first_getter < 7; first_getter++) {
 				CAPTURE(first_getter);
 				Ref<ArrayPolyMeshND> mesh = base->duplicate();
 				mesh->poly_mesh_clear_cache();
@@ -1095,30 +1120,36 @@ TEST_CASE("[PolyMeshND] Derived attributes are independent of the first getter")
 						CHECK(mesh->get_simplex_cell_boundary_normals() == expected_boundary_normals);
 						break;
 					case 3:
-						CHECK(mesh->get_simplex_cell_vertex_normals() == expected_normals);
+						CHECK(TestMeshDataND::get_simplex_normals(mesh) == expected_normals);
 						break;
 					case 4:
-						CHECK(mesh->get_simplex_cell_texture_map() == expected_texture_map);
+						CHECK(TestMeshDataND::get_simplex_texture_map(mesh) == expected_texture_map);
+						break;
+					case 5:
+						CHECK(mesh->get_normal_values() == expected_normal_values);
+						break;
+					case 6:
+						CHECK(mesh->get_texture_map_values() == expected_texture_map_values);
 						break;
 				}
 				CHECK(mesh->get_simplex_cell_vertex_indices() == expected_indices);
 				CHECK(mesh->get_vertex_positions() == expected_positions);
 				CHECK(mesh->get_simplex_cell_boundary_normals() == expected_boundary_normals);
-				CHECK(mesh->get_simplex_cell_vertex_normals() == expected_normals);
-				CHECK(mesh->get_simplex_cell_texture_map() == expected_texture_map);
+				CHECK(TestMeshDataND::get_simplex_normals(mesh) == expected_normals);
+				CHECK(TestMeshDataND::get_simplex_texture_map(mesh) == expected_texture_map);
 				for (int64_t i = 0; i < expected_indices.size() / dimension; i++) {
 					CHECK(mesh->get_source_poly_cell_for_simplex_cell(i) == reference->get_source_poly_cell_for_simplex_cell(i));
 				}
-				CHECK(mesh->get_poly_cell_vertex_normals() == base->get_poly_cell_vertex_normals());
-				CHECK(mesh->get_poly_cell_texture_map() == base->get_poly_cell_texture_map());
+				CHECK(TestMeshDataND::get_poly_normals(mesh) == TestMeshDataND::get_poly_normals(base));
+				CHECK(TestMeshDataND::get_poly_texture_map(mesh) == TestMeshDataND::get_poly_texture_map(base));
 				mesh->poly_mesh_clear_cache(true);
-				CHECK(mesh->get_simplex_cell_vertex_normals() == expected_normals);
+				CHECK(TestMeshDataND::get_simplex_normals(mesh) == expected_normals);
 				CHECK(mesh->get_simplex_cell_boundary_normals() == expected_boundary_normals);
-				CHECK(mesh->get_simplex_cell_texture_map() == expected_texture_map);
+				CHECK(TestMeshDataND::get_simplex_texture_map(mesh) == expected_texture_map);
 				CHECK(mesh->get_simplex_cell_vertex_indices() == expected_indices);
 				mesh->poly_mesh_clear_cache();
-				CHECK(mesh->get_simplex_cell_texture_map() == expected_texture_map);
-				CHECK(mesh->get_simplex_cell_vertex_normals() == expected_normals);
+				CHECK(TestMeshDataND::get_simplex_texture_map(mesh) == expected_texture_map);
+				CHECK(TestMeshDataND::get_simplex_normals(mesh) == expected_normals);
 				CHECK(mesh->get_simplex_cell_vertex_indices() == expected_indices);
 				CHECK(mesh->is_mesh_data_valid());
 			}
@@ -1132,8 +1163,10 @@ TEST_CASE("[PolyMeshND] Valid meshes without exposed boundary return empty deriv
 		Ref<ArrayPolyMeshND> mesh;
 		mesh.instantiate();
 		CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
-		CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
-		CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+		CHECK(TestMeshDataND::get_simplex_normals(mesh).is_empty());
+		CHECK(mesh->get_normal_values().is_empty());
+		CHECK(TestMeshDataND::get_simplex_texture_map(mesh).is_empty());
+		CHECK(mesh->get_texture_map_values().is_empty());
 		CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
 		CHECK(mesh->get_vertex_positions().is_empty());
 		CHECK(mesh->is_mesh_data_valid());
@@ -1146,8 +1179,10 @@ TEST_CASE("[PolyMeshND] Valid meshes without exposed boundary return empty deriv
 			mesh.instantiate();
 			mesh->append_edge_points(VectorND::zero(dimension), VectorND::value_on_axis_with_dimension(1.0, 0, dimension));
 			CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
-			CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
-			CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+			CHECK(TestMeshDataND::get_simplex_normals(mesh).is_empty());
+			CHECK(mesh->get_normal_values().is_empty());
+			CHECK(TestMeshDataND::get_simplex_texture_map(mesh).is_empty());
+			CHECK(mesh->get_texture_map_values().is_empty());
 			CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
 			CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
 			CHECK(mesh->is_mesh_data_valid());
@@ -1159,8 +1194,10 @@ TEST_CASE("[PolyMeshND] Valid meshes without exposed boundary return empty deriv
 				mesh->append_edge_indices(2, 0);
 				mesh->append_poly_cell(2, PackedInt32Array{ 0, 1, 2 });
 				CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
-				CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
-				CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+				CHECK(TestMeshDataND::get_simplex_normals(mesh).is_empty());
+				CHECK(mesh->get_normal_values().is_empty());
+				CHECK(TestMeshDataND::get_simplex_texture_map(mesh).is_empty());
+				CHECK(mesh->get_texture_map_values().is_empty());
 				CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
 				CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
 				CHECK(mesh->is_mesh_data_valid());
@@ -1175,8 +1212,10 @@ TEST_CASE("[PolyMeshND] Valid meshes without exposed boundary return empty deriv
 			poly.resize(dimension - 2);
 			mesh->set_poly_cell_indices(poly);
 			CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
-			CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
-			CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+			CHECK(TestMeshDataND::get_simplex_normals(mesh).is_empty());
+			CHECK(mesh->get_normal_values().is_empty());
+			CHECK(TestMeshDataND::get_simplex_texture_map(mesh).is_empty());
+			CHECK(mesh->get_texture_map_values().is_empty());
 			CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
 			CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
 			CHECK(mesh->is_mesh_data_valid());
@@ -1189,39 +1228,49 @@ TEST_CASE("[PolyMeshND] Valid meshes without exposed boundary return empty deriv
 			REQUIRE(poly[volume_index].size() == 1);
 			// Two identical enclosing volumes use every boundary cell twice, hiding the entire surface.
 			const PackedInt32Array volume = poly[volume_index][0];
-			const auto original_normals = base->get_poly_cell_vertex_normals();
-			const auto original_texture_map = base->get_poly_cell_texture_map();
+			const auto original_normals = TestMeshDataND::get_poly_normals(base);
+			const auto original_texture_map = TestMeshDataND::get_poly_texture_map(base);
 			REQUIRE(!base->get_simplex_cell_vertex_indices().is_empty());
-			REQUIRE(!base->get_simplex_cell_vertex_normals().is_empty());
-			REQUIRE(!base->get_simplex_cell_texture_map().is_empty());
+			REQUIRE(!TestMeshDataND::get_simplex_normals(base).is_empty());
+			REQUIRE(!TestMeshDataND::get_simplex_texture_map(base).is_empty());
 			REQUIRE(base->is_mesh_data_valid());
 			CHECK(base->append_poly_cell(dimension, volume, false) == 1);
 			CHECK(base->get_simplex_cell_vertex_indices().is_empty());
-			CHECK(base->get_simplex_cell_vertex_normals().is_empty());
-			CHECK(base->get_simplex_cell_texture_map().is_empty());
+			CHECK(TestMeshDataND::get_simplex_normals(base).is_empty());
+			CHECK(base->get_normal_values().is_empty());
+			CHECK(TestMeshDataND::get_simplex_texture_map(base).is_empty());
+			CHECK(base->get_texture_map_values().is_empty());
 			CHECK(base->is_mesh_data_valid());
-			for (int first_getter = 0; first_getter < 4; first_getter++) {
+			for (int first_getter = 0; first_getter < 6; first_getter++) {
 				Ref<ArrayPolyMeshND> mesh = base->duplicate();
 				mesh->poly_mesh_clear_cache();
 				if (first_getter == 0) {
-					CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+					CHECK(TestMeshDataND::get_simplex_texture_map(mesh).is_empty());
+					CHECK(mesh->get_texture_map_values().is_empty());
 				} else if (first_getter == 1) {
-					CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+					CHECK(TestMeshDataND::get_simplex_normals(mesh).is_empty());
+					CHECK(mesh->get_normal_values().is_empty());
 				} else if (first_getter == 2) {
 					CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
-				} else {
+				} else if (first_getter == 3) {
 					CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
+				} else if (first_getter == 4) {
+					CHECK(mesh->get_normal_values().is_empty());
+				} else {
+					CHECK(mesh->get_texture_map_values().is_empty());
 				}
 				CHECK(mesh->is_mesh_data_valid());
 				CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
 				CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
-				CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
-				CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+				CHECK(TestMeshDataND::get_simplex_normals(mesh).is_empty());
+				CHECK(mesh->get_normal_values().is_empty());
+				CHECK(TestMeshDataND::get_simplex_texture_map(mesh).is_empty());
+				CHECK(mesh->get_texture_map_values().is_empty());
 				CHECK(mesh->get_simplex_cell_positions().is_empty());
 				CHECK(mesh->get_source_poly_cell_for_simplex_cell(0) == -1);
 				CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
-				CHECK(mesh->get_poly_cell_vertex_normals() == original_normals);
-				CHECK(mesh->get_poly_cell_texture_map() == original_texture_map);
+				CHECK(TestMeshDataND::get_poly_normals(mesh) == original_normals);
+				CHECK(TestMeshDataND::get_poly_texture_map(mesh) == original_texture_map);
 			}
 		}
 		{
@@ -1237,6 +1286,38 @@ TEST_CASE("[PolyMeshND] Valid meshes without exposed boundary return empty deriv
 			CHECK_FALSE(mesh->is_poly_mesh_data_valid());
 			ERR_PRINT_ON;
 		}
+	}
+}
+
+TEST_CASE("[PolyMeshND] Indexed generated attributes across dimensions") {
+	for (const int dimension : { 3, 4, 5 }) {
+		CAPTURE(dimension);
+		Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
+		Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
+		CHECK(mesh->get_poly_cell_normal_indices() == box->get_poly_cell_normal_indices());
+		CHECK(mesh->get_poly_cell_texture_map_indices() == box->get_poly_cell_texture_map_indices());
+		CHECK(mesh->get_poly_cell_normal_values() == box->get_poly_cell_normal_values());
+		CHECK(mesh->get_poly_cell_texture_map_values() == box->get_poly_cell_texture_map_values());
+		mesh->set_flat_shading_normals();
+		const PackedInt32Array vertex_indices = mesh->get_simplex_cell_vertex_indices();
+		const PackedInt32Array normal_indices = mesh->get_simplex_cell_normal_indices();
+		const PackedInt32Array texture_indices = mesh->get_simplex_cell_texture_map_indices();
+		const Vector<VectorN> normal_values = mesh->get_normal_values();
+		const Vector<VectorM> texture_values = mesh->get_texture_map_values();
+		REQUIRE(!vertex_indices.is_empty());
+		REQUIRE(normal_indices.size() == vertex_indices.size());
+		REQUIRE(texture_indices.size() == vertex_indices.size());
+		const Vector<VectorN> boundaries = mesh->get_poly_cell_boundary_normals();
+		for (int64_t i = 0; i < vertex_indices.size(); i++) {
+			REQUIRE(normal_indices[i] >= 0);
+			REQUIRE(normal_indices[i] < normal_values.size());
+			REQUIRE(texture_indices[i] >= 0);
+			REQUIRE(texture_indices[i] < texture_values.size());
+			const int32_t cell = mesh->get_source_poly_cell_for_simplex_cell(i / dimension);
+			CHECK(VectorND::is_equal_approx(normal_values[normal_indices[i]], boundaries[cell]));
+			CHECK(texture_values[texture_indices[i]].size() == dimension - 1);
+		}
+		CHECK(mesh->is_mesh_data_valid());
 	}
 }
 } // namespace TestPolyMeshND

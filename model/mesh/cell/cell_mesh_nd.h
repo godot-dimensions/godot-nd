@@ -38,13 +38,12 @@ public:
 	virtual int get_simplex_cell_count();
 	virtual int get_indices_per_simplex_cell();
 	virtual PackedInt32Array get_simplex_cell_vertex_indices();
+	virtual PackedInt32Array get_simplex_cell_normal_indices();
+	virtual PackedInt32Array get_simplex_cell_texture_map_indices();
 	virtual Vector<VectorN> get_simplex_cell_boundary_normals();
-	virtual Vector<VectorN> get_simplex_cell_vertex_normals();
-	virtual Vector<VectorM> get_simplex_cell_texture_map();
+
 	Vector<VectorN> get_simplex_cell_positions();
 	TypedArray<VectorN> get_simplex_cell_boundary_normals_bind();
-	TypedArray<VectorN> get_simplex_cell_vertex_normals_bind();
-	TypedArray<VectorM> get_simplex_cell_texture_map_bind();
 	TypedArray<VectorN> get_simplex_cell_positions_bind();
 
 	static Vector<PackedInt32Array> decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertex_positions, const PackedInt32Array &p_poly_cell_vertex_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_poly_cell_normals);
@@ -54,7 +53,7 @@ public:
 	virtual Vector<VectorN> get_edge_positions() override;
 
 	GDVIRTUAL0R(PackedInt32Array, _get_simplex_cell_vertex_indices);
+	GDVIRTUAL0R(PackedInt32Array, _get_simplex_cell_normal_indices);
+	GDVIRTUAL0R(PackedInt32Array, _get_simplex_cell_texture_map_indices);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_simplex_cell_boundary_normals);
-	GDVIRTUAL0R(TypedArray<VectorN>, _get_simplex_cell_vertex_normals);
-	GDVIRTUAL0R(TypedArray<VectorM>, _get_simplex_cell_texture_map);
 };

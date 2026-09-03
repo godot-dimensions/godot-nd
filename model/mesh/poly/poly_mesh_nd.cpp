@@ -60,6 +60,13 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 	for (int64_t i = 0; i < vertex_count; i++) {
 		ERR_FAIL_COND_V_MSG(poly_cell_vertices[i].size() > dimension, false, "PolyMeshND: Vertex positions must not exceed the mesh dimension defined by the first vertex.");
 	}
+	for (const VectorN &normal_value : get_poly_cell_normal_values()) {
+		ERR_FAIL_COND_V_MSG(normal_value.size() > dimension, false, "PolyMeshND: Normal values must not exceed the mesh dimension.");
+	}
+	const int64_t texture_map_dimension = MAX(dimension - 1, 0);
+	for (const VectorM &texture_map_value : get_poly_cell_texture_map_values()) {
+		ERR_FAIL_COND_V_MSG(texture_map_value.size() > texture_map_dimension, false, "PolyMeshND: Texture map values must have fewer components than the mesh dimension.");
+	}
 	for (int64_t i = 0; i < edge_index_count; i++) {
 		ERR_FAIL_COND_V_MSG(edge_indices[i] < 0 || edge_indices[i] >= vertex_count, false, "PolyMeshND: Edge index " + itos(i) + " references invalid vertex " + itos(edge_indices[i]) + " (valid range: 0-" + itos(vertex_count - 1) + ").");
 	}
@@ -141,37 +148,39 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 			ERR_FAIL_COND_V_MSG(pivot_vertex_index < 0 || pivot_vertex_index >= vertex_count, false, "PolyMeshND: Boundary pivot override " + itos(i) + " references invalid vertex " + itos(pivot_vertex_index) + " (valid range: 0-" + itos(vertex_count - 1) + ").");
 		}
 	}
-	const Vector<Vector<VectorN>> poly_cell_vertex_normals = get_poly_cell_vertex_normals();
-	const int64_t poly_cell_vertex_normals_count = poly_cell_vertex_normals.size();
-	if (poly_cell_vertex_normals_count != 0) {
+	const Vector<PackedInt32Array> poly_cell_normal_indices = get_poly_cell_normal_indices();
+	const int64_t poly_cell_normal_indices_count = poly_cell_normal_indices.size();
+	if (poly_cell_normal_indices_count != 0) {
 		ERR_FAIL_COND_V_MSG(boundary_dim_index < 0 || poly_cell_dims <= boundary_dim_index, false, "PolyMeshND: Vertex normals provided without any boundary cells to map to.");
 		const Vector<PackedInt32Array> &boundary_cells = poly_cell_indices[boundary_dim_index];
-		ERR_FAIL_COND_V_MSG(boundary_cells.size() != poly_cell_vertex_normals_count, false, "PolyMeshND: Vertex normals count (" + itos(poly_cell_vertex_normals_count) + ") does not match boundary cells count (" + itos(boundary_cells.size()) + ").");
+		ERR_FAIL_COND_V_MSG(boundary_cells.size() != poly_cell_normal_indices_count, false, "PolyMeshND: Vertex normals count (" + itos(poly_cell_normal_indices_count) + ") does not match boundary cells count (" + itos(boundary_cells.size()) + ").");
+		const int64_t normal_value_count = get_poly_cell_normal_values().size();
 		const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(poly_cell_indices, edge_indices, boundary_dim_index, false);
-		for (int64_t i = 0; i < poly_cell_vertex_normals_count; i++) {
-			if (poly_cell_vertex_normals[i].is_empty()) {
+		for (int64_t i = 0; i < poly_cell_normal_indices_count; i++) {
+			if (poly_cell_normal_indices[i].is_empty()) {
 				continue; // Allow cells without vertex normals.
 			}
-			ERR_FAIL_COND_V_MSG(poly_cell_vertex_normals[i].size() != cell_vert[i].size(), false, "PolyMeshND: Vertex normal array " + itos(i) + " has " + itos(poly_cell_vertex_normals[i].size()) + " entries but cell has " + itos(cell_vert[i].size()) + " vertices.");
-			for (const VectorN &normal : poly_cell_vertex_normals[i]) {
-				ERR_FAIL_COND_V_MSG(normal.size() > dimension, false, "PolyMeshND: Vertex normals must not exceed the mesh dimension.");
+			ERR_FAIL_COND_V_MSG(poly_cell_normal_indices[i].size() != cell_vert[i].size(), false, "PolyMeshND: Vertex normal array " + itos(i) + " has " + itos(poly_cell_normal_indices[i].size()) + " entries but cell has " + itos(cell_vert[i].size()) + " vertices.");
+			for (const int32_t normal_index : poly_cell_normal_indices[i]) {
+				ERR_FAIL_COND_V_MSG(normal_index < 0 || normal_index >= normal_value_count, false, "PolyMeshND: Vertex normal array " + itos(i) + " references invalid normal value " + itos(normal_index) + " (valid range: 0-" + itos(normal_value_count - 1) + ").");
 			}
 		}
 	}
-	const Vector<Vector<VectorM>> poly_cell_texture_map = get_poly_cell_texture_map();
-	const int64_t poly_cell_texture_map_count = poly_cell_texture_map.size();
-	if (poly_cell_texture_map_count != 0) {
+	const Vector<PackedInt32Array> poly_cell_texture_map_indices = get_poly_cell_texture_map_indices();
+	const int64_t poly_cell_texture_map_indices_count = poly_cell_texture_map_indices.size();
+	if (poly_cell_texture_map_indices_count != 0) {
 		ERR_FAIL_COND_V_MSG(boundary_dim_index < 0 || poly_cell_dims <= boundary_dim_index, false, "PolyMeshND: Texture map provided without any boundary cells to map to.");
 		const Vector<PackedInt32Array> &boundary_cells = poly_cell_indices[boundary_dim_index];
-		ERR_FAIL_COND_V_MSG(boundary_cells.size() != poly_cell_texture_map_count, false, "PolyMeshND: Texture maps count (" + itos(poly_cell_texture_map_count) + ") does not match boundary cells count (" + itos(boundary_cells.size()) + ").");
+		ERR_FAIL_COND_V_MSG(boundary_cells.size() != poly_cell_texture_map_indices_count, false, "PolyMeshND: Texture maps count (" + itos(poly_cell_texture_map_indices_count) + ") does not match boundary cells count (" + itos(boundary_cells.size()) + ").");
+		const int64_t texture_map_value_count = get_poly_cell_texture_map_values().size();
 		const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(poly_cell_indices, edge_indices, boundary_dim_index, false);
-		for (int64_t i = 0; i < poly_cell_texture_map_count; i++) {
-			if (poly_cell_texture_map[i].is_empty()) {
+		for (int64_t i = 0; i < poly_cell_texture_map_indices_count; i++) {
+			if (poly_cell_texture_map_indices[i].is_empty()) {
 				continue; // Allow unmapped boundary cells.
 			}
-			ERR_FAIL_COND_V_MSG(poly_cell_texture_map[i].size() != cell_vert[i].size(), false, "PolyMeshND: Texture map " + itos(i) + " has " + itos(poly_cell_texture_map[i].size()) + " entries but cell has " + itos(cell_vert[i].size()) + " vertices.");
-			for (const VectorM &texcoord : poly_cell_texture_map[i]) {
-				ERR_FAIL_COND_V_MSG(texcoord.size() > dimension - 1, false, "PolyMeshND: Texture coordinates must have fewer components than the mesh dimension.");
+			ERR_FAIL_COND_V_MSG(poly_cell_texture_map_indices[i].size() != cell_vert[i].size(), false, "PolyMeshND: Texture map " + itos(i) + " has " + itos(poly_cell_texture_map_indices[i].size()) + " entries but cell has " + itos(cell_vert[i].size()) + " vertices.");
+			for (const int32_t texture_map_index : poly_cell_texture_map_indices[i]) {
+				ERR_FAIL_COND_V_MSG(texture_map_index < 0 || texture_map_index >= texture_map_value_count, false, "PolyMeshND: Texture map " + itos(i) + " references invalid texture map value " + itos(texture_map_index) + " (valid range: 0-" + itos(texture_map_value_count - 1) + ").");
 			}
 		}
 	}
@@ -1098,7 +1107,8 @@ TypedArray<PackedInt32Array> PolyMeshND::get_all_poly_cell_poly_indices_bind(con
 
 void PolyMeshND::poly_mesh_clear_cache(const bool p_normals_only) {
 	_simplex_cell_boundary_normals_cache.clear();
-	_simplex_cell_vertex_normals_cache.clear();
+	_simplex_cell_normal_indices_cache.clear();
+	_simplex_cell_normal_values_cache.clear();
 	reset_poly_mesh_data_validation();
 	// Normals can be computed separately from the rest, so allow resetting just them (and mark the proxy mesh 3D dirty).
 	if (p_normals_only) {
@@ -1107,8 +1117,9 @@ void PolyMeshND::poly_mesh_clear_cache(const bool p_normals_only) {
 	}
 	_simplex_cell_vertex_indices_cache.clear();
 	_simplex_cell_source_poly_cells.clear();
-	_simplex_cell_uvw_texture_map_cache.clear();
+	_simplex_cell_texture_map_indices_cache.clear();
 	_simplex_cell_vertex_positions_cache.clear();
+	_simplex_cell_texture_map_values_cache.clear();
 	cell_mesh_clear_cache();
 }
 
@@ -1119,9 +1130,13 @@ Ref<ArrayPolyMeshND> PolyMeshND::to_array_poly_mesh() {
 	array_poly_mesh->set_poly_cell_vertex_positions(get_poly_cell_vertex_positions());
 	array_poly_mesh->set_edge_vertex_indices(get_edge_indices());
 	array_poly_mesh->set_poly_cell_indices(get_poly_cell_indices());
+	// Set the value pools before the indices that reference into them,
+	// and the boundary normals last since they append to the normal values.
+	array_poly_mesh->set_poly_cell_normal_values(get_poly_cell_normal_values());
+	array_poly_mesh->set_poly_cell_texture_map_values(get_poly_cell_texture_map_values());
+	array_poly_mesh->set_poly_cell_normal_indices(get_poly_cell_normal_indices());
+	array_poly_mesh->set_poly_cell_texture_map_indices(get_poly_cell_texture_map_indices());
 	array_poly_mesh->set_poly_cell_boundary_normals(get_poly_cell_boundary_normals());
-	array_poly_mesh->set_poly_cell_vertex_normals(get_poly_cell_vertex_normals());
-	array_poly_mesh->set_poly_cell_texture_map(get_poly_cell_texture_map());
 	array_poly_mesh->set_material(get_material());
 	return array_poly_mesh;
 }
@@ -1171,6 +1186,30 @@ Vector<VectorN> PolyMeshND::get_poly_cell_vertex_positions() {
 	return vertex_positions;
 }
 
+Vector<VectorN> PolyMeshND::get_poly_cell_normal_values() {
+	TypedArray<VectorN> normals_bind;
+	GDVIRTUAL_CALL(_get_poly_cell_normal_values, normals_bind);
+	Vector<VectorN> normals;
+	normals.resize(normals_bind.size());
+	for (int i = 0; i < normals_bind.size(); i++) {
+		const VectorN normal = normals_bind[i];
+		normals.set(i, normal);
+	}
+	return normals;
+}
+
+Vector<VectorM> PolyMeshND::get_poly_cell_texture_map_values() {
+	TypedArray<VectorM> texture_map_bind;
+	GDVIRTUAL_CALL(_get_poly_cell_texture_map_values, texture_map_bind);
+	Vector<VectorM> texture_map;
+	texture_map.resize(texture_map_bind.size());
+	for (int i = 0; i < texture_map_bind.size(); i++) {
+		const VectorM texcoord = texture_map_bind[i];
+		texture_map.set(i, texcoord);
+	}
+	return texture_map;
+}
+
 Vector<VectorN> PolyMeshND::get_poly_cell_boundary_normals() {
 	TypedArray<VectorN> normals_bind;
 	GDVIRTUAL_CALL(_get_poly_cell_boundary_normals, normals_bind);
@@ -1189,40 +1228,28 @@ PackedInt32Array PolyMeshND::get_poly_cell_boundary_pivot_overrides() {
 	return pivot_overrides;
 }
 
-Vector<Vector<VectorN>> PolyMeshND::get_poly_cell_vertex_normals() {
-	TypedArray<Array> vertex_normals_bind;
-	GDVIRTUAL_CALL(_get_poly_cell_vertex_normals, vertex_normals_bind);
-	Vector<Vector<VectorN>> vertex_normals;
-	vertex_normals.resize(vertex_normals_bind.size());
-	for (int i = 0; i < vertex_normals_bind.size(); i++) {
-		const Array cell_vertex_normals_array = vertex_normals_bind[i];
-		Vector<VectorN> cell_vertex_normals;
-		cell_vertex_normals.resize(cell_vertex_normals_array.size());
-		for (int j = 0; j < cell_vertex_normals_array.size(); j++) {
-			const VectorN cell_vertex_normal = cell_vertex_normals_array[j];
-			cell_vertex_normals.set(j, cell_vertex_normal);
-		}
-		vertex_normals.set(i, cell_vertex_normals);
+Vector<PackedInt32Array> PolyMeshND::get_poly_cell_normal_indices() {
+	TypedArray<PackedInt32Array> normal_indices_bind;
+	GDVIRTUAL_CALL(_get_poly_cell_normal_indices, normal_indices_bind);
+	Vector<PackedInt32Array> normal_indices;
+	normal_indices.resize(normal_indices_bind.size());
+	for (int i = 0; i < normal_indices_bind.size(); i++) {
+		const PackedInt32Array cell_normal_indices = normal_indices_bind[i];
+		normal_indices.set(i, cell_normal_indices);
 	}
-	return vertex_normals;
+	return normal_indices;
 }
 
-Vector<Vector<VectorM>> PolyMeshND::get_poly_cell_texture_map() {
-	TypedArray<Array> uvw_texture_map_bind;
-	GDVIRTUAL_CALL(_get_poly_cell_texture_map, uvw_texture_map_bind);
-	Vector<Vector<VectorM>> uvw_texture_map;
-	uvw_texture_map.resize(uvw_texture_map_bind.size());
-	for (int i = 0; i < uvw_texture_map_bind.size(); i++) {
-		const Array cell_texture_map_array = uvw_texture_map_bind[i];
-		Vector<VectorM> cell_texture_map;
-		cell_texture_map.resize(cell_texture_map_array.size());
-		for (int j = 0; j < cell_texture_map_array.size(); j++) {
-			const VectorM cell_texcoord = cell_texture_map_array[j];
-			cell_texture_map.set(j, cell_texcoord);
-		}
-		uvw_texture_map.set(i, cell_texture_map);
+Vector<PackedInt32Array> PolyMeshND::get_poly_cell_texture_map_indices() {
+	TypedArray<PackedInt32Array> texture_map_indices_bind;
+	GDVIRTUAL_CALL(_get_poly_cell_texture_map_indices, texture_map_indices_bind);
+	Vector<PackedInt32Array> texture_map_indices;
+	texture_map_indices.resize(texture_map_indices_bind.size());
+	for (int i = 0; i < texture_map_indices_bind.size(); i++) {
+		const PackedInt32Array cell_texture_map_indices = texture_map_indices_bind[i];
+		texture_map_indices.set(i, cell_texture_map_indices);
 	}
-	return uvw_texture_map;
+	return texture_map_indices;
 }
 
 TypedArray<Array> PolyMeshND::get_poly_cell_indices_bind() {
@@ -1260,6 +1287,34 @@ TypedArray<VectorN> PolyMeshND::get_poly_cell_vertex_positions_bind() {
 	return vertex_positions_bind;
 }
 
+TypedArray<VectorN> PolyMeshND::get_poly_cell_normal_values_bind() {
+	TypedArray<VectorN> normal_values_bind;
+	GDVIRTUAL_CALL(_get_poly_cell_normal_values, normal_values_bind);
+	if (!normal_values_bind.is_empty()) {
+		return normal_values_bind;
+	}
+	const Vector<VectorN> normal_values = get_poly_cell_normal_values();
+	normal_values_bind.resize(normal_values.size());
+	for (int i = 0; i < normal_values.size(); i++) {
+		normal_values_bind[i] = normal_values[i];
+	}
+	return normal_values_bind;
+}
+
+TypedArray<VectorM> PolyMeshND::get_poly_cell_texture_map_values_bind() {
+	TypedArray<VectorM> texture_map_values_bind;
+	GDVIRTUAL_CALL(_get_poly_cell_texture_map_values, texture_map_values_bind);
+	if (!texture_map_values_bind.is_empty()) {
+		return texture_map_values_bind;
+	}
+	const Vector<VectorM> texture_map_values = get_poly_cell_texture_map_values();
+	texture_map_values_bind.resize(texture_map_values.size());
+	for (int i = 0; i < texture_map_values.size(); i++) {
+		texture_map_values_bind[i] = texture_map_values[i];
+	}
+	return texture_map_values_bind;
+}
+
 TypedArray<VectorN> PolyMeshND::get_poly_cell_boundary_normals_bind() {
 	TypedArray<VectorN> normals_bind;
 	GDVIRTUAL_CALL(_get_poly_cell_boundary_normals, normals_bind);
@@ -1274,44 +1329,34 @@ TypedArray<VectorN> PolyMeshND::get_poly_cell_boundary_normals_bind() {
 	return normals_bind;
 }
 
-TypedArray<Array> PolyMeshND::get_poly_cell_vertex_normals_bind() {
-	TypedArray<Array> vertex_normals_bind;
-	GDVIRTUAL_CALL(_get_poly_cell_vertex_normals, vertex_normals_bind);
-	if (!vertex_normals_bind.is_empty()) {
-		return vertex_normals_bind;
+TypedArray<PackedInt32Array> PolyMeshND::get_poly_cell_normal_indices_bind() {
+	TypedArray<PackedInt32Array> normal_indices_bind;
+	GDVIRTUAL_CALL(_get_poly_cell_normal_indices, normal_indices_bind);
+	if (!normal_indices_bind.is_empty()) {
+		return normal_indices_bind;
 	}
-	const Vector<Vector<VectorN>> vertex_normals = get_poly_cell_vertex_normals();
-	vertex_normals_bind.resize(vertex_normals.size());
-	for (int i = 0; i < vertex_normals.size(); i++) {
-		const Vector<VectorN> &cell_vertex_normals = vertex_normals[i];
-		Array cell_vertex_normals_array;
-		cell_vertex_normals_array.resize(cell_vertex_normals.size());
-		for (int j = 0; j < cell_vertex_normals.size(); j++) {
-			cell_vertex_normals_array[j] = cell_vertex_normals[j];
-		}
-		vertex_normals_bind[i] = cell_vertex_normals_array;
+	const Vector<PackedInt32Array> normal_indices = get_poly_cell_normal_indices();
+	normal_indices_bind.resize(normal_indices.size());
+	for (int i = 0; i < normal_indices.size(); i++) {
+		const PackedInt32Array &cell_normal_indices = normal_indices[i];
+		normal_indices_bind[i] = cell_normal_indices;
 	}
-	return vertex_normals_bind;
+	return normal_indices_bind;
 }
 
-TypedArray<Array> PolyMeshND::get_poly_cell_texture_map_bind() {
-	TypedArray<Array> uvw_texture_map_bind;
-	GDVIRTUAL_CALL(_get_poly_cell_texture_map, uvw_texture_map_bind);
-	if (!uvw_texture_map_bind.is_empty()) {
-		return uvw_texture_map_bind;
+TypedArray<PackedInt32Array> PolyMeshND::get_poly_cell_texture_map_indices_bind() {
+	TypedArray<PackedInt32Array> texture_map_indices_bind;
+	GDVIRTUAL_CALL(_get_poly_cell_texture_map_indices, texture_map_indices_bind);
+	if (!texture_map_indices_bind.is_empty()) {
+		return texture_map_indices_bind;
 	}
-	const Vector<Vector<VectorM>> texture_map = get_poly_cell_texture_map();
-	uvw_texture_map_bind.resize(texture_map.size());
-	for (int i = 0; i < texture_map.size(); i++) {
-		const Vector<VectorM> &cell_texture_map = texture_map[i];
-		Array cell_texture_map_array;
-		cell_texture_map_array.resize(cell_texture_map.size());
-		for (int j = 0; j < cell_texture_map.size(); j++) {
-			cell_texture_map_array[j] = cell_texture_map[j];
-		}
-		uvw_texture_map_bind[i] = cell_texture_map_array;
+	const Vector<PackedInt32Array> texture_map_indices = get_poly_cell_texture_map_indices();
+	texture_map_indices_bind.resize(texture_map_indices.size());
+	for (int i = 0; i < texture_map_indices.size(); i++) {
+		const PackedInt32Array &cell_texture_map_indices = texture_map_indices[i];
+		texture_map_indices_bind[i] = cell_texture_map_indices;
 	}
-	return uvw_texture_map_bind;
+	return texture_map_indices_bind;
 }
 
 PackedInt32Array PolyMeshND::get_simplex_cell_vertex_indices() {
@@ -1354,87 +1399,127 @@ Vector<VectorN> PolyMeshND::get_simplex_cell_boundary_normals() {
 	return _simplex_cell_boundary_normals_cache;
 }
 
-Vector<VectorN> PolyMeshND::get_simplex_cell_vertex_normals() {
-	if (_simplex_cell_vertex_normals_cache.is_empty()) {
-		const Vector<Vector<VectorN>> poly_cell_vertex_normals = get_poly_cell_vertex_normals();
-		if (poly_cell_vertex_normals.is_empty()) {
-			return Vector<VectorN>(); // No vertex normal data available.
+PackedInt32Array PolyMeshND::get_simplex_cell_normal_indices() {
+	if (_simplex_cell_normal_indices_cache.is_empty()) {
+		const Vector<PackedInt32Array> poly_cell_normal_indices = get_poly_cell_normal_indices();
+		if (poly_cell_normal_indices.is_empty()) {
+			return PackedInt32Array(); // No vertex normal data available.
 		}
 		const int64_t dimension = get_dimension();
-		ERR_FAIL_COND_V(dimension < 3, Vector<VectorN>());
+		ERR_FAIL_COND_V(dimension < 3, PackedInt32Array());
 		int64_t simplex_count = _simplex_cell_source_poly_cells.size();
 		if (simplex_count == 0 || simplex_count * dimension != _simplex_cell_vertex_indices_cache.size()) {
 			_decompose_boundary_cells_into_simplexes();
 			simplex_count = _simplex_cell_source_poly_cells.size();
 			if (simplex_count == 0) {
-				return Vector<VectorN>(); // Nothing on the surface to compute vertex normals for.
+				return PackedInt32Array(); // Nothing on the surface to compute vertex normals for.
 			}
-			CRASH_COND_MSG(simplex_count * dimension != _simplex_cell_vertex_indices_cache.size(), "PolyMeshND: Simplex cell indices cache is corrupt.");
+			CRASH_COND_MSG(simplex_count * dimension != _simplex_cell_vertex_indices_cache.size(), "PolyMeshND: Simplex cell vertex indices cache is corrupt.");
 		}
 		const int64_t boundary_dim_index = dimension - 3;
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
-		ERR_FAIL_COND_V_MSG(poly_cell_indices.size() <= boundary_dim_index, Vector<VectorN>(), "PolyMeshND: No boundary cells available, cannot compute simplex vertex normals.");
+		ERR_FAIL_COND_V_MSG(poly_cell_indices.size() <= boundary_dim_index, PackedInt32Array(), "PolyMeshND: No boundary cells available, cannot compute simplex vertex normals.");
 		const PackedInt32Array all_edge_indices = get_edge_indices();
 		const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(poly_cell_indices, all_edge_indices, boundary_dim_index, false);
-		_simplex_cell_vertex_normals_cache.resize(simplex_count * dimension);
+		// The simplex normal values are a superset of the polytope cell normal values, so the
+		// polytope cell normal indices can be used directly as indices into the simplex values.
+		_simplex_cell_normal_values_cache = get_poly_cell_normal_values();
+		_simplex_cell_normal_indices_cache.resize(simplex_count * dimension);
+		// Cache the index of the averaged normal value for each cell that needs one (-1 means not computed yet).
+		PackedInt32Array average_normal_value_index_for_cell;
+		average_normal_value_index_for_cell.resize(cell_vert.size());
+		for (int64_t cell_index = 0; cell_index < cell_vert.size(); cell_index++) {
+			average_normal_value_index_for_cell.set(cell_index, -1);
+		}
+		int32_t zero_normal_value_index = -1;
 		bool has_some_vertex_normals = false;
 		bool missing_some_vertex_normals = false;
 		for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
 			const int32_t source_cell = _simplex_cell_source_poly_cells[simplex_index];
-			const Vector<VectorN> &source_poly_vertex_normals = poly_cell_vertex_normals[source_cell];
-			if (source_poly_vertex_normals.is_empty()) {
+			const PackedInt32Array &source_poly_normal_indices = poly_cell_normal_indices[source_cell];
+			const int64_t offset = simplex_index * dimension;
+			if (source_poly_normal_indices.is_empty()) {
 				missing_some_vertex_normals = true;
+				// Point cells without vertex normals at a zero normal value.
+				if (zero_normal_value_index == -1) {
+					zero_normal_value_index = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_normal_values_cache, VectorN());
+				}
+				for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
+					_simplex_cell_normal_indices_cache.set(offset + vertex_in_simplex, zero_normal_value_index);
+				}
 				continue;
 			}
 			has_some_vertex_normals = true;
 			const PackedInt32Array &source_cell_vertices = cell_vert[source_cell];
-			CRASH_COND_MSG(source_poly_vertex_normals.size() != source_cell_vertices.size(), "PolyMeshND: Source polytope cell vertex normals size does not match cell vertex count.");
-			const int64_t offset = simplex_index * dimension;
+			CRASH_COND_MSG(source_poly_normal_indices.size() != source_cell_vertices.size(), "PolyMeshND: Source polytope cell vertex normals size does not match cell vertex count.");
 			for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
 				const int32_t vertex_index = _simplex_cell_vertex_indices_cache[offset + vertex_in_simplex];
 				const int64_t vertex_in_source_poly = source_cell_vertices.find(vertex_index);
-				VectorN normal;
+				int32_t normal_value_index;
 				if (vertex_in_source_poly == -1) {
-					normal = VectorND::average(source_poly_vertex_normals);
+					// The vertex is not on the original polytope cell (such as a computed
+					// centroid), so use the average of the cell's normal values.
+					if (average_normal_value_index_for_cell[source_cell] == -1) {
+						VectorN average_normal;
+						for (const int32_t source_normal_index : source_poly_normal_indices) {
+							average_normal = VectorND::add(average_normal, _simplex_cell_normal_values_cache[source_normal_index]);
+						}
+						average_normal = VectorND::divide_scalar(average_normal, (double)source_poly_normal_indices.size());
+						average_normal_value_index_for_cell.set(source_cell, (int32_t)VectorND::array_append_deduplicate(_simplex_cell_normal_values_cache, average_normal));
+					}
+					normal_value_index = average_normal_value_index_for_cell[source_cell];
 				} else {
-					normal = source_poly_vertex_normals[vertex_in_source_poly];
+					normal_value_index = source_poly_normal_indices[vertex_in_source_poly];
 				}
-				_simplex_cell_vertex_normals_cache.set(offset + vertex_in_simplex, normal);
+				_simplex_cell_normal_indices_cache.set(offset + vertex_in_simplex, normal_value_index);
 			}
 		}
 		if (missing_some_vertex_normals) {
 			if (has_some_vertex_normals) {
-				WARN_PRINT("PolyMeshND: Some polytope cells are missing vertex normal data, the corresponding simplex vertex normals will be averaged from the available data which may produce inaccurate lighting.");
+				WARN_PRINT("PolyMeshND: Some polytope cells are missing vertex normal data, the corresponding simplex vertex normals will be zero which may produce inaccurate lighting.");
 			} else {
-				_simplex_cell_vertex_normals_cache.clear(); // No vertex normal data available.
+				// No vertex normal data available.
+				_simplex_cell_normal_indices_cache.clear();
+				_simplex_cell_normal_values_cache.clear();
 			}
 		}
 	}
-	return _simplex_cell_vertex_normals_cache;
+	return _simplex_cell_normal_indices_cache;
 }
 
-Vector<VectorM> PolyMeshND::get_simplex_cell_texture_map() {
-	if (_simplex_cell_uvw_texture_map_cache.is_empty()) {
-		const Vector<Vector<VectorM>> poly_cell_texture_map = get_poly_cell_texture_map();
-		if (poly_cell_texture_map.is_empty()) {
-			return Vector<VectorM>(); // No texture map data available.
+Vector<VectorN> PolyMeshND::get_normal_values() {
+	if (_simplex_cell_normal_values_cache.is_empty()) {
+		// This will populate the simplex normal values cache as a side effect.
+		get_simplex_cell_normal_indices();
+	}
+	return _simplex_cell_normal_values_cache;
+}
+
+PackedInt32Array PolyMeshND::get_simplex_cell_texture_map_indices() {
+	if (_simplex_cell_texture_map_indices_cache.is_empty()) {
+		const Vector<PackedInt32Array> poly_cell_texture_map_indices = get_poly_cell_texture_map_indices();
+		if (poly_cell_texture_map_indices.is_empty()) {
+			return PackedInt32Array(); // No texture map data available.
 		}
 		const int64_t dimension = get_dimension();
-		ERR_FAIL_COND_V(dimension < 3, Vector<VectorM>());
+		ERR_FAIL_COND_V(dimension < 3, PackedInt32Array());
 		int64_t simplex_count = _simplex_cell_source_poly_cells.size();
 		if (simplex_count == 0 || simplex_count * dimension != _simplex_cell_vertex_indices_cache.size()) {
 			_decompose_boundary_cells_into_simplexes();
 			simplex_count = _simplex_cell_source_poly_cells.size();
 			if (simplex_count == 0) {
-				return Vector<VectorM>(); // Nothing on the surface to texture map.
+				return PackedInt32Array(); // Nothing on the surface to texture map.
 			}
-			CRASH_COND_MSG(simplex_count * dimension != _simplex_cell_vertex_indices_cache.size(), "PolyMeshND: Simplex cell indices cache is corrupt.");
+			CRASH_COND_MSG(simplex_count * dimension != _simplex_cell_vertex_indices_cache.size(), "PolyMeshND: Simplex cell vertex indices cache is corrupt.");
 		}
 		const int64_t boundary_dim_index = dimension - 3;
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
-		ERR_FAIL_COND_V_MSG(poly_cell_indices.size() <= boundary_dim_index, Vector<VectorM>(), "PolyMeshND: No boundary cells available, cannot compute simplex UVW map.");
+		ERR_FAIL_COND_V_MSG(poly_cell_indices.size() <= boundary_dim_index, PackedInt32Array(), "PolyMeshND: No boundary cells available, cannot compute simplex texture map.");
 		const PackedInt32Array all_edge_indices = get_edge_indices();
 		const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(poly_cell_indices, all_edge_indices, boundary_dim_index, false);
+		// The simplex texture map values are a superset of the polytope cell texture map values, so
+		// the polytope cell texture map indices can be used directly as indices into the simplex values.
+		_simplex_cell_texture_map_values_cache = get_poly_cell_texture_map_values();
 		// Prepare a cache for inferred vertex texcoords for pivot overrides.
 		const PackedInt32Array poly_cell_boundary_pivot_overrides = get_poly_cell_boundary_pivot_overrides();
 		const int64_t cell_vert_count = cell_vert.size();
@@ -1447,27 +1532,42 @@ Vector<VectorM> PolyMeshND::get_simplex_cell_texture_map() {
 			cached_inferred_texcoord.set(cell_vert_index, VectorM());
 		}
 		// Fill the texture map cache for each simplex cell using data from the corresponding source polytope cell.
-		_simplex_cell_uvw_texture_map_cache.resize(simplex_count * dimension);
+		_simplex_cell_texture_map_indices_cache.resize(simplex_count * dimension);
+		int32_t zero_texture_map_value_index = -1;
 		bool has_some_texture_map = false;
 		bool missing_some_texture_map = false;
 		for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
 			const int32_t source_cell = _simplex_cell_source_poly_cells[simplex_index];
-			const Vector<VectorM> &source_poly_texture_map = poly_cell_texture_map[source_cell];
-			if (source_poly_texture_map.is_empty()) {
+			const PackedInt32Array &source_poly_texture_map_indices = poly_cell_texture_map_indices[source_cell];
+			const int64_t offset = simplex_index * dimension;
+			if (source_poly_texture_map_indices.is_empty()) {
 				missing_some_texture_map = true;
+				// Point unmapped cells at a zero texture map value, making them degenerate.
+				if (zero_texture_map_value_index == -1) {
+					zero_texture_map_value_index = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_texture_map_values_cache, VectorM());
+				}
+				for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
+					_simplex_cell_texture_map_indices_cache.set(offset + vertex_in_simplex, zero_texture_map_value_index);
+				}
 				continue;
 			}
 			has_some_texture_map = true;
 			const PackedInt32Array &source_cell_vertices = cell_vert[source_cell];
-			CRASH_COND_MSG(source_poly_texture_map.size() != source_cell_vertices.size(), "PolyMeshND: Source polytope cell texture map size does not match cell vertex count.");
-			const int64_t offset = simplex_index * dimension;
+			CRASH_COND_MSG(source_poly_texture_map_indices.size() != source_cell_vertices.size(), "PolyMeshND: Source polytope cell texture map size does not match cell vertex count.");
 			for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
 				const int32_t vertex_index = _simplex_cell_vertex_indices_cache[offset + vertex_in_simplex];
 				const int64_t vertex_in_source_poly = source_cell_vertices.find(vertex_index);
-				VectorM texcoord;
+				int32_t texture_map_value_index;
 				if (vertex_in_source_poly == -1) {
 					// If the simplexes contain a vertex that is not on the original polytope cell surface,
 					// then it is either a pivot override, or a computed centroid. Check for overrides first.
+					// Sample the source cell's texture map values densely for inference and averaging.
+					Vector<VectorM> source_poly_texture_map;
+					source_poly_texture_map.resize(source_poly_texture_map_indices.size());
+					for (int64_t i = 0; i < source_poly_texture_map_indices.size(); i++) {
+						source_poly_texture_map.set(i, _simplex_cell_texture_map_values_cache[source_poly_texture_map_indices[i]]);
+					}
+					VectorM texcoord;
 					bool used_pivot_override = false;
 					if (poly_cell_boundary_pivot_overrides.size() > source_cell) {
 						const int32_t pivot_override_vertex = poly_cell_boundary_pivot_overrides[source_cell];
@@ -1493,21 +1593,32 @@ Vector<VectorM> PolyMeshND::get_simplex_cell_texture_map() {
 					if (!used_pivot_override) {
 						texcoord = _average_vector_m(source_poly_texture_map);
 					}
+					texture_map_value_index = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_texture_map_values_cache, texcoord);
 				} else {
-					texcoord = source_poly_texture_map[vertex_in_source_poly];
+					texture_map_value_index = source_poly_texture_map_indices[vertex_in_source_poly];
 				}
-				_simplex_cell_uvw_texture_map_cache.set(offset + vertex_in_simplex, texcoord);
+				_simplex_cell_texture_map_indices_cache.set(offset + vertex_in_simplex, texture_map_value_index);
 			}
 		}
 		if (missing_some_texture_map) {
 			if (has_some_texture_map) {
-				WARN_PRINT("PolyMeshND: Some polytope cells are missing UVW texture map data, the texture mapping will be missing for the corresponding simplexes.");
+				WARN_PRINT("PolyMeshND: Some polytope cells are missing texture map data, the texture mapping will be missing for the corresponding simplexes.");
 			} else {
-				_simplex_cell_uvw_texture_map_cache.clear(); // No texture map data available.
+				// No texture map data available.
+				_simplex_cell_texture_map_indices_cache.clear();
+				_simplex_cell_texture_map_values_cache.clear();
 			}
 		}
 	}
-	return _simplex_cell_uvw_texture_map_cache;
+	return _simplex_cell_texture_map_indices_cache;
+}
+
+Vector<VectorM> PolyMeshND::get_texture_map_values() {
+	if (_simplex_cell_texture_map_values_cache.is_empty()) {
+		// This will populate the simplex texture map values cache as a side effect.
+		get_simplex_cell_texture_map_indices();
+	}
+	return _simplex_cell_texture_map_values_cache;
 }
 
 Vector<VectorN> PolyMeshND::get_vertex_positions() {
@@ -1537,15 +1648,19 @@ void PolyMeshND::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_poly_cell_indices"), &PolyMeshND::get_poly_cell_indices_bind);
 	ClassDB::bind_method(D_METHOD("get_poly_cell_vertex_positions"), &PolyMeshND::get_poly_cell_vertex_positions_bind);
+	ClassDB::bind_method(D_METHOD("get_poly_cell_normal_values"), &PolyMeshND::get_poly_cell_normal_values_bind);
+	ClassDB::bind_method(D_METHOD("get_poly_cell_texture_map_values"), &PolyMeshND::get_poly_cell_texture_map_values_bind);
 	ClassDB::bind_method(D_METHOD("get_poly_cell_boundary_normals"), &PolyMeshND::get_poly_cell_boundary_normals_bind);
 	ClassDB::bind_method(D_METHOD("get_poly_cell_boundary_pivot_overrides"), &PolyMeshND::get_poly_cell_boundary_pivot_overrides);
-	ClassDB::bind_method(D_METHOD("get_poly_cell_vertex_normals"), &PolyMeshND::get_poly_cell_vertex_normals_bind);
-	ClassDB::bind_method(D_METHOD("get_poly_cell_texture_map"), &PolyMeshND::get_poly_cell_texture_map_bind);
+	ClassDB::bind_method(D_METHOD("get_poly_cell_normal_indices"), &PolyMeshND::get_poly_cell_normal_indices_bind);
+	ClassDB::bind_method(D_METHOD("get_poly_cell_texture_map_indices"), &PolyMeshND::get_poly_cell_texture_map_indices_bind);
 
 	GDVIRTUAL_BIND(_get_poly_cell_indices);
 	GDVIRTUAL_BIND(_get_poly_cell_vertex_positions);
+	GDVIRTUAL_BIND(_get_poly_cell_normal_values);
+	GDVIRTUAL_BIND(_get_poly_cell_texture_map_values);
 	GDVIRTUAL_BIND(_get_poly_cell_boundary_normals);
 	GDVIRTUAL_BIND(_get_poly_cell_boundary_pivot_overrides);
-	GDVIRTUAL_BIND(_get_poly_cell_vertex_normals);
-	GDVIRTUAL_BIND(_get_poly_cell_texture_map);
+	GDVIRTUAL_BIND(_get_poly_cell_normal_indices);
+	GDVIRTUAL_BIND(_get_poly_cell_texture_map_indices);
 }
