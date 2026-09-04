@@ -406,10 +406,10 @@ void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 	const int dimension = get_dimension();
 	const MaterialND::ColorSourceFlagsND albedo_source = p_material->get_albedo_source_flags();
 	if (albedo_source & MaterialND::COLOR_SOURCE_FLAG_PER_CELL) {
-		const PackedInt32Array cell_indices = get_simplex_cell_vertex_indices();
+		const PackedInt32Array cell_vert_indices = get_simplex_cell_vertex_indices();
 		PackedColorArray color_array = p_material->get_albedo_color_array();
 		const int64_t vertices_per_cell = dimension + 1;
-		const int64_t cell_count = cell_indices.size() / vertices_per_cell;
+		const int64_t cell_count = cell_vert_indices.size() / vertices_per_cell;
 		if (color_array.size() < cell_count) {
 			p_material->resize_albedo_color_array(cell_count);
 		}
@@ -422,7 +422,7 @@ Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 	array_mesh.instantiate();
 	array_mesh->set_vertex_positions(get_vertex_positions());
 	array_mesh->set_simplex_cell_vertex_indices(get_simplex_cell_vertex_indices());
-	array_mesh->set_cell_boundary_normals(get_simplex_cell_boundary_normals());
+	array_mesh->set_simplex_cell_boundary_normals(get_simplex_cell_boundary_normals());
 	array_mesh->set_simplex_cell_vertex_normals(get_simplex_cell_vertex_normals());
 	array_mesh->set_material(get_material());
 	return array_mesh;
@@ -435,9 +435,9 @@ Ref<CellMeshND> CellMeshND::to_cell_mesh() {
 int CellMeshND::get_simplex_cell_count() {
 	const int dimension = get_dimension();
 	ERR_FAIL_COND_V_MSG(dimension < 1, -1, "CellMeshND: Mesh is empty or 0-dimensional, cannot determine simplex cell count.");
-	const PackedInt32Array cell_indices = get_simplex_cell_vertex_indices();
-	ERR_FAIL_COND_V_MSG(cell_indices.size() % dimension != 0, -1, "CellMeshND: Cell indices size must be a multiple of the dimension.");
-	return cell_indices.size() / dimension;
+	const PackedInt32Array cell_vert_indices = get_simplex_cell_vertex_indices();
+	ERR_FAIL_COND_V_MSG(cell_vert_indices.size() % dimension != 0, -1, "CellMeshND: Cell indices size must be a multiple of the dimension.");
+	return cell_vert_indices.size() / dimension;
 }
 
 int CellMeshND::get_indices_per_simplex_cell() {
@@ -452,12 +452,12 @@ PackedInt32Array CellMeshND::get_simplex_cell_vertex_indices() {
 
 Vector<VectorN> CellMeshND::get_simplex_cell_positions() {
 	if (_cell_positions_cache.is_empty()) {
-		const PackedInt32Array cell_indices = get_simplex_cell_vertex_indices();
+		const PackedInt32Array cell_vert_indices = get_simplex_cell_vertex_indices();
 		const Vector<VectorN> vertex_positions = get_vertex_positions();
 		const int32_t vertices_count = vertex_positions.size();
-		for (const int cell_index : cell_indices) {
-			ERR_FAIL_INDEX_V(cell_index, vertices_count, _cell_positions_cache);
-			_cell_positions_cache.append(vertex_positions[cell_index]);
+		for (const int cell_vert_index : cell_vert_indices) {
+			ERR_FAIL_INDEX_V(cell_vert_index, vertices_count, _cell_positions_cache);
+			_cell_positions_cache.append(vertex_positions[cell_vert_index]);
 		}
 	}
 	return _cell_positions_cache;

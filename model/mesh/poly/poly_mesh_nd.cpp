@@ -183,19 +183,6 @@ VectorM PolyMeshND::_average_vector_m(const Vector<VectorM> &p_vector_m_array) {
 	return VectorND::divide_scalar(sum, (double)count);
 }
 
-int64_t PolyMeshND::_append_vertex_internal(Vector<VectorN> &r_vertices, const VectorN &p_vertex, const bool p_deduplicate) {
-	const int64_t vertex_count = r_vertices.size();
-	if (p_deduplicate) {
-		for (int64_t i = 0; i < vertex_count; i++) {
-			if (r_vertices[i] == p_vertex) {
-				return i;
-			}
-		}
-	}
-	r_vertices.append(p_vertex);
-	return vertex_count;
-}
-
 int32_t PolyMeshND::_get_lowest_vertex_of_cell_excluding(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const int64_t p_cell_dim_index, const int64_t p_which_cell, const HashSet<int32_t> &p_excluded_vertices) {
 	const PackedInt32Array cell_vertices = _get_vertex_indices_of_poly_cell(p_poly_cell_indices, p_all_edge_indices, p_cell_dim_index, p_which_cell, false);
 	int32_t lowest_vertex = -1;
@@ -726,7 +713,7 @@ void PolyMeshND::_decompose_boundary_cells_into_simplexes() {
 					centroid = VectorND::add(centroid, _simplex_cell_vertex_positions_cache[vertex_index]);
 				}
 				centroid = VectorND::divide_scalar(centroid, (double)cell_vertices.size());
-				pivot_vertex = (int32_t)_append_vertex_internal(_simplex_cell_vertex_positions_cache, centroid, true);
+				pivot_vertex = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_vertex_positions_cache, centroid);
 			} else {
 				_impose_pivot_on_descendants(poly_cell_indices, level_cell_vertices, level_pivots, boundary_dim_index, cell_index, pivot_vertex);
 			}
@@ -756,7 +743,7 @@ void PolyMeshND::_decompose_boundary_cells_into_simplexes() {
 					centroid = VectorND::add(centroid, _simplex_cell_vertex_positions_cache[vertex_index]);
 				}
 				centroid = VectorND::divide_scalar(centroid, (double)cell_vertices.size());
-				pivot_vertex = (int32_t)_append_vertex_internal(_simplex_cell_vertex_positions_cache, centroid, true);
+				pivot_vertex = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_vertex_positions_cache, centroid);
 			} else {
 				_impose_pivot_on_descendants(poly_cell_indices, level_cell_vertices, level_pivots, level, cell_index, pivot_vertex);
 			}

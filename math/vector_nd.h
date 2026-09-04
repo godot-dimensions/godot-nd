@@ -146,14 +146,11 @@ public:
 	static VectorN drop_first_dimensions(const VectorN &p_vector, const int64_t p_dimensions);
 	static VectorN duplicate(const VectorN &p_vector);
 	static VectorN fill(const int64_t p_dimension, const double p_value);
-	static Vector<VectorN> fill_array(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value);
-	static TypedArray<VectorN> fill_array_bind(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value);
 	static VectorN floor(const VectorN &p_vector);
 	static double get_component(const VectorN &p_vector, const int64_t p_axis);
 	static VectorN inverse(const VectorN &p_vector);
 	static bool is_equal_approx(const VectorN &p_a, const VectorN &p_b);
 	static bool is_equal_exact(const VectorN &p_a, const VectorN &p_b);
-	static bool is_equal_exact_array(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b);
 	static bool is_finite(const VectorN &p_vector);
 	static bool is_uniform(const VectorN &p_vector);
 	static bool is_zero_approx(const VectorN &p_vector);
@@ -193,6 +190,12 @@ public:
 	static VectorN with_dimension(const VectorN &p_vector, const int64_t p_dimension);
 	static VectorN with_length(const VectorN &p_vector, const double p_length = 1.0);
 	static VectorN zero(const int64_t p_dimension);
+
+	// Array operations.
+	static int64_t array_append_deduplicate(Vector<VectorN> &r_array, const VectorN &p_vector);
+	static Vector<VectorN> array_fill(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value);
+	static TypedArray<VectorN> array_fill_bind(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value);
+	static bool array_is_equal_exact(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b);
 
 	// Conversion.
 	static VectorN from_2d(const Vector2 &p_vector);

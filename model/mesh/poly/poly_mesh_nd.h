@@ -24,7 +24,6 @@ class PolyMeshND : public CellMeshND {
 	bool _is_poly_mesh_data_valid = false;
 
 	static VectorM _average_vector_m(const Vector<VectorM> &p_vector_m_array);
-	static int64_t _append_vertex_internal(Vector<VectorN> &r_vertices, const VectorN &p_vertex, const bool p_deduplicate);
 	static inline bool _do_edges_have_common_vertex(const int32_t p_edge1_a, const int32_t p_edge1_b, const int32_t p_edge2_a, const int32_t p_edge2_b) {
 		return (p_edge1_a == p_edge2_a) || (p_edge1_a == p_edge2_b) || (p_edge1_b == p_edge2_a) || (p_edge1_b == p_edge2_b);
 	}

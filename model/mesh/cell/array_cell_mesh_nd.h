@@ -28,7 +28,7 @@ public:
 	void set_simplex_cell_vertex_indices(const PackedInt32Array &p_simplex_cell_vertex_indices);
 
 	virtual Vector<VectorN> get_simplex_cell_boundary_normals() override;
-	void set_cell_boundary_normals(const Vector<VectorN> &p_simplex_cell_boundary_normals);
+	void set_simplex_cell_boundary_normals(const Vector<VectorN> &p_simplex_cell_boundary_normals);
 	void set_simplex_cell_boundary_normals_bind(const TypedArray<VectorN> &p_simplex_cell_boundary_normals);
 
 	virtual Vector<VectorN> get_simplex_cell_vertex_normals() override;

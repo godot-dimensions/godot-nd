@@ -132,7 +132,7 @@ TEST_CASE("[TransformND] Inverse Basis") {
 	Vector<VectorN> rot_xz = { VectorN{ 0, 0, 1 }, VectorN{ 0, 1, 0 }, VectorN{ -1, 0, 0 } };
 	Vector<VectorN> rot_zx = { VectorN{ 0, 0, -1 }, VectorN{ 0, 1, 0 }, VectorN{ 1, 0, 0 } };
 	test->set_all_basis_columns(rot_xz);
-	CHECK_MESSAGE(VectorND::is_equal_exact_array(test->inverse_basis()->get_all_basis_columns(), rot_zx), "TransformND inverse_basis of 90 degree rotation should be the inverse rotation.");
+	CHECK_MESSAGE(VectorND::array_is_equal_exact(test->inverse_basis()->get_all_basis_columns(), rot_zx), "TransformND inverse_basis of 90 degree rotation should be the inverse rotation.");
 
 	const double angle = 0.5;
 	test = TransformND::from_rotation(0, 1, angle);

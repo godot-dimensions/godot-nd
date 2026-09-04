@@ -523,26 +523,6 @@ VectorN VectorND::fill(const int64_t p_dimension, const double p_value) {
 	return filled_vector;
 }
 
-Vector<VectorN> VectorND::fill_array(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value) {
-	Vector<VectorN> filled_array;
-	filled_array.resize(p_vector_amount);
-	const VectorN filled_vector = fill(p_dimension, p_value);
-	for (int64_t i = 0; i < p_vector_amount; i++) {
-		filled_array.set(i, filled_vector);
-	}
-	return filled_array;
-}
-
-TypedArray<VectorN> VectorND::fill_array_bind(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value) {
-	Vector<VectorN> filled_array = VectorND::fill_array(p_dimension, p_vector_amount, p_value);
-	TypedArray<VectorN> filled_array_variant;
-	filled_array_variant.resize(p_vector_amount);
-	for (int64_t i = 0; i < p_vector_amount; i++) {
-		filled_array_variant[i] = filled_array[i];
-	}
-	return filled_array_variant;
-}
-
 VectorN VectorND::floor(const VectorN &p_vector) {
 	const int64_t dimension = p_vector.size();
 	VectorN floor_vector;
@@ -588,19 +568,6 @@ bool VectorND::is_equal_exact(const VectorN &p_a, const VectorN &p_b) {
 		const double a = likely(i < p_a.size()) ? p_a[i] : 0.0;
 		const double b = likely(i < p_b.size()) ? p_b[i] : 0.0;
 		if (a != b) {
-			return false;
-		}
-	}
-	return true;
-}
-
-bool VectorND::is_equal_exact_array(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b) {
-	const int64_t size = p_a.size();
-	if (size != p_b.size()) {
-		return false;
-	}
-	for (int64_t i = 0; i < size; i++) {
-		if (!is_equal_exact(p_a[i], p_b[i])) {
 			return false;
 		}
 	}
@@ -865,7 +832,7 @@ VectorN VectorND::perpendicular(const Vector<VectorN> &p_input_vectors) {
 	// Allocate the result vector and a matrix to perform the intermediate calculations.
 	VectorN result = VectorND::zero(dimension);
 	const int64_t sub_size = count; // == dimension - 1
-	Vector<VectorN> sub_matrix = VectorND::fill_array(sub_size, sub_size, 0.0);
+	Vector<VectorN> sub_matrix = VectorND::array_fill(sub_size, sub_size, 0.0);
 	// Flip the entire result if dimension is even.
 	const bool global_parity = (dimension % 2 == 0);
 	// This algorithm was found by ChatGPT and manually tweaked. It is likely suboptimal.
@@ -1174,6 +1141,52 @@ VectorN VectorND::zero(const int64_t p_dimension) {
 	return filled_vector;
 }
 
+// Array operations.
+
+int64_t VectorND::array_append_deduplicate(Vector<VectorN> &r_array, const VectorN &p_vector) {
+	const int64_t array_count = r_array.size();
+	for (int64_t i = 0; i < array_count; i++) {
+		if (r_array[i] == p_vector) {
+			return i;
+		}
+	}
+	r_array.append(p_vector);
+	return array_count;
+}
+
+Vector<VectorN> VectorND::array_fill(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value) {
+	Vector<VectorN> filled_array;
+	filled_array.resize(p_vector_amount);
+	const VectorN filled_vector = fill(p_dimension, p_value);
+	for (int64_t i = 0; i < p_vector_amount; i++) {
+		filled_array.set(i, filled_vector);
+	}
+	return filled_array;
+}
+
+TypedArray<VectorN> VectorND::array_fill_bind(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value) {
+	TypedArray<VectorN> filled_array;
+	filled_array.resize(p_vector_amount);
+	const VectorN filled_vector = fill(p_dimension, p_value);
+	for (int64_t i = 0; i < p_vector_amount; i++) {
+		filled_array[i] = filled_vector;
+	}
+	return filled_array;
+}
+
+bool VectorND::array_is_equal_exact(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b) {
+	const int64_t size = p_a.size();
+	if (size != p_b.size()) {
+		return false;
+	}
+	for (int64_t i = 0; i < size; i++) {
+		if (!is_equal_exact(p_a[i], p_b[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 // Conversion.
 
 VectorN VectorND::from_2d(const Vector2 &p_vector) {
@@ -1293,7 +1306,6 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("drop_first_dimensions", "vector", "dimensions"), &VectorND::drop_first_dimensions);
 	ClassDB::bind_static_method("VectorND", D_METHOD("duplicate", "vector"), &VectorND::duplicate);
 	ClassDB::bind_static_method("VectorND", D_METHOD("fill", "dimension", "value"), &VectorND::fill);
-	ClassDB::bind_static_method("VectorND", D_METHOD("fill_array", "dimension", "vector_amount", "value"), &VectorND::fill_array_bind);
 	ClassDB::bind_static_method("VectorND", D_METHOD("floor", "vector"), &VectorND::floor);
 	ClassDB::bind_static_method("VectorND", D_METHOD("inverse", "vector"), &VectorND::inverse);
 	ClassDB::bind_static_method("VectorND", D_METHOD("is_equal_approx", "a", "b"), &VectorND::is_equal_approx);
@@ -1334,6 +1346,8 @@ void VectorND::_bind_methods() {
 	ClassDB::bind_static_method("VectorND", D_METHOD("with_dimension", "vector", "dimension"), &VectorND::with_dimension);
 	ClassDB::bind_static_method("VectorND", D_METHOD("with_length", "vector", "length"), &VectorND::with_length, DEFVAL(1.0));
 	ClassDB::bind_static_method("VectorND", D_METHOD("zero", "dimension"), &VectorND::zero);
+	// Array operations.
+	ClassDB::bind_static_method("VectorND", D_METHOD("array_fill", "dimension", "vector_amount", "value"), &VectorND::array_fill_bind);
 	// Conversion.
 	ClassDB::bind_static_method("VectorND", D_METHOD("from_2d", "vector"), &VectorND::from_2d);
 	ClassDB::bind_static_method("VectorND", D_METHOD("from_3d", "vector"), &VectorND::from_3d);

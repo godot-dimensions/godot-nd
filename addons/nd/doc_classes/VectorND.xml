@@ -47,6 +47,15 @@
 				Converts an array of VectorN (array of [PackedFloat64Array]) to a string representation, with the outer brackets denoting the array and inner parenthesis denoting each vector. For example, [code][(1.0, 2.0), (3.0, 4.0)][/code].
 			</description>
 		</method>
+		<method name="array_fill" qualifiers="static">
+			<return type="PackedFloat64Array[]" />
+			<param index="0" name="dimension" type="int" />
+			<param index="1" name="vector_amount" type="int" />
+			<param index="2" name="value" type="float" />
+			<description>
+				Returns an array of VectorN ([PackedFloat64Array]) that are filled with the given [param value] for each component in every vector. The amount of vectors is defined by [param vector_amount], and the dimension of each vector is defined by [param dimension]. For example, [code]array_fill(1.0, 3, 2)[/code] will return [code][[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]][/code].
+			</description>
+		</method>
 		<method name="average" qualifiers="static">
 			<return type="PackedFloat64Array" />
 			<param index="0" name="vectors" type="PackedFloat64Array[]" />
@@ -189,15 +198,6 @@
 			<param index="1" name="value" type="float" />
 			<description>
 				Returns a new VectorN ([PackedFloat64Array]) that is filled with the given [param value] for each component. The dimension of the vector is defined by [param dimension]. For example, [code]fill(1.0, 3)[/code] will return [code][1.0, 1.0, 1.0][/code].
-			</description>
-		</method>
-		<method name="fill_array" qualifiers="static">
-			<return type="PackedFloat64Array[]" />
-			<param index="0" name="dimension" type="int" />
-			<param index="1" name="vector_amount" type="int" />
-			<param index="2" name="value" type="float" />
-			<description>
-				Returns an array of VectorN ([PackedFloat64Array]) that are filled with the given [param value] for each component in every vector. The amount of vectors is defined by [param vector_amount], and the dimension of each vector is defined by [param dimension]. For example, [code]fill_array(1.0, 3, 2)[/code] will return [code][[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]][/code].
 			</description>
 		</method>
 		<method name="floor" qualifiers="static">

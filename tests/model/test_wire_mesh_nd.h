@@ -22,7 +22,7 @@ TEST_CASE("[ArrayWireMeshND] Append Edge Points") {
 		const PackedInt32Array correct_edge_indices = { 0, 1, 0, 2, 0, 3 };
 		CHECK(edge_indices == correct_edge_indices);
 		const Vector<VectorN> correct_edge_positions = { VectorN{ 0, 0, 0 }, VectorN{ 1, 0, 0 }, VectorN{ 0, 0, 0 }, VectorN{ 0, 1, 0 }, VectorN{ 0, 0, 0 }, VectorN{ 0, 0, 1 } };
-		CHECK(VectorND::is_equal_exact_array(array_wire_mesh->get_edge_positions(), correct_edge_positions));
+		CHECK(VectorND::array_is_equal_exact(array_wire_mesh->get_edge_positions(), correct_edge_positions));
 	}
 	const bool deduplicate = false;
 	array_wire_mesh->append_edge_points(VectorN{ 0, 0, 0 }, VectorN{ 1, 1, 1 }, deduplicate);
@@ -34,7 +34,7 @@ TEST_CASE("[ArrayWireMeshND] Append Edge Points") {
 		const PackedInt32Array correct_edge_indices = { 0, 1, 0, 2, 0, 3, 4, 5 };
 		CHECK(edge_indices == correct_edge_indices);
 		const Vector<VectorN> correct_edge_positions = { VectorN{ 0, 0, 0 }, VectorN{ 1, 0, 0 }, VectorN{ 0, 0, 0 }, VectorN{ 0, 1, 0 }, VectorN{ 0, 0, 0 }, VectorN{ 0, 0, 1 }, VectorN{ 0, 0, 0 }, VectorN{ 1, 1, 1 } };
-		CHECK(VectorND::is_equal_exact_array(array_wire_mesh->get_edge_positions(), correct_edge_positions));
+		CHECK(VectorND::array_is_equal_exact(array_wire_mesh->get_edge_positions(), correct_edge_positions));
 	}
 }
 

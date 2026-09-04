@@ -129,8 +129,8 @@ Vector<VectorN> ArrayCellMeshND::get_simplex_cell_boundary_normals() {
 	return _simplex_cell_boundary_normals;
 }
 
-void ArrayCellMeshND::set_cell_boundary_normals(const Vector<VectorN> &p_simplex_cell_normals) {
-	_simplex_cell_boundary_normals = p_simplex_cell_normals;
+void ArrayCellMeshND::set_simplex_cell_boundary_normals(const Vector<VectorN> &p_simplex_cell_boundary_normals) {
+	_simplex_cell_boundary_normals = p_simplex_cell_boundary_normals;
 	reset_mesh_data_validation();
 }
 
@@ -216,7 +216,7 @@ void ArrayCellMeshND::_bind_methods() {
 
 	// Only bind the setters here because the getters are already bound in CellMeshND.
 	ClassDB::bind_method(D_METHOD("set_simplex_cell_vertex_indices", "simplex_cell_vertex_indices"), &ArrayCellMeshND::set_simplex_cell_vertex_indices);
-	ClassDB::bind_method(D_METHOD("set_simplex_cell_boundary_normals", "simplex_cell_normals"), &ArrayCellMeshND::set_simplex_cell_boundary_normals_bind);
+	ClassDB::bind_method(D_METHOD("set_simplex_cell_boundary_normals", "simplex_cell_boundary_normals"), &ArrayCellMeshND::set_simplex_cell_boundary_normals_bind);
 	ClassDB::bind_method(D_METHOD("set_simplex_cell_vertex_normals", "simplex_cell_vertex_normals"), &ArrayCellMeshND::set_simplex_cell_vertex_normals_bind);
 	ClassDB::bind_method(D_METHOD("set_simplex_cell_texture_map", "simplex_cell_texture_map"), &ArrayCellMeshND::set_simplex_cell_texture_map_bind);
 	ClassDB::bind_method(D_METHOD("set_vertex_positions", "vertex_positions"), &ArrayCellMeshND::set_vertex_positions_bind);

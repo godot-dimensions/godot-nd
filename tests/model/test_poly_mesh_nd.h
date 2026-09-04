@@ -769,7 +769,7 @@ TEST_CASE("[PolyMeshND] To array poly mesh") {
 	Ref<BoxPolyMeshND> box = make_box_poly_mesh(4);
 	Ref<ArrayPolyMeshND> array_mesh = box->to_array_poly_mesh();
 	REQUIRE(array_mesh.is_valid());
-	CHECK(VectorND::is_equal_exact_array(array_mesh->get_poly_cell_vertex_positions(), box->get_poly_cell_vertex_positions()));
+	CHECK(VectorND::array_is_equal_exact(array_mesh->get_poly_cell_vertex_positions(), box->get_poly_cell_vertex_positions()));
 	CHECK((array_mesh->get_edge_indices() == box->get_edge_indices()));
 	const Vector<Vector<PackedInt32Array>> array_indices = array_mesh->get_poly_cell_indices();
 	const Vector<Vector<PackedInt32Array>> box_indices = box->get_poly_cell_indices();
@@ -777,7 +777,7 @@ TEST_CASE("[PolyMeshND] To array poly mesh") {
 	for (int64_t dim_index = 0; dim_index < array_indices.size(); dim_index++) {
 		CHECK((array_indices[dim_index] == box_indices[dim_index]));
 	}
-	CHECK(VectorND::is_equal_exact_array(array_mesh->get_poly_cell_boundary_normals(), box->get_poly_cell_boundary_normals()));
+	CHECK(VectorND::array_is_equal_exact(array_mesh->get_poly_cell_boundary_normals(), box->get_poly_cell_boundary_normals()));
 	CHECK_MESSAGE(array_mesh->is_poly_mesh_data_valid(), "The converted array mesh must be valid.");
 	CHECK_MESSAGE((array_mesh->get_simplex_cell_vertex_indices() == box->get_simplex_cell_vertex_indices()), "The converted array mesh must decompose identically.");
 }
@@ -788,7 +788,7 @@ TEST_CASE("[PolyMeshND] Meshes without boundary cells") {
 	mesh->append_edge_points(VectorN{ 0.0, 0.0, 0.0, 0.0 }, VectorN{ 1.0, 0.0, 0.0, 0.0 });
 	mesh->append_edge_points(VectorN{ 1.0, 0.0, 0.0, 0.0 }, VectorN{ 1.0, 1.0, 0.0, 0.0 });
 	CHECK(mesh->is_poly_mesh_data_valid());
-	CHECK_MESSAGE(VectorND::is_equal_exact_array(mesh->get_vertex_positions(), mesh->get_poly_cell_vertex_positions()), "Without boundary cells, the simplex vertices are just the poly vertices.");
+	CHECK_MESSAGE(VectorND::array_is_equal_exact(mesh->get_vertex_positions(), mesh->get_poly_cell_vertex_positions()), "Without boundary cells, the simplex vertices are just the poly vertices.");
 	CHECK_MESSAGE(mesh->get_simplex_cell_vertex_indices().is_empty(), "Without boundary cells, there are no simplexes.");
 }
 
