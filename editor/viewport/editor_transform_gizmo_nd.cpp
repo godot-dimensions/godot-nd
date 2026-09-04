@@ -88,7 +88,7 @@ Ref<ArrayWireMeshND> _make_move_arrow_wire_mesh_nd() {
 	mesh.instantiate();
 	Vector<VectorN> vertices = { VectorN{ 0.0 }, VectorN{ 1.0 } };
 	PackedInt32Array edge_indices = { 0, 1 };
-	mesh->set_vertices(vertices.duplicate());
+	mesh->set_vertex_positions(vertices.duplicate());
 	mesh->set_edge_indices(edge_indices);
 	return mesh;
 }
@@ -111,7 +111,7 @@ Ref<ArrayWireMeshND> _make_rotation_ring_wire_mesh_nd() {
 	edge_indices.set(ROTATION_RING_SEGMENTS_ND * 2 - 1, 0);
 	Ref<ArrayWireMeshND> mesh;
 	mesh.instantiate();
-	mesh->set_vertices(vertices);
+	mesh->set_vertex_positions(vertices);
 	mesh->set_edge_indices(edge_indices);
 	return mesh;
 }
@@ -129,7 +129,7 @@ Ref<ArrayWireMeshND> _make_plane_wire_mesh_nd() {
 	PackedInt32Array edge_indices = { 0, 1, 0, 2, 1, 2, 3, 4, 3, 5, 4, 5 };
 	Ref<ArrayWireMeshND> mesh;
 	mesh.instantiate();
-	mesh->set_vertices(vertices);
+	mesh->set_vertex_positions(vertices);
 	mesh->set_edge_indices(edge_indices);
 	return mesh;
 }

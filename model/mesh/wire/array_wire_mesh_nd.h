@@ -7,7 +7,7 @@ class ArrayWireMeshND : public WireMeshND {
 	GDCLASS(ArrayWireMeshND, WireMeshND);
 
 	PackedInt32Array _edge_vertex_indices;
-	Vector<VectorN> _vertices;
+	Vector<VectorN> _vertex_positions;
 
 protected:
 	static void _bind_methods();
@@ -27,8 +27,8 @@ public:
 	virtual PackedInt32Array get_edge_indices() override;
 	void set_edge_indices(const PackedInt32Array &p_edge_indices);
 
-	virtual Vector<VectorN> get_vertices() override;
-	void set_vertices(const Vector<VectorN> &p_vertices);
-	void set_vertices_bind(const TypedArray<VectorN> &p_vertices);
+	virtual Vector<VectorN> get_vertex_positions() override;
+	void set_vertex_positions(const Vector<VectorN> &p_vertex_positions);
+	void set_vertex_positions_bind(const TypedArray<VectorN> &p_vertex_positions);
 	void set_dimension(int p_dimension);
 };

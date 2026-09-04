@@ -9,7 +9,7 @@ namespace TestMeshInstanceND {
 TEST_CASE("[MeshInstanceND] Bounds follow mesh data and target transform") {
 	Ref<ArrayWireMeshND> mesh;
 	mesh.instantiate();
-	mesh->set_vertices(Vector<VectorN>({ VectorN{ -1, -1, -1, -1 }, VectorN{ 1, 1, 1, 1 } }));
+	mesh->set_vertex_positions(Vector<VectorN>({ VectorN{ -1, -1, -1, -1 }, VectorN{ 1, 1, 1, 1 } }));
 
 	MeshInstanceND mesh_instance;
 	mesh_instance.set_mesh(mesh);
@@ -18,7 +18,7 @@ TEST_CASE("[MeshInstanceND] Bounds follow mesh data and target transform") {
 	CHECK(VectorND::is_equal_exact(bounds->get_position(), VectorN{ -1, -1, -1, -1 }));
 	CHECK(VectorND::is_equal_exact(bounds->get_size(), VectorN{ 2, 2, 2, 2 }));
 
-	mesh->set_vertices(Vector<VectorN>({ VectorN{ -2, -2, -2, -2 }, VectorN{ 3, 3, 3, 3 } }));
+	mesh->set_vertex_positions(Vector<VectorN>({ VectorN{ -2, -2, -2, -2 }, VectorN{ 3, 3, 3, 3 } }));
 	bounds = mesh_instance.get_rect_bounds(identity);
 	CHECK(VectorND::is_equal_exact(bounds->get_position(), VectorN{ -2, -2, -2, -2 }));
 	CHECK(VectorND::is_equal_exact(bounds->get_size(), VectorN{ 5, 5, 5, 5 }));

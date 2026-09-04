@@ -90,7 +90,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(const R
 			}
 		}
 	}
-	ret->set_poly_cell_vertices(output_vertices);
+	ret->set_poly_cell_vertex_positions(output_vertices);
 	ret->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ output_face_indices });
 	if (!output_face_boundary_normals.is_empty()) {
 		ret->set_poly_cell_boundary_normals(output_face_boundary_normals);
@@ -157,7 +157,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 	const int32_t input_edge_count = (int32_t)(input_edge_indices.size() / 2);
 	PackedInt32Array vertex_to_extruded_edge;
 	{
-		const Vector<VectorN> &input_vertices = p_input_mesh->get_poly_cell_vertices();
+		const Vector<VectorN> &input_vertices = p_input_mesh->get_poly_cell_vertex_positions();
 		PackedInt32Array edge_indices = ret->get_edge_indices();
 		int64_t edge_indices_iter = edge_indices.size();
 		const int32_t input_vertex_count = (int32_t)input_vertices.size();
@@ -281,7 +281,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 			// which came from the input mesh's own boundary and volumetric cells.
 			const int64_t output_volumetric_dim_index = int64_t(output_dimension) - 2;
 			if (output_boundary_dim_index >= 0 && poly_cell_indices.size() > output_volumetric_dim_index) {
-				const Vector<VectorN> &output_vertices = ret->get_poly_cell_vertices();
+				const Vector<VectorN> &output_vertices = ret->get_poly_cell_vertex_positions();
 				const Vector<PackedInt32Array> volume_vert = ret->get_all_poly_cell_vertex_indices(output_dimension, false);
 				const Vector<PackedInt32Array> volume_cells = poly_cell_indices[output_volumetric_dim_index];
 				const Vector<PackedInt32Array> boundary_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 1, false);
@@ -483,7 +483,7 @@ void PolyMeshBuilderND::make_boundary_normals_topologically_consistent(const Ref
 		}
 	}
 	// Compute the average position of each boundary cell.
-	const Vector<VectorN> &poly_vertices = p_mesh_nd->get_poly_cell_vertices();
+	const Vector<VectorN> &poly_vertices = p_mesh_nd->get_poly_cell_vertex_positions();
 	const Vector<PackedInt32Array> boundary_vert = p_mesh_nd->get_all_poly_cell_vertex_indices(dimension - 1, false);
 	const PackedInt32Array &boundary_pivot_overrides = p_mesh_nd->get_poly_cell_boundary_pivot_overrides();
 	CRASH_COND(boundary_vert.size() != boundary_cells.size());
@@ -1163,7 +1163,7 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 	ERR_FAIL_COND_V_MSG(p_dimension < 1 || p_dimension > dimension, ret, "Cannot subdivide elements of dimension " + itos(p_dimension) + " in a mesh of dimension " + itos(dimension) + ".");
 	SubdivisionContext ctx;
 	ctx.dimension = dimension;
-	ctx.old_vertices = p_input_mesh->get_poly_cell_vertices();
+	ctx.old_vertices = p_input_mesh->get_poly_cell_vertex_positions();
 	ctx.old_edges = p_input_mesh->get_edge_indices();
 	ctx.old_levels = p_input_mesh->get_poly_cell_indices();
 	const int64_t level_count = ctx.old_levels.size();
@@ -1314,7 +1314,7 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 		}
 	}
 	// Write the new data into the mesh.
-	p_input_mesh->set_poly_cell_vertices(ctx.new_vertices);
+	p_input_mesh->set_poly_cell_vertex_positions(ctx.new_vertices);
 	p_input_mesh->set_edge_vertex_indices(ctx.new_edges);
 	p_input_mesh->set_poly_cell_indices(ctx.new_levels);
 	p_input_mesh->set_all_poly_cell_normals(HashMap<Vector2i, Vector<Vector<VectorN>>>());

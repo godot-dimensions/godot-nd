@@ -15,10 +15,10 @@
 				Callback method that should return the edge indices of a mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_edge_indices] for details of the returned data.
 			</description>
 		</method>
-		<method name="_get_vertices" qualifiers="virtual">
+		<method name="_get_vertex_positions" qualifiers="virtual">
 			<return type="PackedFloat64Array[]" />
 			<description>
-				Callback method that should return the vertices of a mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_vertices] for details of the returned data.
+				Callback method that should return the vertices of a mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_vertex_positions] for details of the returned data.
 			</description>
 		</method>
 		<method name="_update_proxy_mesh_3d" qualifiers="virtual">
@@ -63,7 +63,7 @@
 		<method name="get_edge_positions">
 			<return type="PackedFloat64Array[]" />
 			<description>
-				Gets the edge positions of the mesh. Each VectorN ([PackedFloat64Array]) in the array is a position in meters in ND space. Edges are defined by two vertices, and the positions in this array are the positions of the vertices that make up the edges. This value is calculated from a combination of the edge indices and the vertices arrays, see [method get_edge_indices] and [method get_vertices].
+				Gets the edge positions of the mesh. Each VectorN ([PackedFloat64Array]) in the array is a position in meters in ND space. Edges are defined by two vertices, and the positions in this array are the positions of the vertices that make up the edges. This value is calculated from a combination of the edge indices and the vertices arrays, see [method get_edge_indices] and [method get_vertex_positions].
 			</description>
 		</method>
 		<method name="get_proxy_mesh_3d">
@@ -79,7 +79,7 @@
 				Returns the [RectND] bounds of the mesh in local space, computed by expanding a rect to include every vertex, and always including the mesh's local origin even if the mesh's geometry does not cover that point. The result is cached until [method mark_mesh_bounds_and_proxy_mesh_3d_dirty] is called, so repeated calls are cheap.
 			</description>
 		</method>
-		<method name="get_vertices">
+		<method name="get_vertex_positions">
 			<return type="PackedFloat64Array[]" />
 			<description>
 				Gets the vertices of the mesh. Each VectorN ([PackedFloat64Array]) in the array is a vertex defined as a position in meters in ND space. Vertices are referenced by many other arrays in the mesh, such as the edge indices or cell indices.

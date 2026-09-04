@@ -14,7 +14,7 @@
 			<param index="0" name="vertex" type="PackedFloat64Array" />
 			<param index="1" name="deduplicate_vertices" type="bool" default="true" />
 			<description>
-				Append a vertex to the cell mesh. If [param deduplicate_vertices] is [code]true[/code], the method will check if the vertex already exists in the [member vertices] array and return the index of the existing vertex. If the vertex does not exist, it will be appended to the vertices array and its index will be returned. In both cases, the returned index points to a vertex identical to the input vertex.
+				Append a vertex to the cell mesh. If [param deduplicate_vertices] is [code]true[/code], the method will check if the vertex already exists in the [member vertex_positions] array and return the index of the existing vertex. If the vertex does not exist, it will be appended to the vertices array and its index will be returned. In both cases, the returned index points to a vertex identical to the input vertex.
 			</description>
 		</method>
 		<method name="merge_with">
@@ -31,18 +31,18 @@
 			The dimension of the mesh. This is calculated as the length of the first vertex. Setting this will resize all vertices to the new dimension, either truncating them or padding them with zeros as necessary. The amount of indices making up a simplex cell is equal to the dimension.
 		</member>
 		<member name="simplex_cell_boundary_normals" type="PackedFloat64Array[]" setter="set_simplex_cell_boundary_normals" getter="get_simplex_cell_boundary_normals" default="[]">
-			The boundary normals of the simplex cells. Boundary normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be one-Nth as long as the [member simplex_cell_indices] array, or empty for no normals, or else the mesh is invalid.
-		</member>
-		<member name="simplex_cell_indices" type="PackedInt32Array" setter="set_simplex_cell_indices" getter="get_simplex_cell_indices" default="PackedInt32Array()">
-			The indices of the simplex cells. For an N-dimensional mesh, every N integers defines a simplex cell (as returned by [method CellMeshND.get_indices_per_simplex_cell]), for a total of [method CellMeshND.get_simplex_cell_count] cells. Each integer is an index to the [member vertices] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
+			The boundary normals of the simplex cells. Boundary normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one cell, and should be normalized. This array should either be one-Nth as long as the [member simplex_cell_vertex_indices] array, or empty for no normals, or else the mesh is invalid.
 		</member>
 		<member name="simplex_cell_texture_map" type="PackedFloat64Array[]" setter="set_simplex_cell_texture_map" getter="get_simplex_cell_texture_map" default="[]">
-			The texture coordinate mapping of the simplex cells. Each VectorN ([PackedFloat64Array]) in this array is the texture space mapping for the vertex in the [method MeshND.get_vertices] array with the same index. This array should either be the same length as the [method MeshND.get_vertices] array, or empty for no texture coordinate mapping, or else the mesh is invalid.
+			The texture coordinate mapping of the simplex cells. Each VectorN ([PackedFloat64Array]) in this array is the texture space mapping for one vertex instance in a simplex cell, meaning [method CellMeshND.get_indices_per_simplex_cell] per cell. This array should either be the same length as the [member simplex_cell_vertex_indices] array, or empty for no texture coordinate mapping, or else the mesh is invalid.
+		</member>
+		<member name="simplex_cell_vertex_indices" type="PackedInt32Array" setter="set_simplex_cell_vertex_indices" getter="get_simplex_cell_vertex_indices" default="PackedInt32Array()">
+			The vertex indices of the simplex cells. For an N-dimensional mesh, every N integers defines a simplex cell (as returned by [method CellMeshND.get_indices_per_simplex_cell]), for a total of [method CellMeshND.get_simplex_cell_count] cells. Each integer is an index to the [member vertex_positions] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
 		</member>
 		<member name="simplex_cell_vertex_normals" type="PackedFloat64Array[]" setter="set_simplex_cell_vertex_normals" getter="get_simplex_cell_vertex_normals" default="[]">
-			The normals of the vertex indices of simplex cells. Vertex normals define how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one vertex instance in a simplex cell, meaning N per cell, and each should be normalized. This array should either be the same length as the [member simplex_cell_indices] array, or empty for no normals, or else the mesh is invalid.
+			The normals of the vertex indices of simplex cells. Vertex normals define how lighting angles are calculated for the cell. Each VectorN ([PackedFloat64Array]) in this array is for one vertex instance in a simplex cell, meaning N per cell, and each should be normalized. This array should either be the same length as the [member simplex_cell_vertex_indices] array, or empty for no normals, or else the mesh is invalid.
 		</member>
-		<member name="vertices" type="PackedFloat64Array[]" setter="set_vertices" getter="get_vertices" default="[]">
+		<member name="vertex_positions" type="PackedFloat64Array[]" setter="set_vertex_positions" getter="get_vertex_positions" default="[]">
 			The vertices of the cell mesh. Each vertex is a VectorN ([PackedFloat64Array]) with a length equal to the number of dimensions. Indices of cells and edges refer to the items in this array. The vertices array must be kept consistent with the cell indices array, such that each cell index points to a valid vertex index, or else the mesh is invalid.
 		</member>
 	</members>

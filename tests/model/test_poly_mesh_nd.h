@@ -273,7 +273,7 @@ TEST_CASE("[PolyMeshND] Cell orientation determines boundary normals for all fac
 TEST_CASE("[PolyMeshND] Box generator produces valid oriented data") {
 	for (int dimension = 3; dimension <= 5; dimension++) {
 		Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
-		CHECK_MESSAGE(box->get_vertices().size() == (int64_t(1) << dimension), "An N-box has 2^N vertices.");
+		CHECK_MESSAGE(box->get_vertex_positions().size() == (int64_t(1) << dimension), "An N-box has 2^N vertices.");
 		CHECK_MESSAGE(box->get_edge_indices().size() == dimension * (int64_t(1) << (dimension - 1)) * 2, "An N-box has N*2^(N-1) edges.");
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = box->get_poly_cell_indices();
 		REQUIRE_MESSAGE(poly_cell_indices.size() == dimension - 1, "An N-box has poly cells from 2D faces up to the N-dimensional volume.");
@@ -306,7 +306,7 @@ TEST_CASE("[PolyMeshND] Box generator produces valid oriented data") {
 TEST_CASE("[PolyMeshND] Orthoplex generator produces valid oriented data") {
 	for (int dimension = 3; dimension <= 5; dimension++) {
 		Ref<OrthoplexPolyMeshND> orthoplex = make_orthoplex_poly_mesh(dimension);
-		CHECK_MESSAGE(orthoplex->get_vertices().size() == 2 * dimension, "An N-orthoplex has 2N vertices.");
+		CHECK_MESSAGE(orthoplex->get_vertex_positions().size() == 2 * dimension, "An N-orthoplex has 2N vertices.");
 		CHECK_MESSAGE(orthoplex->get_edge_indices().size() == dimension * (dimension - 1) * 2 * 2, "An N-orthoplex has C(N,2)*4 edges.");
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = orthoplex->get_poly_cell_indices();
 		REQUIRE_MESSAGE(poly_cell_indices.size() == dimension - 1, "An N-orthoplex has poly cells from 2D faces up to the N-dimensional volume.");
@@ -338,7 +338,7 @@ TEST_CASE("[PolyMeshND] Orthoplex generator produces valid oriented data") {
 TEST_CASE("[PolyMeshND] Simplex decomposition") {
 	SUBCASE("A single tetrahedral cell decomposes into one simplex") {
 		Ref<ArrayPolyMeshND> mesh = make_tetrahedron_cell_mesh();
-		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_vertex_indices();
 		REQUIRE_MESSAGE(simplex_indices.size() == 4, "A tetrahedral cell in 4D must decompose into exactly one simplex of 4 vertices.");
 		for (int32_t vertex_index = 0; vertex_index < 4; vertex_index++) {
 			CHECK_MESSAGE(simplex_indices.has(vertex_index), "The single simplex must use every vertex of the tetrahedral cell.");
@@ -352,21 +352,21 @@ TEST_CASE("[PolyMeshND] Simplex decomposition") {
 
 	SUBCASE("A 3D box decomposes into 12 triangles") {
 		Ref<BoxPolyMeshND> box = make_box_poly_mesh(3);
-		const PackedInt32Array simplex_indices = box->get_simplex_cell_indices();
+		const PackedInt32Array simplex_indices = box->get_simplex_cell_vertex_indices();
 		CHECK_MESSAGE(simplex_indices.size() == 12 * 3, "A cube's 6 quad faces each decompose into 2 triangles.");
 	}
 
 	SUBCASE("A 4D orthoplex decomposes into 16 tetrahedra") {
 		Ref<OrthoplexPolyMeshND> orthoplex = make_orthoplex_poly_mesh(4);
-		const PackedInt32Array simplex_indices = orthoplex->get_simplex_cell_indices();
+		const PackedInt32Array simplex_indices = orthoplex->get_simplex_cell_vertex_indices();
 		REQUIRE_MESSAGE(simplex_indices.size() == 16 * 4, "Each of the 16 tetrahedral cells decomposes into exactly one simplex.");
-		CHECK_MESSAGE(orthoplex->get_vertices().size() == 8, "Decomposing an orthoplex should not add any vertices.");
+		CHECK_MESSAGE(orthoplex->get_vertex_positions().size() == 8, "Decomposing an orthoplex should not add any vertices.");
 	}
 
 	SUBCASE("Simplex normals match the source cell normals") {
 		for (int dimension = 3; dimension <= 5; dimension++) {
 			Ref<BoxPolyMeshND> box = make_box_poly_mesh(dimension);
-			const PackedInt32Array simplex_indices = box->get_simplex_cell_indices();
+			const PackedInt32Array simplex_indices = box->get_simplex_cell_vertex_indices();
 			REQUIRE(simplex_indices.size() % dimension == 0);
 			const int64_t simplex_count = simplex_indices.size() / dimension;
 			REQUIRE(simplex_count > 0);
@@ -384,7 +384,7 @@ TEST_CASE("[PolyMeshND] Simplex decomposition") {
 
 	SUBCASE("Simplex vertex normals come from the source cells") {
 		Ref<BoxPolyMeshND> box = make_box_poly_mesh(4);
-		const PackedInt32Array simplex_indices = box->get_simplex_cell_indices();
+		const PackedInt32Array simplex_indices = box->get_simplex_cell_vertex_indices();
 		const int64_t simplex_count = simplex_indices.size() / 4;
 		const Vector<VectorN> cell_normals = box->get_poly_cell_boundary_normals();
 		const Vector<VectorN> simplex_vertex_normals = box->get_simplex_cell_vertex_normals();
@@ -410,7 +410,7 @@ TEST_CASE("[PolyMeshND] Simplex decomposition") {
 		}
 		pivot_overrides.set(0, override_vertex);
 		mesh->set_poly_cell_boundary_pivot_overrides(pivot_overrides);
-		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_vertex_indices();
 		REQUIRE(simplex_indices.size() % 4 == 0);
 		const int64_t simplex_count = simplex_indices.size() / 4;
 		int64_t cell_0_simplex_count = 0;
@@ -445,7 +445,7 @@ TEST_CASE("[PolyMeshND] Watertight simplex decomposition") {
 			} else {
 				mesh = make_orthoplex_poly_mesh(dimension);
 			}
-			const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+			const PackedInt32Array simplex_indices = mesh->get_simplex_cell_vertex_indices();
 			REQUIRE(simplex_indices.size() % dimension == 0);
 			const int64_t simplex_count = simplex_indices.size() / dimension;
 			REQUIRE(simplex_count > 0);
@@ -769,7 +769,7 @@ TEST_CASE("[PolyMeshND] To array poly mesh") {
 	Ref<BoxPolyMeshND> box = make_box_poly_mesh(4);
 	Ref<ArrayPolyMeshND> array_mesh = box->to_array_poly_mesh();
 	REQUIRE(array_mesh.is_valid());
-	CHECK(VectorND::is_equal_exact_array(array_mesh->get_poly_cell_vertices(), box->get_poly_cell_vertices()));
+	CHECK(VectorND::is_equal_exact_array(array_mesh->get_poly_cell_vertex_positions(), box->get_poly_cell_vertex_positions()));
 	CHECK((array_mesh->get_edge_indices() == box->get_edge_indices()));
 	const Vector<Vector<PackedInt32Array>> array_indices = array_mesh->get_poly_cell_indices();
 	const Vector<Vector<PackedInt32Array>> box_indices = box->get_poly_cell_indices();
@@ -779,7 +779,7 @@ TEST_CASE("[PolyMeshND] To array poly mesh") {
 	}
 	CHECK(VectorND::is_equal_exact_array(array_mesh->get_poly_cell_boundary_normals(), box->get_poly_cell_boundary_normals()));
 	CHECK_MESSAGE(array_mesh->is_poly_mesh_data_valid(), "The converted array mesh must be valid.");
-	CHECK_MESSAGE((array_mesh->get_simplex_cell_indices() == box->get_simplex_cell_indices()), "The converted array mesh must decompose identically.");
+	CHECK_MESSAGE((array_mesh->get_simplex_cell_vertex_indices() == box->get_simplex_cell_vertex_indices()), "The converted array mesh must decompose identically.");
 }
 
 TEST_CASE("[PolyMeshND] Meshes without boundary cells") {
@@ -788,8 +788,8 @@ TEST_CASE("[PolyMeshND] Meshes without boundary cells") {
 	mesh->append_edge_points(VectorN{ 0.0, 0.0, 0.0, 0.0 }, VectorN{ 1.0, 0.0, 0.0, 0.0 });
 	mesh->append_edge_points(VectorN{ 1.0, 0.0, 0.0, 0.0 }, VectorN{ 1.0, 1.0, 0.0, 0.0 });
 	CHECK(mesh->is_poly_mesh_data_valid());
-	CHECK_MESSAGE(VectorND::is_equal_exact_array(mesh->get_vertices(), mesh->get_poly_cell_vertices()), "Without boundary cells, the simplex vertices are just the poly vertices.");
-	CHECK_MESSAGE(mesh->get_simplex_cell_indices().is_empty(), "Without boundary cells, there are no simplexes.");
+	CHECK_MESSAGE(VectorND::is_equal_exact_array(mesh->get_vertex_positions(), mesh->get_poly_cell_vertex_positions()), "Without boundary cells, the simplex vertices are just the poly vertices.");
+	CHECK_MESSAGE(mesh->get_simplex_cell_vertex_indices().is_empty(), "Without boundary cells, there are no simplexes.");
 }
 
 TEST_CASE("[PolyMeshND] Faces with unordered edges are read in walk order") {
@@ -804,23 +804,23 @@ TEST_CASE("[PolyMeshND] Faces with unordered edges are read in walk order") {
 		VectorN{ 1.0, 4.0, 0.0 },
 		VectorN{ -1.0, 2.0, 0.0 },
 	};
-	mesh->set_poly_cell_vertices(vertices);
+	mesh->set_poly_cell_vertex_positions(vertices);
 	mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4 });
 	Vector<PackedInt32Array> faces;
 	faces.append(PackedInt32Array{ 0, 4, 1, 2, 3 }); // The scrambled pentagon: AB, AE, BC, CD, DE.
 	mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
 	ERR_PRINT_OFF; // The unordered edge list prints a warning, which is expected here.
 	CHECK(mesh->is_poly_mesh_data_valid());
-	const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+	const PackedInt32Array simplex_indices = mesh->get_simplex_cell_vertex_indices();
 	const Vector<PackedInt32Array> face_vertex_indices = mesh->get_all_face_vertex_indices();
 	ERR_PRINT_ON;
 	// The triangulated area must match the pentagon's area of 10.
-	const Vector<VectorN> simplex_vertices = mesh->get_vertices();
+	const Vector<VectorN> simplex_vertex_positions = mesh->get_vertex_positions();
 	double total_area = 0.0;
 	for (int64_t simplex_start = 0; simplex_start < simplex_indices.size(); simplex_start += 3) {
 		Vector<VectorN> edges = {
-			VectorND::subtract(simplex_vertices[simplex_indices[simplex_start + 1]], simplex_vertices[simplex_indices[simplex_start]]),
-			VectorND::subtract(simplex_vertices[simplex_indices[simplex_start + 2]], simplex_vertices[simplex_indices[simplex_start]]),
+			VectorND::subtract(simplex_vertex_positions[simplex_indices[simplex_start + 1]], simplex_vertex_positions[simplex_indices[simplex_start]]),
+			VectorND::subtract(simplex_vertex_positions[simplex_indices[simplex_start + 2]], simplex_vertex_positions[simplex_indices[simplex_start]]),
 		};
 		total_area += VectorND::length(VectorND::perpendicular(edges)) / 2.0;
 	}
@@ -858,13 +858,13 @@ TEST_CASE("[PolyMeshND] Conformed and interior cells") {
 			VectorN{ 2.0, 2.0, 0.0 },
 			VectorN{ 0.0, 2.0, 0.0 },
 		};
-		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_poly_cell_vertex_positions(vertices);
 		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 1, 2, 3, 4 });
 		mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
 		CHECK(mesh->is_poly_mesh_data_valid());
-		CHECK_MESSAGE(mesh->get_simplex_cell_indices().size() == 2 * 3, "The face must decompose into 2 simplexes, with the zero-measure one skipped.");
+		CHECK_MESSAGE(mesh->get_simplex_cell_vertex_indices().size() == 2 * 3, "The face must decompose into 2 simplexes, with the zero-measure one skipped.");
 		const Vector<VectorN> simplex_normals = mesh->get_simplex_cell_boundary_normals();
 		for (int64_t simplex_index = 0; simplex_index < simplex_normals.size(); simplex_index++) {
 			CHECK_MESSAGE(!VectorND::is_zero_approx(simplex_normals[simplex_index]), "Every emitted simplex must have a nonzero normal.");
@@ -888,13 +888,13 @@ TEST_CASE("[PolyMeshND] Conformed and interior cells") {
 			VectorN{ 0.0, 2.0, 0.0 },
 			VectorN{ 0.0, 1.0, 0.0 },
 		};
-		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_poly_cell_vertex_positions(vertices);
 		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 0, 7 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 1, 2, 3, 4, 5, 6, 7 });
 		mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
 		CHECK(mesh->is_poly_mesh_data_valid());
-		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_vertex_indices();
 		CHECK_MESSAGE(simplex_indices.size() >= 4 * 3, "The face must decompose into at least 4 simplexes to cover its area.");
 		const Vector<VectorN> simplex_normals = mesh->get_simplex_cell_boundary_normals();
 		for (int64_t simplex_index = 0; simplex_index < simplex_normals.size(); simplex_index++) {
@@ -924,7 +924,7 @@ TEST_CASE("[PolyMeshND] Conformed and interior cells") {
 			VectorN{ -1.0, 0.0, 1.0 },
 			VectorN{ 0.0, 0.0, 1.0 },
 		};
-		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_poly_cell_vertex_positions(vertices);
 		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 0, 3, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 8, 5, 9, 6, 9, 6, 10, 7, 10, 4, 11, 7, 11, 8, 12, 9, 12, 10, 12, 11, 12 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 1, 2, 3 });
@@ -974,7 +974,7 @@ TEST_CASE("[PolyMeshND] Conformed and interior cells") {
 			VectorN{ 2.0, 0.0, 1.0 },
 			VectorN{ 2.0, 1.0, 1.0 },
 		};
-		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_poly_cell_vertex_positions(vertices);
 		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 3, 2, 3, 0, 2, 4, 5, 5, 7, 6, 7, 4, 6, 8, 9, 9, 11, 10, 11, 8, 10, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 9, 6, 10, 7, 11 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 1, 2, 3 }); // Left square at X = 0.
@@ -993,7 +993,7 @@ TEST_CASE("[PolyMeshND] Conformed and interior cells") {
 		volumes.append(PackedInt32Array{ 2, 7, 1, 8, 9, 10 });
 		mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces, volumes });
 		CHECK(mesh->is_poly_mesh_data_valid());
-		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
+		const PackedInt32Array simplex_indices = mesh->get_simplex_cell_vertex_indices();
 		CHECK_MESSAGE(simplex_indices.size() == 20 * 3, "Only the 10 outer faces must decompose, into 2 simplexes each.");
 		for (int32_t simplex_index = 0; simplex_index < (int32_t)(simplex_indices.size() / 3); simplex_index++) {
 			CHECK_MESSAGE(mesh->get_source_poly_cell_for_simplex_cell(simplex_index) != 1, "The interior boundary cell shared by both volumetric cells must generate no simplexes.");

@@ -48,7 +48,7 @@ TEST_CASE("[ArrayPolyMeshND] Append vertices, edges, and poly cells") {
 		CHECK(mesh->append_vertex(VectorN{ 1.0, 2.0, 3.0, 4.0 }) == 0);
 		CHECK(mesh->append_vertex(VectorN{ 5.0, 6.0, 7.0, 8.0 }) == 1);
 		CHECK_MESSAGE(mesh->append_vertex(VectorN{ 1.0, 2.0, 3.0, 4.0 }) == 0, "Appending a duplicate vertex should return the existing index.");
-		CHECK(mesh->get_poly_cell_vertices().size() == 2);
+		CHECK(mesh->get_poly_cell_vertex_positions().size() == 2);
 		CHECK_MESSAGE(mesh->append_vertex(VectorN{ 1.0, 2.0, 3.0, 4.0 }, false) == 2, "Appending without deduplication should append a new vertex.");
 		CHECK(mesh->append_edge_indices(1, 0) == 0);
 		CHECK_MESSAGE((mesh->get_edge_indices() == PackedInt32Array{ 0, 1 }), "Edges should be stored with sorted vertex indices.");
@@ -74,7 +74,7 @@ TEST_CASE("[ArrayPolyMeshND] Delete poly elements") {
 	SUBCASE("Deleting a vertex cascades to edges, faces, and cells") {
 		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_tetrahedron_cell_mesh();
 		mesh->delete_poly_element(0, 3);
-		CHECK(mesh->get_poly_cell_vertices().size() == 3);
+		CHECK(mesh->get_poly_cell_vertex_positions().size() == 3);
 		CHECK_MESSAGE((mesh->get_edge_indices() == PackedInt32Array{ 0, 1, 0, 2, 1, 2 }), "Edges referencing the deleted vertex should be deleted, and the rest reindexed.");
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = mesh->get_poly_cell_indices();
 		REQUIRE_MESSAGE(poly_cell_indices.size() == 1, "The cell dimension should be trimmed once it becomes empty.");
@@ -179,7 +179,7 @@ TEST_CASE("[ArrayPolyMeshND] Flat and smooth shading normals") {
 		Ref<BoxPolyMeshND> box = TestPolyMeshND::make_box_poly_mesh(4);
 		Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
 		mesh->set_smooth_shading_normals();
-		const Vector<VectorN> vertices = mesh->get_poly_cell_vertices();
+		const Vector<VectorN> vertex_positions = mesh->get_poly_cell_vertex_positions();
 		const Vector<PackedInt32Array> cell_vertex_indices = mesh->get_all_boundary_cell_vertex_indices(false);
 		const Vector<Vector<VectorN>> vertex_normals = mesh->get_poly_cell_vertex_normals();
 		REQUIRE(vertex_normals.size() == 8);
@@ -188,7 +188,7 @@ TEST_CASE("[ArrayPolyMeshND] Flat and smooth shading normals") {
 			for (int64_t vertex_in_cell = 0; vertex_in_cell < cell_vertex_indices[cell_index].size(); vertex_in_cell++) {
 				// Each box vertex is used by cells whose normals are the signed axes matching
 				// the vertex's coordinate signs, so the average is the corner diagonal.
-				const VectorN expected = VectorND::normalized(vertices[cell_vertex_indices[cell_index][vertex_in_cell]]);
+				const VectorN expected = VectorND::normalized(vertex_positions[cell_vertex_indices[cell_index][vertex_in_cell]]);
 				CHECK_MESSAGE(VectorND::is_equal_approx(vertex_normals[cell_index][vertex_in_cell], expected), "Smooth box normals must point along the corner diagonals.");
 			}
 		}
@@ -374,10 +374,10 @@ TEST_CASE("[ArrayPolyMeshND] Transform texture map and vertices") {
 	SUBCASE("Transforming vertices applies the transform") {
 		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_tetrahedron_cell_mesh();
 		mesh->transform_vertices(TransformND::from_position(VectorN{ 1.0, 2.0, 3.0, 4.0 }));
-		const Vector<VectorN> vertices = mesh->get_poly_cell_vertices();
-		REQUIRE(vertices.size() == 4);
-		CHECK(VectorND::is_equal_approx(vertices[0], VectorN{ 1.0, 2.0, 3.0, 4.0 }));
-		CHECK(VectorND::is_equal_approx(vertices[1], VectorN{ 2.0, 2.0, 3.0, 4.0 }));
+		const Vector<VectorN> vertex_positions = mesh->get_poly_cell_vertex_positions();
+		REQUIRE(vertex_positions.size() == 4);
+		CHECK(VectorND::is_equal_approx(vertex_positions[0], VectorN{ 1.0, 2.0, 3.0, 4.0 }));
+		CHECK(VectorND::is_equal_approx(vertex_positions[1], VectorN{ 2.0, 2.0, 3.0, 4.0 }));
 		CHECK(mesh->is_poly_mesh_data_valid());
 	}
 }
@@ -387,9 +387,9 @@ TEST_CASE("[ArrayPolyMeshND] Merge meshes") {
 		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_tetrahedron_cell_mesh();
 		Ref<ArrayPolyMeshND> other = TestPolyMeshND::make_tetrahedron_cell_mesh();
 		mesh->merge_with(other, TransformND::from_position(VectorN{ 10.0, 0.0, 0.0, 0.0 }));
-		const Vector<VectorN> vertices = mesh->get_poly_cell_vertices();
-		REQUIRE(vertices.size() == 8);
-		CHECK(VectorND::is_equal_approx(vertices[4], VectorN{ 10.0, 0.0, 0.0, 0.0 }));
+		const Vector<VectorN> vertex_positions = mesh->get_poly_cell_vertex_positions();
+		REQUIRE(vertex_positions.size() == 8);
+		CHECK(VectorND::is_equal_approx(vertex_positions[4], VectorN{ 10.0, 0.0, 0.0, 0.0 }));
 		const PackedInt32Array edge_indices = mesh->get_edge_indices();
 		REQUIRE(edge_indices.size() == 24);
 		CHECK_MESSAGE(edge_indices[12] == 4, "The merged edges must reference the offset vertices.");
@@ -436,7 +436,7 @@ TEST_CASE("[ArrayPolyMeshND] Merge meshes") {
 		other->append_edge_indices(1, 2);
 		other->append_poly_cell(2, PackedInt32Array{ 0, 2, 1 }, false);
 		mesh->merge_with(other);
-		CHECK(mesh->get_poly_cell_vertices().size() == 7);
+		CHECK(mesh->get_poly_cell_vertex_positions().size() == 7);
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = mesh->get_poly_cell_indices();
 		REQUIRE(poly_cell_indices.size() == 2);
 		CHECK(poly_cell_indices[0].size() == 5);
@@ -458,11 +458,11 @@ TEST_CASE("[ArrayPolyMeshND] Deduplicate all elements") {
 	mesh->append_vertex(VectorN{ 0.0, 0.0, 1.0, 0.0 }, false); // Duplicate of vertex 3.
 	mesh->append_edge_indices(2, 4, false); // Becomes a duplicate of edge 5 (2, 3) after vertex dedup.
 	mesh->append_poly_cell(2, PackedInt32Array{ 3, 5, 4 }, false); // Duplicate of face 3.
-	CHECK(mesh->get_poly_cell_vertices().size() == 5);
+	CHECK(mesh->get_poly_cell_vertex_positions().size() == 5);
 	CHECK(mesh->get_edge_indices().size() == 14);
 	CHECK(mesh->get_poly_cell_indices()[0].size() == 5);
 	mesh->deduplicate_all_elements();
-	CHECK(mesh->get_poly_cell_vertices().size() == 4);
+	CHECK(mesh->get_poly_cell_vertex_positions().size() == 4);
 	CHECK(mesh->get_edge_indices().size() == 12);
 	const Vector<Vector<PackedInt32Array>> poly_cell_indices = mesh->get_poly_cell_indices();
 	CHECK(poly_cell_indices[0].size() == 4);
@@ -527,7 +527,7 @@ TEST_CASE("[ArrayPolyMeshND] Getters and setters") {
 	SUBCASE("Geometry round trip") {
 		Ref<ArrayPolyMeshND> copy;
 		copy.instantiate();
-		copy->set_poly_cell_vertices(mesh->get_poly_cell_vertices());
+		copy->set_poly_cell_vertex_positions(mesh->get_poly_cell_vertex_positions());
 		copy->set_edge_vertex_indices(mesh->get_edge_indices());
 		copy->set_poly_cell_indices(mesh->get_poly_cell_indices());
 		CHECK((copy->get_edge_indices() == mesh->get_edge_indices()));
@@ -541,14 +541,14 @@ TEST_CASE("[ArrayPolyMeshND] Make double sided preserves pentagon triangulation"
 	// double-sided adds a flipped copy, whose triangulation must still cover the pentagon.
 	Ref<ArrayPolyMeshND> mesh;
 	mesh.instantiate();
-	Vector<VectorN> vertices = {
+	Vector<VectorN> vertex_positions = {
 		VectorN{ 0.0, 0.0, 0.0 },
 		VectorN{ 2.0, 0.0, 0.0 },
 		VectorN{ 3.0, 2.0, 0.0 },
 		VectorN{ 1.0, 4.0, 0.0 },
 		VectorN{ -1.0, 2.0, 0.0 },
 	};
-	mesh->set_poly_cell_vertices(vertices);
+	mesh->set_poly_cell_vertex_positions(vertex_positions);
 	mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4 });
 	Vector<PackedInt32Array> faces;
 	faces.append(PackedInt32Array{ 0, 1, 2, 3, 4 });
@@ -558,13 +558,13 @@ TEST_CASE("[ArrayPolyMeshND] Make double sided preserves pentagon triangulation"
 	mesh->make_double_sided(true);
 	CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The double-sided mesh must have valid poly mesh data.");
 	REQUIRE(mesh->get_poly_cell_indices()[0].size() == 2);
-	const PackedInt32Array simplex_indices = mesh->get_simplex_cell_indices();
-	const Vector<VectorN> simplex_vertices = mesh->get_vertices();
+	const PackedInt32Array simplex_indices = mesh->get_simplex_cell_vertex_indices();
+	const Vector<VectorN> simplex_vertex_positions = mesh->get_vertex_positions();
 	double total_area = 0.0;
 	for (int64_t simplex_start = 0; simplex_start < simplex_indices.size(); simplex_start += 3) {
 		Vector<VectorN> edges = {
-			VectorND::subtract(simplex_vertices[simplex_indices[simplex_start + 1]], simplex_vertices[simplex_indices[simplex_start]]),
-			VectorND::subtract(simplex_vertices[simplex_indices[simplex_start + 2]], simplex_vertices[simplex_indices[simplex_start]]),
+			VectorND::subtract(simplex_vertex_positions[simplex_indices[simplex_start + 1]], simplex_vertex_positions[simplex_indices[simplex_start]]),
+			VectorND::subtract(simplex_vertex_positions[simplex_indices[simplex_start + 2]], simplex_vertex_positions[simplex_indices[simplex_start]]),
 		};
 		total_area += VectorND::length(VectorND::perpendicular(edges)) / 2.0;
 	}
@@ -577,12 +577,12 @@ TEST_CASE("[ArrayPolyMeshND] Duplicate preserves the normals and texture map dic
 	// the dictionaries are bound as properties on all Godot versions.
 	Ref<ArrayPolyMeshND> mesh;
 	mesh.instantiate();
-	Vector<VectorN> vertices = {
+	Vector<VectorN> vertex_positions = {
 		VectorN{ 0.0, 0.0, 0.0, 0.0 },
 		VectorN{ 1.0, 0.0, 0.0, 0.0 },
 		VectorN{ 0.0, 1.0, 0.0, 0.0 },
 	};
-	mesh->set_poly_cell_vertices(vertices);
+	mesh->set_poly_cell_vertex_positions(vertex_positions);
 	mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 0, 2 });
 	Vector<PackedInt32Array> faces;
 	faces.append(PackedInt32Array{ 0, 1, 2 });

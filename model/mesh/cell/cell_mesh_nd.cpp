@@ -47,15 +47,15 @@ Vector<PackedInt32Array> CellMeshND::_generate_combinations(const PackedInt32Arr
 }
 
 // Find unique opposing faces of the cell that are not coplanar with the pivot.
-Vector<PackedInt32Array> CellMeshND::_determine_opposing_faces(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_poly_cell_indices_without_pivot, const int p_dimension, const int p_pivot_index, const Vector<VectorN> &p_poly_cell_normals, Vector<VectorN> &r_out_normals) {
+Vector<PackedInt32Array> CellMeshND::_determine_opposing_faces(const Vector<VectorN> &p_vertex_positions, const PackedInt32Array &p_poly_cell_indices_without_pivot, const int p_dimension, const int p_pivot_index, const Vector<VectorN> &p_poly_cell_normals, Vector<VectorN> &r_out_normals) {
 	Vector<PackedInt32Array> combinations = _generate_combinations(p_poly_cell_indices_without_pivot, p_dimension);
-	const VectorN pivot_vertex = p_vertices[p_pivot_index];
+	const VectorN pivot_vertex_position = p_vertex_positions[p_pivot_index];
 	Vector<PackedInt32Array> opposing_faces;
 	for (const PackedInt32Array &combination : combinations) {
 		Vector<VectorN> plane_points;
 		plane_points.resize(combination.size() + p_poly_cell_normals.size());
 		for (int64_t i = 0; i < combination.size(); i++) {
-			plane_points.set(i, p_vertices[combination[i]]);
+			plane_points.set(i, p_vertex_positions[combination[i]]);
 		}
 		for (int64_t i = 0; i < p_poly_cell_normals.size(); i++) {
 			plane_points.set(i + combination.size(), VectorND::add(plane_points[0], p_poly_cell_normals[i]));
@@ -64,7 +64,7 @@ Vector<PackedInt32Array> CellMeshND::_determine_opposing_faces(const Vector<Vect
 		if (plane.is_null()) {
 			continue; // Skip invalid planes.
 		}
-		const double pivot_distance = plane->distance_to(pivot_vertex);
+		const double pivot_distance = plane->distance_to(pivot_vertex_position);
 		if (Math::is_zero_approx(pivot_distance)) {
 			continue; // Skip coplanar faces.
 		}
@@ -76,7 +76,7 @@ Vector<PackedInt32Array> CellMeshND::_determine_opposing_faces(const Vector<Vect
 			if (combination.has(p_poly_cell_indices_without_pivot[i])) {
 				continue;
 			}
-			const VectorN vertex = p_vertices[p_poly_cell_indices_without_pivot[i]];
+			const VectorN vertex = p_vertex_positions[p_poly_cell_indices_without_pivot[i]];
 			const double vertex_distance = plane->distance_to(vertex);
 			// Any vertex that is coplanar with this simplex is part of a larger face.
 			if (Math::is_zero_approx(vertex_distance)) {
@@ -110,24 +110,24 @@ void CellMeshND::populate_inverse_metric_cache() {
 	const int64_t dimension = get_dimension();
 	ERR_FAIL_COND_MSG(dimension < 2, "CellMeshND: Cannot populate closest-point cache for a mesh with less than 2 dimensions.");
 	ERR_FAIL_COND_MSG(get_indices_per_simplex_cell() != dimension, "CellMeshND: Cannot populate closest-point cache for a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices.");
-	const PackedInt32Array &simplex_cell_indices = get_simplex_cell_indices();
-	const int64_t simplex_count = simplex_cell_indices.size() / dimension;
+	const PackedInt32Array &simplex_cell_vertex_indices = get_simplex_cell_vertex_indices();
+	const int64_t simplex_count = simplex_cell_vertex_indices.size() / dimension;
 	const int64_t edge_count = dimension - 1;
 	const int64_t metric_size = edge_count * (edge_count + 1) / 2;
 	if (_nearest_simplex_inverse_metric_cache.size() == simplex_count * metric_size) {
 		return;
 	}
 	_nearest_simplex_inverse_metric_cache.resize(simplex_count * metric_size);
-	const Vector<VectorN> &vertices = get_vertices();
+	const Vector<VectorN> &vertex_positions = get_vertex_positions();
 	Vector<VectorN> edges;
 	edges.resize(edge_count);
 	VectorN metric;
 	metric.resize(metric_size);
 	for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
 		// These indices are guaranteed to be within bounds due to mesh validation.
-		const VectorN vert0 = VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension]], dimension);
+		const VectorN vert0 = VectorND::with_dimension(vertex_positions[simplex_cell_vertex_indices[simplex_index * dimension]], dimension);
 		for (int64_t edge_index = 0; edge_index < edge_count; edge_index++) {
-			const VectorN vert = VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension + edge_index + 1]], dimension);
+			const VectorN vert = VectorND::with_dimension(vertex_positions[simplex_cell_vertex_indices[simplex_index * dimension + edge_index + 1]], dimension);
 			edges.set(edge_index, VectorND::subtract(vert, vert0));
 		}
 		// Pack the Gram metric matrix G_ij = e_i · e_j in row-major upper-triangular order.
@@ -155,15 +155,15 @@ double CellMeshND::get_signed_distance_to_mesh(const VectorN &p_local_point, Vec
 	const int64_t dimension = get_dimension();
 	ERR_FAIL_COND_V_MSG(dimension < 2, Math_INF, "CellMeshND: Cannot get signed distance to a mesh with less than 2 dimensions.");
 	ERR_FAIL_COND_V_MSG(get_indices_per_simplex_cell() != dimension, Math_INF, "CellMeshND: Cannot get signed distance to a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices.");
-	const PackedInt32Array &simplex_cell_indices = get_simplex_cell_indices();
-	const int64_t simplex_count = simplex_cell_indices.size() / dimension;
+	const PackedInt32Array &simplex_cell_vertex_indices = get_simplex_cell_vertex_indices();
+	const int64_t simplex_count = simplex_cell_vertex_indices.size() / dimension;
 	const int64_t metric_size = (dimension - 1) * dimension / 2;
 	if (_nearest_simplex_inverse_metric_cache.size() != simplex_count * metric_size) {
 		populate_inverse_metric_cache();
 	}
 	ERR_FAIL_COND_V_MSG(_nearest_simplex_inverse_metric_cache.size() != simplex_count * metric_size, Math_INF, "CellMeshND: Closest-point cache is invalid for this mesh.");
 	ERR_FAIL_COND_V_MSG(simplex_count == 0, Math_INF, "CellMeshND: Cannot get signed distance to a mesh with zero simplex cells.");
-	const Vector<VectorN> &vertices = get_vertices();
+	const Vector<VectorN> &vertex_positions = get_vertex_positions();
 	const VectorN local_point = VectorND::with_dimension(p_local_point, dimension);
 	// Iterate over all simplex cells to find the nearest point on the mesh, keeping track of the best one.
 	// Unlike the fixed-size candidate buffer in the 4D module, this uses growable arrays, because the
@@ -174,8 +174,8 @@ double CellMeshND::get_signed_distance_to_mesh(const VectorN &p_local_point, Vec
 	double best_distance_sq = Math_INF;
 	int best_simplex_index = -1;
 	bool best_proj_inside = false;
-	Vector<VectorN> simplex_vertices;
-	simplex_vertices.resize(dimension);
+	Vector<VectorN> simplex_vertex_positions;
+	simplex_vertex_positions.resize(dimension);
 	// Future: This part could be accelerated with spatial partitioning, and/or accelerated with threading.
 	// But those optimizations add a lot of complexity and would only benefit larger meshes.
 	for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
@@ -183,9 +183,9 @@ double CellMeshND::get_signed_distance_to_mesh(const VectorN &p_local_point, Vec
 		double min_distance_sq = 0.0;
 		bool proj_inside = false;
 		for (int64_t vertex_num = 0; vertex_num < dimension; vertex_num++) {
-			simplex_vertices.set(vertex_num, VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension + vertex_num]], dimension));
+			simplex_vertex_positions.set(vertex_num, VectorND::with_dimension(vertex_positions[simplex_cell_vertex_indices[simplex_index * dimension + vertex_num]], dimension));
 		}
-		GeometryND::get_nearest_point_on_simplex_barycentric(simplex_vertices, local_point, _nearest_simplex_inverse_metric_cache, simplex_index, nearest_on_cell, min_distance_sq, proj_inside);
+		GeometryND::get_nearest_point_on_simplex_barycentric(simplex_vertex_positions, local_point, _nearest_simplex_inverse_metric_cache, simplex_index, nearest_on_cell, min_distance_sq, proj_inside);
 		const bool less_dist = min_distance_sq < best_distance_sq;
 		// If the projection is outside the cell, but the projected point is the same distance as what we
 		// already found, then we may have multiple candidates for the closest cell to this point.
@@ -265,26 +265,26 @@ bool CellMeshND::raycast_intersects_fast(const VectorN &p_local_from, const Vect
 	const int64_t dimension = get_dimension();
 	ERR_FAIL_COND_V_MSG(dimension < 2, false, "CellMeshND: Cannot raycast on a mesh with less than 2 dimensions.");
 	ERR_FAIL_COND_V_MSG(get_indices_per_simplex_cell() != dimension, false, "CellMeshND: Cannot raycast on a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices.");
-	const PackedInt32Array &simplex_cell_indices = get_simplex_cell_indices();
-	const int64_t simplex_count = simplex_cell_indices.size() / dimension;
+	const PackedInt32Array &simplex_cell_vertex_indices = get_simplex_cell_vertex_indices();
+	const int64_t simplex_count = simplex_cell_vertex_indices.size() / dimension;
 	if (simplex_count == 0) {
 		return false; // No simplex cells to raycast against.
 	}
 	const int64_t metric_size = (dimension - 1) * dimension / 2;
 	const PackedFloat64Array &inverse_metric_cache = _nearest_simplex_inverse_metric_cache;
 	ERR_FAIL_COND_V_MSG(inverse_metric_cache.size() != simplex_count * metric_size, false, "CellMeshND: Closest-point cache is invalid for this mesh. Call `populate_inverse_metric_cache()` before calling `raycast_intersects_fast()`.");
-	const Vector<VectorN> &vertices = get_vertices();
+	const Vector<VectorN> &vertex_positions = get_vertex_positions();
 	const Vector<VectorN> &boundary_normals = get_simplex_cell_boundary_normals();
 	const int64_t boundary_normals_count = boundary_normals.size();
 	const VectorN local_from = VectorND::with_dimension(p_local_from, dimension);
 	const VectorN local_direction = VectorND::with_dimension(p_local_direction, dimension);
-	Vector<VectorN> simplex_vertices;
-	simplex_vertices.resize(dimension);
+	Vector<VectorN> simplex_vertex_positions;
+	simplex_vertex_positions.resize(dimension);
 	// Iterate through all simplex cells to find any ray intersection.
 	for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
 		// These indices are guaranteed to be within bounds due to mesh validation.
 		for (int64_t vertex_num = 0; vertex_num < dimension; vertex_num++) {
-			simplex_vertices.set(vertex_num, VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension + vertex_num]], dimension));
+			simplex_vertex_positions.set(vertex_num, VectorND::with_dimension(vertex_positions[simplex_cell_vertex_indices[simplex_index * dimension + vertex_num]], dimension));
 		}
 		VectorN normal;
 		if (simplex_count == boundary_normals_count) {
@@ -294,7 +294,7 @@ bool CellMeshND::raycast_intersects_fast(const VectorN &p_local_from, const Vect
 			Vector<VectorN> edges;
 			edges.resize(dimension - 1);
 			for (int64_t edge_index = 0; edge_index < dimension - 1; edge_index++) {
-				edges.set(edge_index, VectorND::subtract(simplex_vertices[edge_index + 1], simplex_vertices[0]));
+				edges.set(edge_index, VectorND::subtract(simplex_vertex_positions[edge_index + 1], simplex_vertex_positions[0]));
 			}
 			normal = VectorND::normalized(VectorND::perpendicular(edges));
 		}
@@ -303,7 +303,7 @@ bool CellMeshND::raycast_intersects_fast(const VectorN &p_local_from, const Vect
 		if (Math::is_zero_approx(denominator)) {
 			continue; // The ray is parallel to the hyperplane of this simplex cell.
 		}
-		const double plane_intersection_factor = (VectorND::dot(normal, simplex_vertices[0]) - VectorND::dot(normal, local_from)) / denominator;
+		const double plane_intersection_factor = (VectorND::dot(normal, simplex_vertex_positions[0]) - VectorND::dot(normal, local_from)) / denominator;
 		if (plane_intersection_factor < 0.0) {
 			continue; // No intersection with the hyperplane of this simplex cell.
 		}
@@ -312,7 +312,7 @@ bool CellMeshND::raycast_intersects_fast(const VectorN &p_local_from, const Vect
 		}
 		// Check if this candidate intersection is inside the simplex cell.
 		const VectorN intersection_point = VectorND::add(local_from, VectorND::multiply_scalar(local_direction, plane_intersection_factor));
-		const bool hit = GeometryND::is_point_inside_simplex_barycentric(simplex_vertices, intersection_point, inverse_metric_cache, simplex_index);
+		const bool hit = GeometryND::is_point_inside_simplex_barycentric(simplex_vertex_positions, intersection_point, inverse_metric_cache, simplex_index);
 		if (hit) {
 			// For this fast version, we only care if there is any intersection, so we can return true immediately.
 			return true;
@@ -328,21 +328,21 @@ Dictionary CellMeshND::raycast_intersects(const VectorN &p_local_from, const Vec
 	const int64_t dimension = get_dimension();
 	ERR_FAIL_COND_V_MSG(dimension < 2, result, "CellMeshND: Cannot raycast on a mesh with less than 2 dimensions.");
 	ERR_FAIL_COND_V_MSG(get_indices_per_simplex_cell() != dimension, result, "CellMeshND: Cannot raycast on a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices.");
-	const PackedInt32Array &simplex_cell_indices = get_simplex_cell_indices();
-	const int64_t simplex_count = simplex_cell_indices.size() / dimension;
+	const PackedInt32Array &simplex_cell_vertex_indices = get_simplex_cell_vertex_indices();
+	const int64_t simplex_count = simplex_cell_vertex_indices.size() / dimension;
 	if (simplex_count == 0) {
 		return result; // No simplex cells to raycast against.
 	}
 	const int64_t metric_size = (dimension - 1) * dimension / 2;
 	const PackedFloat64Array &inverse_metric_cache = _nearest_simplex_inverse_metric_cache;
 	ERR_FAIL_COND_V_MSG(inverse_metric_cache.size() != simplex_count * metric_size, result, "CellMeshND: Closest-point cache is invalid for this mesh. Call `populate_inverse_metric_cache()` before calling `raycast_intersects()`.");
-	const Vector<VectorN> &vertices = get_vertices();
+	const Vector<VectorN> &vertex_positions = get_vertex_positions();
 	const Vector<VectorN> &boundary_normals = get_simplex_cell_boundary_normals();
 	const int64_t boundary_normals_count = boundary_normals.size();
 	const VectorN local_from = VectorND::with_dimension(p_local_from, dimension);
 	const VectorN local_direction = VectorND::with_dimension(p_local_direction, dimension);
-	Vector<VectorN> simplex_vertices;
-	simplex_vertices.resize(dimension);
+	Vector<VectorN> simplex_vertex_positions;
+	simplex_vertex_positions.resize(dimension);
 	VectorN best_hit_normal;
 	double best_distance = p_max_distance;
 	int32_t best_simplex_cell_index = -1;
@@ -350,7 +350,7 @@ Dictionary CellMeshND::raycast_intersects(const VectorN &p_local_from, const Vec
 	for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
 		// These indices are guaranteed to be within bounds due to mesh validation.
 		for (int64_t vertex_num = 0; vertex_num < dimension; vertex_num++) {
-			simplex_vertices.set(vertex_num, VectorND::with_dimension(vertices[simplex_cell_indices[simplex_index * dimension + vertex_num]], dimension));
+			simplex_vertex_positions.set(vertex_num, VectorND::with_dimension(vertex_positions[simplex_cell_vertex_indices[simplex_index * dimension + vertex_num]], dimension));
 		}
 		VectorN normal;
 		if (simplex_count == boundary_normals_count) {
@@ -360,7 +360,7 @@ Dictionary CellMeshND::raycast_intersects(const VectorN &p_local_from, const Vec
 			Vector<VectorN> edges;
 			edges.resize(dimension - 1);
 			for (int64_t edge_index = 0; edge_index < dimension - 1; edge_index++) {
-				edges.set(edge_index, VectorND::subtract(simplex_vertices[edge_index + 1], simplex_vertices[0]));
+				edges.set(edge_index, VectorND::subtract(simplex_vertex_positions[edge_index + 1], simplex_vertex_positions[0]));
 			}
 			normal = VectorND::normalized(VectorND::perpendicular(edges));
 		}
@@ -369,7 +369,7 @@ Dictionary CellMeshND::raycast_intersects(const VectorN &p_local_from, const Vec
 		if (Math::is_zero_approx(denominator)) {
 			continue; // The ray is parallel to the hyperplane of this simplex cell.
 		}
-		const double plane_intersection_factor = (VectorND::dot(normal, simplex_vertices[0]) - VectorND::dot(normal, local_from)) / denominator;
+		const double plane_intersection_factor = (VectorND::dot(normal, simplex_vertex_positions[0]) - VectorND::dot(normal, local_from)) / denominator;
 		if (plane_intersection_factor < 0.0) {
 			continue; // No intersection with the hyperplane of this simplex cell.
 		}
@@ -378,7 +378,7 @@ Dictionary CellMeshND::raycast_intersects(const VectorN &p_local_from, const Vec
 		}
 		// Check if this candidate intersection is inside the simplex cell.
 		const VectorN intersection_point = VectorND::add(local_from, VectorND::multiply_scalar(local_direction, plane_intersection_factor));
-		const bool hit = GeometryND::is_point_inside_simplex_barycentric(simplex_vertices, intersection_point, inverse_metric_cache, simplex_index);
+		const bool hit = GeometryND::is_point_inside_simplex_barycentric(simplex_vertex_positions, intersection_point, inverse_metric_cache, simplex_index);
 		if (hit) {
 			best_hit_normal = normal;
 			best_distance = plane_intersection_factor;
@@ -406,7 +406,7 @@ void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 	const int dimension = get_dimension();
 	const MaterialND::ColorSourceFlagsND albedo_source = p_material->get_albedo_source_flags();
 	if (albedo_source & MaterialND::COLOR_SOURCE_FLAG_PER_CELL) {
-		const PackedInt32Array cell_indices = get_simplex_cell_indices();
+		const PackedInt32Array cell_indices = get_simplex_cell_vertex_indices();
 		PackedColorArray color_array = p_material->get_albedo_color_array();
 		const int64_t vertices_per_cell = dimension + 1;
 		const int64_t cell_count = cell_indices.size() / vertices_per_cell;
@@ -420,8 +420,8 @@ void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 	Ref<ArrayCellMeshND> array_mesh;
 	array_mesh.instantiate();
-	array_mesh->set_vertices(get_vertices());
-	array_mesh->set_simplex_cell_indices(get_simplex_cell_indices());
+	array_mesh->set_vertex_positions(get_vertex_positions());
+	array_mesh->set_simplex_cell_vertex_indices(get_simplex_cell_vertex_indices());
 	array_mesh->set_cell_boundary_normals(get_simplex_cell_boundary_normals());
 	array_mesh->set_simplex_cell_vertex_normals(get_simplex_cell_vertex_normals());
 	array_mesh->set_material(get_material());
@@ -435,7 +435,7 @@ Ref<CellMeshND> CellMeshND::to_cell_mesh() {
 int CellMeshND::get_simplex_cell_count() {
 	const int dimension = get_dimension();
 	ERR_FAIL_COND_V_MSG(dimension < 1, -1, "CellMeshND: Mesh is empty or 0-dimensional, cannot determine simplex cell count.");
-	const PackedInt32Array cell_indices = get_simplex_cell_indices();
+	const PackedInt32Array cell_indices = get_simplex_cell_vertex_indices();
 	ERR_FAIL_COND_V_MSG(cell_indices.size() % dimension != 0, -1, "CellMeshND: Cell indices size must be a multiple of the dimension.");
 	return cell_indices.size() / dimension;
 }
@@ -444,20 +444,20 @@ int CellMeshND::get_indices_per_simplex_cell() {
 	return get_dimension();
 }
 
-PackedInt32Array CellMeshND::get_simplex_cell_indices() {
+PackedInt32Array CellMeshND::get_simplex_cell_vertex_indices() {
 	PackedInt32Array indices;
-	GDVIRTUAL_CALL(_get_simplex_cell_indices, indices);
+	GDVIRTUAL_CALL(_get_simplex_cell_vertex_indices, indices);
 	return indices;
 }
 
 Vector<VectorN> CellMeshND::get_simplex_cell_positions() {
 	if (_cell_positions_cache.is_empty()) {
-		const PackedInt32Array cell_indices = get_simplex_cell_indices();
-		const Vector<VectorN> vertices = get_vertices();
-		const int32_t vertices_count = vertices.size();
+		const PackedInt32Array cell_indices = get_simplex_cell_vertex_indices();
+		const Vector<VectorN> vertex_positions = get_vertex_positions();
+		const int32_t vertices_count = vertex_positions.size();
 		for (const int cell_index : cell_indices) {
 			ERR_FAIL_INDEX_V(cell_index, vertices_count, _cell_positions_cache);
-			_cell_positions_cache.append(vertices[cell_index]);
+			_cell_positions_cache.append(vertex_positions[cell_index]);
 		}
 	}
 	return _cell_positions_cache;
@@ -564,22 +564,22 @@ TypedArray<VectorN> CellMeshND::get_simplex_cell_positions_bind() {
 // 3. For each face, recursively call this function with the face as the new cell.
 // 4. Each of the returned simplexes will have the pivot index prepended to it.
 // This function has atrocious time complexity, so avoid using it on large cells or at runtime.
-Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_poly_cell_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_poly_cell_normals) {
+Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertex_positions, const PackedInt32Array &p_poly_cell_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_poly_cell_normals) {
 	Vector<PackedInt32Array> simplexes;
 	if (p_poly_cell_indices.size() < 2) {
 		return simplexes; // No simplexes can be formed.
 	}
-	PackedInt32Array without_pivot = p_poly_cell_indices;
+	PackedInt32Array cell_ind_without_pivot = p_poly_cell_indices;
 	int pivot_item;
 	if (p_poly_cell_indices[0] == p_last_pivot) {
 		pivot_item = p_poly_cell_indices[1];
-		without_pivot.remove_at(1);
+		cell_ind_without_pivot.remove_at(1);
 	} else {
 		pivot_item = p_poly_cell_indices[0];
-		without_pivot.remove_at(0);
+		cell_ind_without_pivot.remove_at(0);
 	}
 	Vector<VectorN> out_normals;
-	Vector<PackedInt32Array> opposing_faces = _determine_opposing_faces(p_vertices, without_pivot, p_dimension, pivot_item, p_poly_cell_normals, out_normals);
+	Vector<PackedInt32Array> opposing_faces = _determine_opposing_faces(p_vertex_positions, cell_ind_without_pivot, p_dimension, pivot_item, p_poly_cell_normals, out_normals);
 	for (int i = 0; i < opposing_faces.size(); i++) {
 		PackedInt32Array face = opposing_faces[i];
 		if (face.size() == p_dimension) {
@@ -591,7 +591,7 @@ Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(cons
 		// This face is not a simplex, so we need to recurse.
 		Vector<VectorN> boundary_normals = p_poly_cell_normals;
 		boundary_normals.append(out_normals[i]);
-		Vector<PackedInt32Array> lower_simplexes = decompose_polytope_cell_into_simplexes(p_vertices, face, p_dimension - 1, pivot_item, boundary_normals);
+		Vector<PackedInt32Array> lower_simplexes = decompose_polytope_cell_into_simplexes(p_vertex_positions, face, p_dimension - 1, pivot_item, boundary_normals);
 		for (PackedInt32Array &lower_simplex : lower_simplexes) {
 			lower_simplex.insert(0, pivot_item);
 			simplexes.append(lower_simplex);
@@ -600,11 +600,11 @@ Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(cons
 	return simplexes;
 }
 
-PackedInt32Array CellMeshND::calculate_edge_indices_from_simplex_cell_indices(const PackedInt32Array &p_simplex_cell_indices, const int p_dimension, const bool p_deduplicate) {
+PackedInt32Array CellMeshND::calculate_edge_indices_from_simplex_cell_vertex_indices(const PackedInt32Array &p_simplex_cell_vertex_indices, const int p_dimension, const bool p_deduplicate) {
 	PackedInt32Array edge_indices;
 	ERR_FAIL_COND_V_MSG(p_dimension < 1, edge_indices, "CellMeshND: Dimension must be greater than 0.");
-	ERR_FAIL_COND_V_MSG(p_simplex_cell_indices.size() % p_dimension != 0, edge_indices, "CellMeshND: Simplex cell indices size must be a multiple of the dimension.");
-	const int cell_count = p_simplex_cell_indices.size() / p_dimension;
+	ERR_FAIL_COND_V_MSG(p_simplex_cell_vertex_indices.size() % p_dimension != 0, edge_indices, "CellMeshND: Simplex cell vertex indices size must be a multiple of the dimension.");
+	const int cell_count = p_simplex_cell_vertex_indices.size() / p_dimension;
 	// The number of edges is the triangular number of the dimension per cell.
 	const int edge_index_count = cell_count * (p_dimension * (p_dimension - 1));
 	edge_indices.resize(edge_index_count);
@@ -613,8 +613,8 @@ PackedInt32Array CellMeshND::calculate_edge_indices_from_simplex_cell_indices(co
 		const int cell_start = cell_index * p_dimension;
 		for (int i = 0; i < p_dimension; i++) {
 			for (int j = i + 1; j < p_dimension; j++) {
-				edge_indices.set(edge_index++, p_simplex_cell_indices[cell_start + i]);
-				edge_indices.set(edge_index++, p_simplex_cell_indices[cell_start + j]);
+				edge_indices.set(edge_index++, p_simplex_cell_vertex_indices[cell_start + i]);
+				edge_indices.set(edge_index++, p_simplex_cell_vertex_indices[cell_start + j]);
 			}
 		}
 	}
@@ -628,7 +628,7 @@ PackedInt32Array CellMeshND::calculate_edge_indices_from_simplex_cell_indices(co
 PackedInt32Array CellMeshND::get_edge_indices() {
 	const int dimension = get_dimension();
 	if (_edge_indices_cache.is_empty()) {
-		_edge_indices_cache = calculate_edge_indices_from_simplex_cell_indices(get_simplex_cell_indices(), dimension, true);
+		_edge_indices_cache = calculate_edge_indices_from_simplex_cell_vertex_indices(get_simplex_cell_vertex_indices(), dimension, true);
 	}
 	return _edge_indices_cache;
 }
@@ -636,11 +636,11 @@ PackedInt32Array CellMeshND::get_edge_indices() {
 Vector<VectorN> CellMeshND::get_edge_positions() {
 	if (_edge_positions_cache.is_empty()) {
 		const PackedInt32Array edge_indices = get_edge_indices();
-		const Vector<VectorN> vertices = get_vertices();
-		const int32_t vertices_count = vertices.size();
+		const Vector<VectorN> vertex_positions = get_vertex_positions();
+		const int32_t vertices_count = vertex_positions.size();
 		for (const int edge_index : edge_indices) {
 			ERR_FAIL_INDEX_V(edge_index, vertices_count, _edge_positions_cache);
-			_edge_positions_cache.append(vertices[edge_index]);
+			_edge_positions_cache.append(vertex_positions[edge_index]);
 		}
 	}
 	return _edge_positions_cache;
@@ -659,13 +659,13 @@ void CellMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_indices_per_simplex_cell"), &CellMeshND::get_indices_per_simplex_cell);
 	ClassDB::bind_method(D_METHOD("to_array_cell_mesh"), &CellMeshND::to_array_cell_mesh);
 
-	ClassDB::bind_static_method("CellMeshND", D_METHOD("calculate_edge_indices_from_simplex_cell_indices", "simplex_cell_indices", "dimension", "deduplicate"), &CellMeshND::calculate_edge_indices_from_simplex_cell_indices);
-	ClassDB::bind_method(D_METHOD("get_simplex_cell_indices"), &CellMeshND::get_simplex_cell_indices);
+	ClassDB::bind_static_method("CellMeshND", D_METHOD("calculate_edge_indices_from_simplex_cell_vertex_indices", "simplex_cell_vertex_indices", "dimension", "deduplicate"), &CellMeshND::calculate_edge_indices_from_simplex_cell_vertex_indices);
+	ClassDB::bind_method(D_METHOD("get_simplex_cell_vertex_indices"), &CellMeshND::get_simplex_cell_vertex_indices);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_boundary_normals"), &CellMeshND::get_simplex_cell_boundary_normals_bind);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_vertex_normals"), &CellMeshND::get_simplex_cell_vertex_normals_bind);
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_texture_map"), &CellMeshND::get_simplex_cell_texture_map_bind);
 
-	GDVIRTUAL_BIND(_get_simplex_cell_indices);
+	GDVIRTUAL_BIND(_get_simplex_cell_vertex_indices);
 	GDVIRTUAL_BIND(_get_simplex_cell_boundary_normals);
 	GDVIRTUAL_BIND(_get_simplex_cell_vertex_normals);
 	GDVIRTUAL_BIND(_get_simplex_cell_texture_map);

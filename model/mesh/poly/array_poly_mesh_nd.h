@@ -33,7 +33,7 @@ private:
 	// boundary/surface cells, and index N - 2 optionally holds the N-dimensional
 	// volumetric cells for encoding hypervolumes.
 	Vector<Vector<PackedInt32Array>> _poly_cell_indices;
-	Vector<VectorN> _poly_cell_vertices;
+	Vector<VectorN> _poly_cell_vertex_positions;
 	// The key's X is the geometry dimension, Y is the decomposition dimension.
 	// See G4MFMeshSurfaceBindingGeometry4D for more details.
 	HashMap<Vector2i, Vector<Vector<VectorN>>> _all_poly_cell_normals;
@@ -136,9 +136,9 @@ public:
 	void set_seam_indices(const HashSet<int32_t> &p_seam_indices);
 	void set_seam_indices_bind(const PackedInt32Array &p_seam_indices);
 
-	virtual Vector<VectorN> get_poly_cell_vertices() override;
-	void set_poly_cell_vertices(const Vector<VectorN> &p_vertices);
-	void set_poly_cell_vertices_bind(const TypedArray<VectorN> &p_vertices);
+	virtual Vector<VectorN> get_poly_cell_vertex_positions() override;
+	void set_poly_cell_vertex_positions(const Vector<VectorN> &p_vertex_positions);
+	void set_poly_cell_vertex_positions_bind(const TypedArray<VectorN> &p_vertex_positions);
 };
 
 VARIANT_ENUM_CAST(ArrayPolyMeshND::ComputeNormalsMode);

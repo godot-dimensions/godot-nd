@@ -10,14 +10,14 @@ namespace TestPolyMeshBuilderND {
 inline Ref<ArrayMesh> make_quad_array_mesh_3d() {
 	Ref<ArrayMesh> mesh;
 	mesh.instantiate();
-	PackedVector3Array vertices = { Vector3(0, 0, 0), Vector3(1, 0, 0), Vector3(1, 1, 0), Vector3(0, 1, 0) };
+	PackedVector3Array vertex_positions = { Vector3(0, 0, 0), Vector3(1, 0, 0), Vector3(1, 1, 0), Vector3(0, 1, 0) };
 	PackedVector3Array normals = { Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(0, 0, 1) };
 	PackedVector2Array uvs = { Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1) };
 	// Godot 3D uses clockwise winding order for front faces.
 	PackedInt32Array indices = { 0, 2, 1, 0, 3, 2 };
 	Array arrays;
 	arrays.resize(Mesh::ARRAY_MAX);
-	arrays[Mesh::ARRAY_VERTEX] = vertices;
+	arrays[Mesh::ARRAY_VERTEX] = vertex_positions;
 	arrays[Mesh::ARRAY_NORMAL] = normals;
 	arrays[Mesh::ARRAY_TEX_UV] = uvs;
 	arrays[Mesh::ARRAY_INDEX] = indices;
@@ -30,7 +30,7 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Convert 3D mesh to ND faces only") {
 	REQUIRE(converted.is_valid());
 	CHECK_MESSAGE(converted->get_dimension() == 3, "The converted mesh must be 3-dimensional.");
 	CHECK_MESSAGE(converted->is_poly_mesh_data_valid(), "The converted mesh must have valid poly mesh data.");
-	CHECK_MESSAGE(converted->get_poly_cell_vertices().size() == 4, "The vertices of the two triangles must be deduplicated.");
+	CHECK_MESSAGE(converted->get_poly_cell_vertex_positions().size() == 4, "The vertices of the two triangles must be deduplicated.");
 	CHECK_MESSAGE(converted->get_edge_indices().size() == 5 * 2, "The quad must have 4 outer edges and 1 shared diagonal edge.");
 	const Vector<Vector<PackedInt32Array>> poly_cell_indices = converted->get_poly_cell_indices();
 	REQUIRE(poly_cell_indices.size() == 1);
@@ -68,7 +68,7 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Convert 3D mesh to ND faces only") {
 			REQUIRE_MESSAGE(texcoord.size() == 2, "The texture map of a 3-dimensional mesh must have 2-dimensional coordinates.");
 			// The quad's UVs match the XY coordinates of its vertices.
 			const int32_t vertex_index = converted->get_all_face_vertex_indices()[face_index][vert_index];
-			const VectorN vertex = converted->get_poly_cell_vertices()[vertex_index];
+			const VectorN vertex = converted->get_poly_cell_vertex_positions()[vertex_index];
 			CHECK_MESSAGE(texcoord[0] == doctest::Approx(vertex[0]), "The texture map coordinates must carry through from the 3D mesh UVs.");
 			CHECK_MESSAGE(texcoord[1] == doctest::Approx(vertex[1]), "The texture map coordinates must carry through from the 3D mesh UVs.");
 		}
@@ -83,7 +83,7 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear") {
 		REQUIRE(extruded.is_valid());
 		CHECK_MESSAGE(extruded->get_dimension() == 4, "Extruding a 3-dimensional mesh by default must give a 4-dimensional mesh.");
 		CHECK_MESSAGE(extruded->is_poly_mesh_data_valid(), "The extruded mesh must have valid poly mesh data.");
-		CHECK_MESSAGE(extruded->get_poly_cell_vertices().size() == 8, "The extruded quad must have two copies of the input vertices.");
+		CHECK_MESSAGE(extruded->get_poly_cell_vertex_positions().size() == 8, "The extruded quad must have two copies of the input vertices.");
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = extruded->get_poly_cell_indices();
 		REQUIRE(poly_cell_indices.size() == 2);
 		CHECK_MESSAGE(poly_cell_indices[0].size() == 2 * 2 + 5, "The extruded quad must have two copies of the faces plus one face per input edge.");
@@ -118,7 +118,7 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear") {
 			REQUIRE(extruded.is_valid());
 			CHECK_MESSAGE(extruded->get_dimension() == dimension + 1, "Extruding a box must give a mesh one dimension higher.");
 			CHECK_MESSAGE(extruded->is_poly_mesh_data_valid(), "The extruded box must have valid poly mesh data.");
-			CHECK_MESSAGE(extruded->get_poly_cell_vertices().size() == (int64_t(2) << dimension), "The extruded box must have two copies of the input vertices.");
+			CHECK_MESSAGE(extruded->get_poly_cell_vertex_positions().size() == (int64_t(2) << dimension), "The extruded box must have two copies of the input vertices.");
 			const Vector<Vector<PackedInt32Array>> poly_cell_indices = extruded->get_poly_cell_indices();
 			REQUIRE(poly_cell_indices.size() == dimension);
 			CHECK_MESSAGE(poly_cell_indices[dimension - 2].size() == 2 * (dimension + 1), "The extruded box must have the boundary cell count of a box one dimension higher.");
@@ -127,7 +127,7 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear") {
 			// Every boundary normal must be an outward-facing unit vector along an axis.
 			const Vector<VectorN> boundary_normals = extruded->get_poly_cell_boundary_normals();
 			const Vector<PackedInt32Array> boundary_vert = extruded->get_all_poly_cell_vertex_indices(dimension, false);
-			const Vector<VectorN> vertices = extruded->get_poly_cell_vertices();
+			const Vector<VectorN> vertex_positions = extruded->get_poly_cell_vertex_positions();
 			REQUIRE(boundary_normals.size() == 2 * (dimension + 1));
 			REQUIRE(boundary_vert.size() == boundary_normals.size());
 			for (int64_t cell_index = 0; cell_index < boundary_normals.size(); cell_index++) {
@@ -135,7 +135,7 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear") {
 				CHECK_MESSAGE(VectorND::length(normal) == doctest::Approx(1.0), "The extruded box's boundary normals must be unit length.");
 				VectorN center;
 				for (int64_t i = 0; i < boundary_vert[cell_index].size(); i++) {
-					center = VectorND::add(center, vertices[boundary_vert[cell_index][i]]);
+					center = VectorND::add(center, vertex_positions[boundary_vert[cell_index][i]]);
 				}
 				center = VectorND::divide_scalar(center, boundary_vert[cell_index].size());
 				CHECK_MESSAGE(VectorND::dot(normal, center) > 0.0, "The extruded box's boundary normals must point outward.");
@@ -146,13 +146,13 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear") {
 		// A 2-dimensional square with 2D vertices, 4 edges, and 1 face, without any normals.
 		Ref<ArrayPolyMeshND> square;
 		square.instantiate();
-		Vector<VectorN> vertices = {
+		Vector<VectorN> vertex_positions = {
 			VectorN{ -0.5, -0.5 },
 			VectorN{ 0.5, -0.5 },
 			VectorN{ -0.5, 0.5 },
 			VectorN{ 0.5, 0.5 },
 		};
-		square->set_poly_cell_vertices(vertices);
+		square->set_poly_cell_vertex_positions(vertex_positions);
 		square->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 0, 2, 1, 3, 2, 3 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 2, 3, 1 });
@@ -168,12 +168,12 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear") {
 		// Even without input normals, the volumetric cell allows orienting all normals outward.
 		const Vector<VectorN> boundary_normals = extruded->get_poly_cell_boundary_normals();
 		const Vector<PackedInt32Array> boundary_vert = extruded->get_all_poly_cell_vertex_indices(2, false);
-		const Vector<VectorN> out_vertices = extruded->get_poly_cell_vertices();
+		const Vector<VectorN> out_vertex_positions = extruded->get_poly_cell_vertex_positions();
 		REQUIRE(boundary_normals.size() == 6);
 		for (int64_t cell_index = 0; cell_index < boundary_normals.size(); cell_index++) {
 			VectorN center;
 			for (int64_t i = 0; i < boundary_vert[cell_index].size(); i++) {
-				center = VectorND::add(center, out_vertices[boundary_vert[cell_index][i]]);
+				center = VectorND::add(center, out_vertex_positions[boundary_vert[cell_index][i]]);
 			}
 			center = VectorND::divide_scalar(center, boundary_vert[cell_index].size());
 			CHECK_MESSAGE(VectorND::dot(boundary_normals[cell_index], center) > 0.0, "The extruded cube's boundary normals must point outward.");
@@ -186,16 +186,16 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear") {
 // Sums the areas of the triangulated simplexes of a 3-dimensional mesh, optionally
 // filtered to the simplexes that came from one source face.
 inline double sum_simplex_areas(const Ref<ArrayPolyMeshND> &p_mesh, const int32_t p_source_face = -1) {
-	const PackedInt32Array simplex_indices = p_mesh->get_simplex_cell_indices();
-	const Vector<VectorN> vertices = p_mesh->get_vertices();
+	const PackedInt32Array simplex_indices = p_mesh->get_simplex_cell_vertex_indices();
+	const Vector<VectorN> vertex_positions = p_mesh->get_vertex_positions();
 	double total = 0.0;
 	for (int64_t simplex_start = 0; simplex_start < simplex_indices.size(); simplex_start += 3) {
 		if (p_source_face != -1 && p_mesh->get_source_poly_cell_for_simplex_cell((int32_t)(simplex_start / 3)) != p_source_face) {
 			continue;
 		}
 		Vector<VectorN> edges = {
-			VectorND::subtract(vertices[simplex_indices[simplex_start + 1]], vertices[simplex_indices[simplex_start]]),
-			VectorND::subtract(vertices[simplex_indices[simplex_start + 2]], vertices[simplex_indices[simplex_start]]),
+			VectorND::subtract(vertex_positions[simplex_indices[simplex_start + 1]], vertex_positions[simplex_indices[simplex_start]]),
+			VectorND::subtract(vertex_positions[simplex_indices[simplex_start + 2]], vertex_positions[simplex_indices[simplex_start]]),
 		};
 		total += VectorND::length(VectorND::perpendicular(edges)) / 2.0;
 	}
@@ -206,14 +206,14 @@ inline double sum_simplex_areas(const Ref<ArrayPolyMeshND> &p_mesh, const int32_
 inline Ref<ArrayPolyMeshND> make_pentagon_face_mesh() {
 	Ref<ArrayPolyMeshND> mesh;
 	mesh.instantiate();
-	Vector<VectorN> vertices = {
+	Vector<VectorN> vertex_positions = {
 		VectorN{ 0.0, 0.0, 0.0 },
 		VectorN{ 2.0, 0.0, 0.0 },
 		VectorN{ 3.0, 2.0, 0.0 },
 		VectorN{ 1.0, 4.0, 0.0 },
 		VectorN{ -1.0, 2.0, 0.0 },
 	};
-	mesh->set_poly_cell_vertices(vertices);
+	mesh->set_poly_cell_vertex_positions(vertex_positions);
 	mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4 });
 	Vector<PackedInt32Array> faces;
 	faces.append(PackedInt32Array{ 0, 1, 2, 3, 4 });
@@ -225,13 +225,13 @@ inline Ref<ArrayPolyMeshND> make_pentagon_face_mesh() {
 inline Ref<ArrayPolyMeshND> make_solid_tetrahedron_mesh() {
 	Ref<ArrayPolyMeshND> mesh;
 	mesh.instantiate();
-	Vector<VectorN> vertices = {
+	Vector<VectorN> vertex_positions = {
 		VectorN{ 0.0, 0.0, 0.0 },
 		VectorN{ 1.0, 0.0, 0.0 },
 		VectorN{ 0.0, 1.0, 0.0 },
 		VectorN{ 0.0, 0.0, 1.0 },
 	};
-	mesh->set_poly_cell_vertices(vertices);
+	mesh->set_poly_cell_vertex_positions(vertex_positions);
 	mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 0, 2, 0, 3, 1, 2, 1, 3, 2, 3 });
 	Vector<PackedInt32Array> faces;
 	faces.append(PackedInt32Array{ 0, 3, 1 }); // Vertices 0, 1, 2.
@@ -262,14 +262,14 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide box boundary cells") {
 		CHECK_MESSAGE(poly_cell_indices[dimension - 2].size() == 1, "The volumetric cell must be conformed, not subdivided.");
 		CHECK_MESSAGE(poly_cell_indices[dimension - 2][0].size() == old_boundary_count * pieces_per_cell, "The conformed volumetric cell must reference all sub-boxes.");
 		// Subdividing the surface adds edge midpoints and element centers, but no interior vertices.
-		int64_t expected_vertices = int64_t(1) << dimension; // Original vertices.
-		expected_vertices += dimension * (int64_t(1) << (dimension - 1)); // Edge midpoints.
+		int64_t expected_vertex_pos_count = int64_t(1) << dimension; // Original vertices.
+		expected_vertex_pos_count += dimension * (int64_t(1) << (dimension - 1)); // Edge midpoints.
 		if (dimension == 3) {
-			expected_vertices += 6; // Face centers.
+			expected_vertex_pos_count += 6; // Face centers.
 		} else {
-			expected_vertices += 24 + 8; // Face centers and boundary cell centers.
+			expected_vertex_pos_count += 24 + 8; // Face centers and boundary cell centers.
 		}
-		CHECK_MESSAGE(mesh->get_poly_cell_vertices().size() == expected_vertices, "The subdivided box must have the expected number of vertices.");
+		CHECK_MESSAGE(mesh->get_poly_cell_vertex_positions().size() == expected_vertex_pos_count, "The subdivided box must have the expected number of vertices.");
 		// Each piece must inherit its parent's boundary normal, and the cell orientations must match.
 		const Vector<VectorN> new_normals = mesh->get_poly_cell_boundary_normals();
 		REQUIRE(new_normals.size() == new_pieces.size());
@@ -315,7 +315,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide simplex and orthoplex volumes") {
 		const PackedInt32Array new_pieces = PolyMeshBuilderND::subdivide_elements(mesh, 3, PackedInt32Array());
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The subdivided tetrahedron must have valid poly mesh data.");
 		CHECK_MESSAGE(new_pieces.size() == 5, "A tetrahedron must subdivide into 4 corner tetrahedra and 1 central octahedron.");
-		CHECK_MESSAGE(mesh->get_poly_cell_vertices().size() == 10, "The subdivided tetrahedron must only add the 6 edge midpoints, with no center vertices.");
+		CHECK_MESSAGE(mesh->get_poly_cell_vertex_positions().size() == 10, "The subdivided tetrahedron must only add the 6 edge midpoints, with no center vertices.");
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = mesh->get_poly_cell_indices();
 		REQUIRE(poly_cell_indices.size() == 2);
 		CHECK_MESSAGE(poly_cell_indices[0].size() == 4 * 4 + 4, "The subdivided tetrahedron must have 16 boundary face pieces and 4 interior cut faces.");
@@ -333,7 +333,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide simplex and orthoplex volumes") {
 		CHECK_MESSAGE(tetrahedron_count == 4, "The subdivided tetrahedron must have 4 corner tetrahedra.");
 		CHECK_MESSAGE(octahedron_count == 1, "The subdivided tetrahedron must have 1 central octahedron.");
 		// The 4 interior cut faces are each shared by two volumetric cells, so they are excluded from rendering.
-		CHECK_MESSAGE(mesh->get_simplex_cell_indices().size() == 16 * 3, "Only the 16 boundary face pieces must decompose into simplexes.");
+		CHECK_MESSAGE(mesh->get_simplex_cell_vertex_indices().size() == 16 * 3, "Only the 16 boundary face pieces must decompose into simplexes.");
 		// The geometry is unchanged, so the signed distance must be unchanged.
 		mesh->populate_inverse_metric_cache();
 		CHECK_MESSAGE(Math::abs(mesh->get_signed_distance_to_mesh(VectorN{ -1.0, 0.0, 0.0 }, nullptr, nullptr)) == doctest::Approx(1.0), "The subdivided tetrahedron must have the same signed distances as before.");
@@ -354,7 +354,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide simplex and orthoplex volumes") {
 		const PackedInt32Array new_pieces = PolyMeshBuilderND::subdivide_elements(mesh, 3, PackedInt32Array());
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The subdivided octahedron must have valid poly mesh data.");
 		CHECK_MESSAGE(new_pieces.size() == 6 + 8, "An octahedron must subdivide into 6 corner octahedra and 8 hole tetrahedra.");
-		CHECK_MESSAGE(mesh->get_poly_cell_vertices().size() == 6 + 12 + 1, "The subdivided octahedron must add the 12 edge midpoints and 1 center vertex.");
+		CHECK_MESSAGE(mesh->get_poly_cell_vertex_positions().size() == 6 + 12 + 1, "The subdivided octahedron must add the 12 edge midpoints and 1 center vertex.");
 		// The geometry is unchanged, so the signed distance must be unchanged.
 		mesh->populate_inverse_metric_cache();
 		CHECK_MESSAGE(mesh->get_signed_distance_to_mesh(VectorN{ 2.0, 0.0, 0.0 }, nullptr, nullptr) == doctest::Approx(1.0), "The subdivided octahedron must have the same signed distances as before.");
@@ -363,14 +363,14 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide simplex and orthoplex volumes") {
 		// A solid 4D simplex: 5 vertices, 10 edges, 10 triangles, 5 tetrahedra, 1 volumetric cell.
 		Ref<ArrayPolyMeshND> mesh;
 		mesh.instantiate();
-		Vector<VectorN> vertices = {
+		Vector<VectorN> vertex_positions = {
 			VectorN{ 0.0, 0.0, 0.0, 0.0 },
 			VectorN{ 1.0, 0.0, 0.0, 0.0 },
 			VectorN{ 0.0, 1.0, 0.0, 0.0 },
 			VectorN{ 0.0, 0.0, 1.0, 0.0 },
 			VectorN{ 0.0, 0.0, 0.0, 1.0 },
 		};
-		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_poly_cell_vertex_positions(vertex_positions);
 		PackedInt32Array edge_indices;
 		HashMap<int32_t, int32_t> edge_map;
 		for (int32_t a = 0; a < 5; a++) {
@@ -415,7 +415,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide simplex and orthoplex volumes") {
 		const PackedInt32Array new_pieces = PolyMeshBuilderND::subdivide_elements(mesh, 4, PackedInt32Array());
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The subdivided pentachoron must have valid poly mesh data.");
 		CHECK_MESSAGE(new_pieces.size() == 6, "A pentachoron must subdivide into 5 corner pentachora and 1 central rectified pentachoron.");
-		CHECK_MESSAGE(mesh->get_poly_cell_vertices().size() == 5 + 10, "The subdivided pentachoron must only add the 10 edge midpoints, with no center vertices.");
+		CHECK_MESSAGE(mesh->get_poly_cell_vertex_positions().size() == 5 + 10, "The subdivided pentachoron must only add the 10 edge midpoints, with no center vertices.");
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = mesh->get_poly_cell_indices();
 		REQUIRE(poly_cell_indices.size() == 3);
 		CHECK_MESSAGE(poly_cell_indices[1].size() == 5 * 5 + 5, "The subdivided pentachoron must have 25 boundary cell pieces and 5 interior cut cells.");
@@ -440,7 +440,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 		// Two unit cubes side by side sharing one square face, with two volumetric cells.
 		Ref<ArrayPolyMeshND> mesh;
 		mesh.instantiate();
-		Vector<VectorN> vertices = {
+		Vector<VectorN> vertex_positions = {
 			VectorN{ 0.0, 0.0, 0.0 },
 			VectorN{ 0.0, 1.0, 0.0 },
 			VectorN{ 0.0, 0.0, 1.0 },
@@ -454,7 +454,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 			VectorN{ 2.0, 0.0, 1.0 },
 			VectorN{ 2.0, 1.0, 1.0 },
 		};
-		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_poly_cell_vertex_positions(vertex_positions);
 		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 3, 2, 3, 0, 2, 4, 5, 5, 7, 6, 7, 4, 6, 8, 9, 9, 11, 10, 11, 8, 10, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 9, 6, 10, 7, 11 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 1, 2, 3 });
@@ -483,7 +483,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 		// Faces: 5 subdivided faces of cube A (20), 4 pieces of the shared face, 12 internal
 		// walls of cube A, 4 conformed side faces of cube B, and 1 untouched far face.
 		CHECK_MESSAGE(poly_cell_indices[0].size() == 20 + 4 + 12 + 4 + 1, "The face count must match the subdivision and conformance.");
-		CHECK_MESSAGE(mesh->get_poly_cell_vertices().size() == 12 + 12 + 6 + 1, "Subdividing one cube must add its edge midpoints, face centers, and center.");
+		CHECK_MESSAGE(mesh->get_poly_cell_vertex_positions().size() == 12 + 12 + 6 + 1, "Subdividing one cube must add its edge midpoints, face centers, and center.");
 		// The geometry is unchanged, so the signed distance must be unchanged.
 		mesh->populate_inverse_metric_cache();
 		CHECK_MESSAGE(Math::abs(mesh->get_signed_distance_to_mesh(VectorN{ 3.0, 0.5, 0.5 }, nullptr, nullptr)) == doctest::Approx(1.0), "The partially subdivided mesh must have the same signed distances as before.");
@@ -493,13 +493,13 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 		// A single flat quad face with a stored +Z normal, vertex normals, and a texture map.
 		Ref<ArrayPolyMeshND> mesh;
 		mesh.instantiate();
-		Vector<VectorN> vertices = {
+		Vector<VectorN> vertex_positions = {
 			VectorN{ 0.0, 0.0, 0.0 },
 			VectorN{ 2.0, 0.0, 0.0 },
 			VectorN{ 2.0, 2.0, 0.0 },
 			VectorN{ 0.0, 2.0, 0.0 },
 		};
-		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_poly_cell_vertex_positions(vertex_positions);
 		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 0, 3 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 1, 2, 3 });
@@ -512,7 +512,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 		Vector<VectorM> cell_texture_map;
 		for (int64_t i = 0; i < cell_vertices.size(); i++) {
 			cell_vertex_normals.append(pos_z);
-			const VectorN vertex = vertices[cell_vertices[i]];
+			const VectorN vertex = vertex_positions[cell_vertices[i]];
 			cell_texture_map.append(VectorM{ vertex[0] / 2.0, vertex[1] / 2.0 });
 		}
 		mesh->set_poly_cell_vertex_normals(Vector<Vector<VectorN>>{ cell_vertex_normals });
@@ -520,7 +520,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 		const PackedInt32Array new_pieces = PolyMeshBuilderND::subdivide_elements(mesh, 2, PackedInt32Array());
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The subdivided quad must have valid poly mesh data.");
 		CHECK_MESSAGE(new_pieces.size() == 4, "A quad must subdivide into 4 sub-quads.");
-		CHECK_MESSAGE(mesh->get_poly_cell_vertices().size() == 4 + 4 + 1, "The subdivided quad must add 4 edge midpoints and 1 center vertex.");
+		CHECK_MESSAGE(mesh->get_poly_cell_vertex_positions().size() == 4 + 4 + 1, "The subdivided quad must add 4 edge midpoints and 1 center vertex.");
 		// Every piece must keep the +Z normal, both stored and orientation-derived.
 		const Vector<VectorN> new_normals = mesh->get_poly_cell_boundary_normals();
 		REQUIRE(new_normals.size() == 4);
@@ -534,17 +534,17 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 		}
 		// The texture map was set to half the vertex position, and interpolation is linear,
 		// so this relationship must also hold at the new midpoint and center vertices.
-		const Vector<VectorN> new_vertices = mesh->get_poly_cell_vertices();
-		const Vector<PackedInt32Array> new_cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+		const Vector<VectorN> new_vertex_positions = mesh->get_poly_cell_vertex_positions();
+		const Vector<PackedInt32Array> new_cell_vertex_indices = mesh->get_all_boundary_cell_vertex_indices(false);
 		const Vector<Vector<VectorM>> new_texture_map = mesh->get_poly_cell_texture_map();
 		const Vector<Vector<VectorN>> new_vertex_normals = mesh->get_poly_cell_vertex_normals();
 		REQUIRE(new_texture_map.size() == 4);
 		REQUIRE(new_vertex_normals.size() == 4);
 		for (int64_t cell_index = 0; cell_index < 4; cell_index++) {
-			REQUIRE(new_texture_map[cell_index].size() == new_cell_vertices[cell_index].size());
-			REQUIRE(new_vertex_normals[cell_index].size() == new_cell_vertices[cell_index].size());
-			for (int64_t vert_num = 0; vert_num < new_cell_vertices[cell_index].size(); vert_num++) {
-				const VectorN vertex = new_vertices[new_cell_vertices[cell_index][vert_num]];
+			REQUIRE(new_texture_map[cell_index].size() == new_cell_vertex_indices[cell_index].size());
+			REQUIRE(new_vertex_normals[cell_index].size() == new_cell_vertex_indices[cell_index].size());
+			for (int64_t vert_num = 0; vert_num < new_cell_vertex_indices[cell_index].size(); vert_num++) {
+				const VectorN vertex = new_vertex_positions[new_cell_vertex_indices[cell_index][vert_num]];
 				const VectorM texcoord = new_texture_map[cell_index][vert_num];
 				REQUIRE(texcoord.size() == 2);
 				CHECK_MESSAGE(texcoord[0] == doctest::Approx(vertex[0] / 2.0), "The interpolated texture map must remain linear in the vertex positions.");
@@ -556,13 +556,13 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 	SUBCASE("Subdividing one edge conforms the face that uses it") {
 		Ref<ArrayPolyMeshND> mesh;
 		mesh.instantiate();
-		Vector<VectorN> vertices = {
+		Vector<VectorN> vertex_positions = {
 			VectorN{ 0.0, 0.0, 0.0 },
 			VectorN{ 2.0, 0.0, 0.0 },
 			VectorN{ 2.0, 2.0, 0.0 },
 			VectorN{ 0.0, 2.0, 0.0 },
 		};
-		mesh->set_poly_cell_vertices(vertices);
+		mesh->set_poly_cell_vertex_positions(vertex_positions);
 		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 0, 3 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 1, 2, 3 });
@@ -570,7 +570,7 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide with partial selection and conformance"
 		const PackedInt32Array new_pieces = PolyMeshBuilderND::subdivide_elements(mesh, 1, PackedInt32Array{ 0 });
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The mesh must be valid after subdividing one edge.");
 		CHECK_MESSAGE(new_pieces.size() == 2, "The subdivided edge must become 2 pieces.");
-		CHECK_MESSAGE(mesh->get_poly_cell_vertices().size() == 5, "Subdividing one edge must add exactly one midpoint vertex.");
+		CHECK_MESSAGE(mesh->get_poly_cell_vertex_positions().size() == 5, "Subdividing one edge must add exactly one midpoint vertex.");
 		CHECK_MESSAGE(mesh->get_edge_indices().size() == 5 * 2, "The mesh must have 3 surviving edges plus 2 pieces.");
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = mesh->get_poly_cell_indices();
 		CHECK_MESSAGE(poly_cell_indices[0][0].size() == 5, "The face must be conformed into a 5-edge loop.");
@@ -585,7 +585,7 @@ TEST_CASE("[PolyMeshBuilderND] Flipping faces of 3D meshes preserves their trian
 		for (int flip_second = 0; flip_second < 2; flip_second++) {
 			Ref<ArrayPolyMeshND> mesh;
 			mesh.instantiate();
-			Vector<VectorN> vertices = {
+			Vector<VectorN> vertex_positions = {
 				VectorN{ 0.0, 0.0, 0.0 },
 				VectorN{ 2.0, 0.0, 0.0 },
 				VectorN{ 3.0, 2.0, 0.0 },
@@ -595,7 +595,7 @@ TEST_CASE("[PolyMeshBuilderND] Flipping faces of 3D meshes preserves their trian
 				VectorN{ 1.0, -4.0, 2.0 },
 				VectorN{ -1.0, -2.0, 1.0 },
 			};
-			mesh->set_poly_cell_vertices(vertices);
+			mesh->set_poly_cell_vertex_positions(vertex_positions);
 			mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4, 1, 5, 5, 6, 6, 7, 0, 7 });
 			Vector<PackedInt32Array> faces;
 			faces.append(PackedInt32Array{ 0, 1, 2, 3, 4 });
@@ -622,14 +622,14 @@ TEST_CASE("[PolyMeshBuilderND] Flipping faces of 3D meshes preserves their trian
 		// The extrusion's normal calculations flip pentagon cap faces to point outward.
 		Ref<ArrayPolyMeshND> pentagon;
 		pentagon.instantiate();
-		Vector<VectorN> vertices = {
+		Vector<VectorN> vertex_positions = {
 			VectorN{ 0.0, 0.0 },
 			VectorN{ 2.0, 0.0 },
 			VectorN{ 3.0, 2.0 },
 			VectorN{ 1.0, 4.0 },
 			VectorN{ -1.0, 2.0 },
 		};
-		pentagon->set_poly_cell_vertices(vertices);
+		pentagon->set_poly_cell_vertex_positions(vertex_positions);
 		pentagon->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 4, 0, 4 });
 		Vector<PackedInt32Array> faces;
 		faces.append(PackedInt32Array{ 0, 1, 2, 3, 4 });
@@ -638,7 +638,7 @@ TEST_CASE("[PolyMeshBuilderND] Flipping faces of 3D meshes preserves their trian
 		CHECK_MESSAGE(prism->is_poly_mesh_data_valid(), "The extruded pentagonal prism must have valid poly mesh data.");
 		double perimeter = 0.0;
 		for (int64_t i = 0; i < 5; i++) {
-			perimeter += VectorND::distance_to(vertices[i], vertices[(i + 1) % 5]);
+			perimeter += VectorND::distance_to(vertex_positions[i], vertex_positions[(i + 1) % 5]);
 		}
 		CHECK_MESSAGE(sum_simplex_areas(prism) == doctest::Approx(2.0 * 10.0 + perimeter), "The prism's triangulated surface area must be two caps plus the sides.");
 		// The normals must point outward, so an interior point must have a negative signed distance.

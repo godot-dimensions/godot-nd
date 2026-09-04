@@ -87,7 +87,7 @@ void MeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 Ref<ArrayWireMeshND> MeshND::to_array_wire_mesh() {
 	Ref<ArrayWireMeshND> wire_mesh;
 	wire_mesh.instantiate();
-	wire_mesh->set_vertices(get_vertices());
+	wire_mesh->set_vertex_positions(get_vertex_positions());
 	wire_mesh->set_edge_indices(get_edge_indices());
 	wire_mesh->set_material(get_material());
 	return wire_mesh;
@@ -101,12 +101,12 @@ Ref<RectND> MeshND::get_rect_bounds() {
 	if (likely(!_is_rect_bounds_dirty)) {
 		return _rect_bounds;
 	}
-	const Vector<VectorN> vertices = get_vertices();
-	const int dimension = vertices.is_empty() ? 0 : vertices[0].size();
+	const Vector<VectorN> vertex_positions = get_vertex_positions();
+	const int dimension = vertex_positions.is_empty() ? 0 : vertex_positions[0].size();
 	// Start by including the mesh's local origin always, even if the mesh does not cover that point.
 	_rect_bounds = RectND::from_position_size(VectorND::zero(dimension), VectorND::zero(dimension));
-	for (int vertex_index = 0; vertex_index < vertices.size(); vertex_index++) {
-		_rect_bounds->expand_self_to_point(vertices[vertex_index]);
+	for (int vertex_index = 0; vertex_index < vertex_positions.size(); vertex_index++) {
+		_rect_bounds->expand_self_to_point(vertex_positions[vertex_index]);
 	}
 	_is_rect_bounds_dirty = false;
 	return _rect_bounds;
@@ -147,10 +147,10 @@ PackedInt32Array MeshND::get_edge_indices() {
 
 Vector<VectorN> MeshND::get_edge_positions() {
 	const PackedInt32Array edge_indices = get_edge_indices();
-	const Vector<VectorN> vertices = get_vertices();
+	const Vector<VectorN> vertex_positions = get_vertex_positions();
 	Vector<VectorN> edges;
 	for (const int32_t edge_index : edge_indices) {
-		edges.append(vertices[edge_index]);
+		edges.append(vertex_positions[edge_index]);
 	}
 	return edges;
 }
@@ -165,33 +165,33 @@ TypedArray<VectorN> MeshND::get_edge_positions_bind() {
 	return typed_array_edge_positions;
 }
 
-Vector<VectorN> MeshND::get_vertices() {
-	TypedArray<VectorN> typed_array_vertices;
-	GDVIRTUAL_CALL(_get_vertices, typed_array_vertices);
-	Vector<VectorN> vertices;
-	vertices.resize(typed_array_vertices.size());
-	for (int i = 0; i < typed_array_vertices.size(); i++) {
-		vertices.set(i, typed_array_vertices[i]);
+Vector<VectorN> MeshND::get_vertex_positions() {
+	TypedArray<VectorN> typed_array_vertex_positions;
+	GDVIRTUAL_CALL(_get_vertex_positions, typed_array_vertex_positions);
+	Vector<VectorN> vertex_positions;
+	vertex_positions.resize(typed_array_vertex_positions.size());
+	for (int i = 0; i < typed_array_vertex_positions.size(); i++) {
+		vertex_positions.set(i, typed_array_vertex_positions[i]);
 	}
-	return vertices;
+	return vertex_positions;
 }
 
-TypedArray<VectorN> MeshND::get_vertices_bind() {
-	const Vector<VectorN> vertices = get_vertices();
-	TypedArray<VectorN> typed_array_vertices;
-	typed_array_vertices.resize(vertices.size());
-	for (int i = 0; i < vertices.size(); i++) {
-		typed_array_vertices[i] = vertices[i];
+TypedArray<VectorN> MeshND::get_vertex_positions_bind() {
+	const Vector<VectorN> vertex_positions = get_vertex_positions();
+	TypedArray<VectorN> typed_array_vertex_positions;
+	typed_array_vertex_positions.resize(vertex_positions.size());
+	for (int i = 0; i < vertex_positions.size(); i++) {
+		typed_array_vertex_positions[i] = vertex_positions[i];
 	}
-	return typed_array_vertices;
+	return typed_array_vertex_positions;
 }
 
 int MeshND::get_dimension() {
-	const Vector<VectorN> vertices = get_vertices();
-	if (vertices.is_empty()) {
+	const Vector<VectorN> vertex_positions = get_vertex_positions();
+	if (vertex_positions.is_empty()) {
 		return 0;
 	}
-	return vertices[0].size();
+	return vertex_positions[0].size();
 }
 
 void MeshND::_bind_methods() {
@@ -216,11 +216,11 @@ void MeshND::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_edge_indices"), &MeshND::get_edge_indices);
 	ClassDB::bind_method(D_METHOD("get_edge_positions"), &MeshND::get_edge_positions_bind);
-	ClassDB::bind_method(D_METHOD("get_vertices"), &MeshND::get_vertices_bind);
+	ClassDB::bind_method(D_METHOD("get_vertex_positions"), &MeshND::get_vertex_positions_bind);
 	ClassDB::bind_method(D_METHOD("get_dimension"), &MeshND::get_dimension);
 
 	GDVIRTUAL_BIND(_get_edge_indices);
-	GDVIRTUAL_BIND(_get_vertices);
+	GDVIRTUAL_BIND(_get_vertex_positions);
 	GDVIRTUAL_BIND(_validate_material_for_mesh, "material");
 	GDVIRTUAL_BIND(_validate_mesh_data);
 	GDVIRTUAL_BIND(_update_proxy_mesh_3d);

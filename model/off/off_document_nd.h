@@ -17,7 +17,7 @@ class OFFDocumentND : public Resource {
 
 	Vector<PackedColorArray> _cell_colors;
 	Vector<Vector<PackedInt32Array>> _cell_face_indices;
-	Vector<VectorN> _vertices;
+	Vector<VectorN> _vertex_positions;
 	int _dimension = 3;
 	int _edge_count = 0;
 	bool _has_any_cell_colors = false;
@@ -57,6 +57,6 @@ public:
 	int get_edge_count() const { return _edge_count; }
 	void set_edge_count(const int p_edge_count) { _edge_count = p_edge_count; }
 
-	Vector<VectorN> get_vertices() const { return _vertices; }
-	void set_vertices(const Vector<VectorN> &p_vertices) { _vertices = p_vertices; }
+	Vector<VectorN> get_vertex_positions() const { return _vertex_positions; }
+	void set_vertex_positions(const Vector<VectorN> &p_vertex_positions) { _vertex_positions = p_vertex_positions; }
 };

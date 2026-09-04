@@ -50,7 +50,7 @@ PackedInt32Array BoxWireMeshND::get_edge_indices() {
 	return _edge_indices_cache;
 }
 
-Vector<VectorN> BoxWireMeshND::get_vertices() {
+Vector<VectorN> BoxWireMeshND::get_vertex_positions() {
 	if (_vertices_cache.is_empty()) {
 		const uint64_t dimension = _size.size();
 		ERR_FAIL_COND_V_MSG(dimension > 30, _vertices_cache, "BoxWireMeshND: Too many dimensions for box vertices.");

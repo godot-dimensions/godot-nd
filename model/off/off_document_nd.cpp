@@ -41,15 +41,15 @@ void OFFDocumentND::_count_unique_edges_from_faces() {
 }
 
 int64_t OFFDocumentND::_find_or_insert_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
-	const int64_t vertex_count = _vertices.size();
+	const int64_t vertex_count = _vertex_positions.size();
 	if (p_deduplicate_vertices) {
 		for (int64_t vertex_number = 0; vertex_number < vertex_count; vertex_number++) {
-			if (VectorND::is_equal_exact(_vertices[vertex_number], p_vertex)) {
+			if (VectorND::is_equal_exact(_vertex_positions[vertex_number], p_vertex)) {
 				return vertex_number;
 			}
 		}
 	}
-	_vertices.append(p_vertex);
+	_vertex_positions.append(p_vertex);
 	return vertex_count;
 }
 
@@ -173,7 +173,7 @@ Ref<ArrayCellMeshND> OFFDocumentND::import_generate_array_cell_mesh_nd() {
 	Ref<ArrayCellMeshND> cell_mesh;
 	cell_mesh.instantiate();
 	cell_mesh->set_dimension(_dimension);
-	cell_mesh->set_vertices(_vertices);
+	cell_mesh->set_vertex_positions(_vertex_positions);
 	ERR_FAIL_COND_V_MSG(_cell_face_indices.is_empty(), cell_mesh, "OFFDocumentND: This OFF document does not contain any cells, so it cannot be converted to a cell mesh. Perhaps this is a vertex-only OFF file, or a 0D or 1D OFF file?");
 	const Vector<Vector<PackedInt32Array>> cell_vertex_indices = _calculate_cell_vertex_indices();
 	const Vector<Vector<PackedInt32Array>> simplex_vertex_indices = _calculate_simplex_vertex_indices(cell_vertex_indices);
@@ -199,7 +199,7 @@ Ref<ArrayCellMeshND> OFFDocumentND::import_generate_array_cell_mesh_nd() {
 			}
 		}
 	}
-	cell_mesh->set_simplex_cell_indices(packed_cell_indices);
+	cell_mesh->set_simplex_cell_vertex_indices(packed_cell_indices);
 	if (_has_any_cell_colors) {
 		Ref<CellMaterialND> cell_material;
 		cell_material.instantiate();
@@ -214,9 +214,9 @@ Ref<ArrayCellMeshND> OFFDocumentND::import_generate_array_cell_mesh_nd() {
 Ref<ArrayWireMeshND> OFFDocumentND::import_generate_wire_mesh_nd(const bool p_deduplicate_edges) {
 	Ref<ArrayWireMeshND> wire_mesh;
 	wire_mesh.instantiate();
-	wire_mesh->set_vertices(_vertices);
+	wire_mesh->set_vertex_positions(_vertex_positions);
 	if (_cell_face_indices.is_empty()) {
-		if (_vertices.size() == 2) {
+		if (_vertex_positions.size() == 2) {
 			// Special case: OFF file with just two vertices and one implicit edge (such as a 1D OFF file).
 			wire_mesh->append_edge_indices(0, 1);
 			return wire_mesh;
@@ -346,7 +346,7 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 		switch (read_state) {
 			case OFFDocumentNDReadState::READ_SIZE: {
 				vertex_count = items[0].to_int();
-				off_document->_vertices.resize(vertex_count);
+				off_document->_vertex_positions.resize(vertex_count);
 				if (item_count == 2) {
 					// Special case: 2D OFF file with only vertices and components.
 					cell_counts.resize(1);
@@ -374,7 +374,7 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 				for (int i = 0; i < item_count; i++) {
 					vertex.set(i, items[i].to_float());
 				}
-				off_document->_vertices.set(current_vertex_index, vertex);
+				off_document->_vertex_positions.set(current_vertex_index, vertex);
 				current_vertex_index++;
 				if (current_vertex_index >= vertex_count) {
 					read_state = OFFDocumentNDReadState::READ_CELLS;
@@ -418,15 +418,15 @@ Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw
 	return off_document;
 }
 
-String OFFDocumentND::_vector_n_to_off_nd(const VectorN &p_vertex) {
-	ERR_FAIL_COND_V(p_vertex.size() == 0, String());
-	String ret = String::num(p_vertex[0]);
-	if (p_vertex[0] == (real_t)(int64_t)p_vertex[0]) {
+String OFFDocumentND::_vector_n_to_off_nd(const VectorN &p_vector) {
+	ERR_FAIL_COND_V(p_vector.size() == 0, String());
+	String ret = String::num(p_vector[0]);
+	if (p_vector[0] == (real_t)(int64_t)p_vector[0]) {
 		ret += String(".0");
 	}
-	for (int i = 1; i < p_vertex.size(); i++) {
-		ret += " " + String::num(p_vertex[i]);
-		if (p_vertex[i] == (real_t)(int64_t)p_vertex[i]) {
+	for (int i = 1; i < p_vector.size(); i++) {
+		ret += " " + String::num(p_vector[i]);
+		if (p_vector[i] == (real_t)(int64_t)p_vector[i]) {
 			ret += String(".0");
 		}
 	}
@@ -505,7 +505,7 @@ String OFFDocumentND::_export_save_to_string() {
 	} else {
 		lines.append(String::num_int64(_dimension) + "OFF");
 	}
-	String size_line = String::num_int64(_vertices.size());
+	String size_line = String::num_int64(_vertex_positions.size());
 	if (_cell_face_indices.size() > 0) {
 		size_line += " " + String::num_int64(_cell_face_indices.size()) + " " + String::num_int64(_edge_count);
 		for (int i = 1; i < _cell_face_indices.size(); i++) {
@@ -515,8 +515,8 @@ String OFFDocumentND::_export_save_to_string() {
 	}
 	lines.append(size_line);
 	lines.append("\n# Vertices");
-	for (int i = 0; i < _vertices.size(); i++) {
-		lines.append(_vector_n_to_off_nd(_vertices[i]));
+	for (int i = 0; i < _vertex_positions.size(); i++) {
+		lines.append(_vector_n_to_off_nd(_vertex_positions[i]));
 	}
 	for (int dim = 0; dim < _cell_face_indices.size(); dim++) {
 		Vector<PackedInt32Array> dim_cell_face_indices = _cell_face_indices[dim];

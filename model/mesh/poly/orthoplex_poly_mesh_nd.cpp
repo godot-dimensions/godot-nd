@@ -49,7 +49,7 @@ int64_t OrthoplexPolyMeshND::_vertex_set_key(const PackedInt32Array &p_vertex_in
 // Procedurally generates the N-orthoplex's poly cell hierarchy. Every k-dimensional cell
 // with k < N is a simplex made of k + 1 vertices on distinct axes, one vertex per axis,
 // on either the positive or negative side. Vertex index 2i is the negative side of axis i
-// and vertex index 2i + 1 is the positive side, matching get_vertices.
+// and vertex index 2i + 1 is the positive side, matching get_vertex_positions.
 void OrthoplexPolyMeshND::_generate_poly_data() {
 	_poly_cell_indices_cache.clear();
 	_orthoplex_edge_indices_cache.clear();
@@ -175,7 +175,7 @@ void OrthoplexPolyMeshND::_generate_poly_data() {
 	volumetric_level.append(volumetric_cell);
 	_poly_cell_indices_cache.append(volumetric_level);
 	// Orient the boundary cells so that their orientation-derived normals point outward.
-	_orient_cells_to_match_normals(_poly_cell_indices_cache, _orthoplex_edge_indices_cache, get_vertices(), _boundary_normals_cache, dimension - 3);
+	_orient_cells_to_match_normals(_poly_cell_indices_cache, _orthoplex_edge_indices_cache, get_vertex_positions(), _boundary_normals_cache, dimension - 3);
 	// Flat shading vertex normals: every vertex instance of a cell uses the cell's normal.
 	_vertex_normals_cache.resize(_boundary_normals_cache.size());
 	for (int64_t cell_index = 0; cell_index < _boundary_normals_cache.size(); cell_index++) {
@@ -195,8 +195,8 @@ Vector<Vector<PackedInt32Array>> OrthoplexPolyMeshND::get_poly_cell_indices() {
 	return _poly_cell_indices_cache;
 }
 
-Vector<VectorN> OrthoplexPolyMeshND::get_poly_cell_vertices() {
-	return get_vertices();
+Vector<VectorN> OrthoplexPolyMeshND::get_poly_cell_vertex_positions() {
+	return get_vertex_positions();
 }
 
 Vector<VectorN> OrthoplexPolyMeshND::get_poly_cell_boundary_normals() {
@@ -279,7 +279,7 @@ PackedInt32Array OrthoplexPolyMeshND::get_edge_indices() {
 	return _orthoplex_edge_indices_cache;
 }
 
-Vector<VectorN> OrthoplexPolyMeshND::get_vertices() {
+Vector<VectorN> OrthoplexPolyMeshND::get_vertex_positions() {
 	if (_vertices_cache.is_empty()) {
 		const VectorN he = get_half_extents();
 		for (int i = 0; i < _size.size(); i++) {

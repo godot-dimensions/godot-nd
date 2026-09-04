@@ -62,12 +62,12 @@ public:
 	virtual PackedInt32Array get_edge_indices();
 	virtual Vector<VectorN> get_edge_positions();
 	TypedArray<VectorN> get_edge_positions_bind();
-	virtual Vector<VectorN> get_vertices();
-	TypedArray<VectorN> get_vertices_bind();
+	virtual Vector<VectorN> get_vertex_positions();
+	TypedArray<VectorN> get_vertex_positions_bind();
 	virtual int get_dimension();
 
 	GDVIRTUAL0R(PackedInt32Array, _get_edge_indices);
-	GDVIRTUAL0R(TypedArray<VectorN>, _get_vertices);
+	GDVIRTUAL0R(TypedArray<VectorN>, _get_vertex_positions);
 	GDVIRTUAL0R(bool, _validate_mesh_data);
 	GDVIRTUAL0(_update_proxy_mesh_3d);
 	GDVIRTUAL1(_validate_material_for_mesh, Ref<MaterialND>);

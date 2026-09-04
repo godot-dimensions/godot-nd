@@ -21,7 +21,7 @@ public:
 	void set_size(const VectorN &p_size);
 
 	virtual PackedInt32Array get_edge_indices() override;
-	virtual Vector<VectorN> get_vertices() override;
+	virtual Vector<VectorN> get_vertex_positions() override;
 	virtual int get_dimension() override { return _size.size(); }
 	void set_dimension(int p_dimension);
 

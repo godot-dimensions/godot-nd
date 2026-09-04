@@ -85,7 +85,7 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 		const Ref<MeshND> mesh = mesh_inst->get_mesh();
 		const Ref<MaterialND> material = mesh_inst->get_active_material();
 		const Ref<TransformND> mesh_relative_transform = mesh_relative_transforms[mesh_index];
-		const Vector<VectorN> camera_relative_vertices = mesh_relative_transform->xform_many(mesh->get_vertices());
+		const Vector<VectorN> camera_relative_vertices = mesh_relative_transform->xform_many(mesh->get_vertex_positions());
 		if (camera_relative_vertices.is_empty()) {
 			continue;
 		}

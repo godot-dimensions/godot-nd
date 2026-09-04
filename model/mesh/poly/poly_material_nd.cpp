@@ -8,7 +8,7 @@ void PolyMaterialND::populate_albedo_color_array_for_poly_mesh(const Ref<CellMes
 	if (poly_color_array_size == 0) {
 		return; // Nothing to do.
 	}
-	const PackedInt32Array simplexes = p_poly_mesh->get_simplex_cell_indices();
+	const PackedInt32Array simplexes = p_poly_mesh->get_simplex_cell_vertex_indices();
 	const int64_t indices_per_simplex = p_poly_mesh->get_indices_per_simplex_cell();
 	ERR_FAIL_COND(indices_per_simplex < 1);
 	ERR_FAIL_COND(simplexes.size() < indices_per_simplex || simplexes.size() % indices_per_simplex != 0);

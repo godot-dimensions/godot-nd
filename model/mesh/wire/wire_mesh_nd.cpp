@@ -8,11 +8,11 @@ void WireMeshND::wire_mesh_clear_cache() {
 Vector<VectorN> WireMeshND::get_edge_positions() {
 	if (_edge_positions_cache.is_empty()) {
 		const PackedInt32Array edge_indices = get_edge_indices();
-		const Vector<VectorN> vertices = get_vertices();
-		const int32_t vertices_count = vertices.size();
+		const Vector<VectorN> vertex_positions = get_vertex_positions();
+		const int32_t vertices_count = vertex_positions.size();
 		for (const int32_t edge_index : edge_indices) {
 			ERR_FAIL_INDEX_V(edge_index, vertices_count, _edge_positions_cache);
-			_edge_positions_cache.append(vertices[edge_index]);
+			_edge_positions_cache.append(vertex_positions[edge_index]);
 		}
 	}
 	return _edge_positions_cache;

@@ -54,7 +54,7 @@ PackedInt32Array OrthoplexWireMeshND::get_edge_indices() {
 	return _edge_indices_cache;
 }
 
-Vector<VectorN> OrthoplexWireMeshND::get_vertices() {
+Vector<VectorN> OrthoplexWireMeshND::get_vertex_positions() {
 	if (_vertices_cache.is_empty()) {
 		const int dimension = _size.size();
 		ERR_FAIL_COND_V_MSG(dimension > 10000, _vertices_cache, "OrthoplexWireMeshND: Too many dimensions for orthoplex.");

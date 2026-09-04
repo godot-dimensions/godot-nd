@@ -131,7 +131,7 @@ void MarkerND::generate_marker_mesh() {
 	material->set_albedo_color_array(albedo_colors);
 	Ref<ArrayWireMeshND> mesh;
 	mesh.instantiate();
-	mesh->set_vertices(vertices);
+	mesh->set_vertex_positions(vertices);
 	mesh->set_edge_indices(edge_indices);
 	mesh->set_material(material);
 	set_mesh(mesh);

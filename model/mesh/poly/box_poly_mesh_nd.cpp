@@ -46,7 +46,7 @@ void BoxPolyMeshND::set_dimension(const int p_dimension) {
 
 // Procedurally generates the N-cube's poly cell hierarchy. Each k-dimensional cell of the
 // N-cube is identified by a set of k "free" axes and a fixed +/- bit for each other axis.
-// Vertex indices are bitmasks where bit i set means the +X side of axis i, matching get_vertices.
+// Vertex indices are bitmasks where bit i set means the +X side of axis i, matching get_vertex_positions.
 void BoxPolyMeshND::_generate_poly_data() {
 	_poly_cell_indices_cache.clear();
 	_box_edge_indices_cache.clear();
@@ -147,7 +147,7 @@ void BoxPolyMeshND::_generate_poly_data() {
 	}
 	// Orient the boundary cells so that their orientation-derived normals point outward.
 	if (dimension >= 3) {
-		_orient_cells_to_match_normals(_poly_cell_indices_cache, _box_edge_indices_cache, get_vertices(), _boundary_normals_cache, dimension - 3);
+		_orient_cells_to_match_normals(_poly_cell_indices_cache, _box_edge_indices_cache, get_vertex_positions(), _boundary_normals_cache, dimension - 3);
 		// Flat shading vertex normals: every vertex instance of a cell uses the cell's normal.
 		const int64_t boundary_cell_vertex_count = int64_t(1) << (dimension - 1);
 		_vertex_normals_cache.resize(_boundary_normals_cache.size());
@@ -169,8 +169,8 @@ Vector<Vector<PackedInt32Array>> BoxPolyMeshND::get_poly_cell_indices() {
 	return _poly_cell_indices_cache;
 }
 
-Vector<VectorN> BoxPolyMeshND::get_poly_cell_vertices() {
-	return get_vertices();
+Vector<VectorN> BoxPolyMeshND::get_poly_cell_vertex_positions() {
+	return get_vertex_positions();
 }
 
 Vector<VectorN> BoxPolyMeshND::get_poly_cell_boundary_normals() {
@@ -323,7 +323,7 @@ PackedInt32Array BoxPolyMeshND::get_edge_indices() {
 	return _box_edge_indices_cache;
 }
 
-Vector<VectorN> BoxPolyMeshND::get_vertices() {
+Vector<VectorN> BoxPolyMeshND::get_vertex_positions() {
 	if (_vertices_cache.is_empty()) {
 		const VectorN he = get_half_extents();
 		const int64_t dimension = _size.size();

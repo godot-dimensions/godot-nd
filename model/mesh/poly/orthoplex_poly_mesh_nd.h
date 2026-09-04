@@ -39,13 +39,13 @@ public:
 	void set_dimension(const int p_dimension);
 
 	virtual Vector<Vector<PackedInt32Array>> get_poly_cell_indices() override;
-	virtual Vector<VectorN> get_poly_cell_vertices() override;
+	virtual Vector<VectorN> get_poly_cell_vertex_positions() override;
 	virtual Vector<VectorN> get_poly_cell_boundary_normals() override;
 	virtual Vector<Vector<VectorN>> get_poly_cell_vertex_normals() override;
 	virtual Vector<Vector<VectorM>> get_poly_cell_texture_map() override;
 
 	virtual PackedInt32Array get_edge_indices() override;
-	virtual Vector<VectorN> get_vertices() override;
+	virtual Vector<VectorN> get_vertex_positions() override;
 
 	static Ref<OrthoplexPolyMeshND> from_orthoplex_wire_mesh(const Ref<OrthoplexWireMeshND> &p_wire_mesh);
 	Ref<OrthoplexWireMeshND> to_orthoplex_wire_mesh() const;

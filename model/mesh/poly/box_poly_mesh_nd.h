@@ -49,13 +49,13 @@ public:
 	void set_poly_texture_map(const BoxPolyTextureMap p_map);
 
 	virtual Vector<Vector<PackedInt32Array>> get_poly_cell_indices() override;
-	virtual Vector<VectorN> get_poly_cell_vertices() override;
+	virtual Vector<VectorN> get_poly_cell_vertex_positions() override;
 	virtual Vector<VectorN> get_poly_cell_boundary_normals() override;
 	virtual Vector<Vector<VectorN>> get_poly_cell_vertex_normals() override;
 	virtual Vector<Vector<VectorM>> get_poly_cell_texture_map() override;
 
 	virtual PackedInt32Array get_edge_indices() override;
-	virtual Vector<VectorN> get_vertices() override;
+	virtual Vector<VectorN> get_vertex_positions() override;
 
 	static Ref<BoxPolyMeshND> from_box_wire_mesh(const Ref<BoxWireMeshND> &p_wire_mesh);
 	Ref<BoxWireMeshND> to_box_wire_mesh() const;

@@ -32,7 +32,7 @@ int64_t ArrayPolyMeshND::append_edge_indices(int32_t p_index_a, int32_t p_index_
 }
 
 int64_t ArrayPolyMeshND::append_poly_cell(const int32_t p_dimension, const PackedInt32Array &p_cell, const bool p_deduplicate) {
-	ERR_FAIL_COND_V_MSG(_poly_cell_vertices.is_empty() || _edge_vertex_indices.is_empty(), -1, "This ArrayPolyMeshND lacks any 0D vertices or 1D edges, so cannot append a poly cell.");
+	ERR_FAIL_COND_V_MSG(_poly_cell_vertex_positions.is_empty() || _edge_vertex_indices.is_empty(), -1, "This ArrayPolyMeshND lacks any 0D vertices or 1D edges, so cannot append a poly cell.");
 	ERR_FAIL_COND_V_MSG(p_dimension < 2, -1, "ArrayPolyMeshND: Cannot append " + itos(p_dimension) + "D poly cell. For 0D vertices and 1D edges, use the special functions for those.");
 	const int64_t old_mesh_dim = _poly_cell_indices.size() + 1;
 	ERR_FAIL_COND_V_MSG(p_dimension > old_mesh_dim + 1, -1, "ArrayPolyMeshND: Cannot append a " + itos(p_dimension) + "D poly cell because the mesh currently only has cells up to " + itos(old_mesh_dim) + "D. Cells must be appended in order of dimension, so append the missing " + itos(old_mesh_dim + 1) + "D cell(s) first.");
@@ -74,16 +74,16 @@ int64_t ArrayPolyMeshND::append_poly_cell(const int32_t p_dimension, const Packe
 }
 
 int ArrayPolyMeshND::append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
-	const int vertex_count = _poly_cell_vertices.size();
+	const int vertex_count = _poly_cell_vertex_positions.size();
 	if (p_deduplicate_vertices) {
 		for (int i = 0; i < vertex_count; i++) {
-			if (_poly_cell_vertices[i] == p_vertex) {
+			if (_poly_cell_vertex_positions[i] == p_vertex) {
 				return i;
 			}
 		}
 	}
-	ERR_FAIL_COND_V(_poly_cell_vertices.size() > MAX_POLY_VERTICES, 2147483647);
-	_poly_cell_vertices.push_back(p_vertex);
+	ERR_FAIL_COND_V(_poly_cell_vertex_positions.size() > MAX_POLY_VERTICES, 2147483647);
+	_poly_cell_vertex_positions.push_back(p_vertex);
 	reset_poly_mesh_data_validation();
 	return vertex_count;
 }
@@ -150,7 +150,7 @@ void ArrayPolyMeshND::_delete_edge_internal(const int32_t p_index) {
 }
 
 void ArrayPolyMeshND::_delete_vertex_internal(const int32_t p_index) {
-	const int64_t vertex_count = _poly_cell_vertices.size();
+	const int64_t vertex_count = _poly_cell_vertex_positions.size();
 	ERR_FAIL_COND_MSG(p_index < 0 || p_index >= vertex_count, "ArrayPolyMeshND: Vertex index is out of range.");
 	// Before deleting this vertex, we need to delete any edges that reference it,
 	// and any poly cells in higher dimensions that reference those edges.
@@ -165,7 +165,7 @@ void ArrayPolyMeshND::_delete_vertex_internal(const int32_t p_index) {
 		_delete_edge_internal(edges_to_delete[i]);
 	}
 	// Delete the vertex itself now that all dependent edges (and higher dimensions) are gone.
-	_poly_cell_vertices.remove_at(p_index);
+	_poly_cell_vertex_positions.remove_at(p_index);
 	// Shift remaining edge vertex references down to preserve index semantics.
 	for (int64_t edge_vertex_index = 0; edge_vertex_index < _edge_vertex_indices.size(); edge_vertex_index++) {
 		if (_edge_vertex_indices[edge_vertex_index] > p_index) {
@@ -302,7 +302,7 @@ void ArrayPolyMeshND::calculate_boundary_normals(const ComputeNormalsMode p_mode
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	ERR_FAIL_COND_MSG(boundary_dim_index < 0 || _poly_cell_indices.size() <= boundary_dim_index, "ArrayPolyMeshND: Cannot calculate boundary normals because there are no boundary cells.");
 	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot calculate boundary normals for invalid poly mesh data.");
-	ERR_FAIL_COND_MSG(_poly_cell_vertices.is_empty(), "ArrayPolyMeshND: Cannot calculate boundary normals because there are no vertices.");
+	ERR_FAIL_COND_MSG(_poly_cell_vertex_positions.is_empty(), "ArrayPolyMeshND: Cannot calculate boundary normals because there are no vertices.");
 	const Vector<PackedInt32Array> cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, true);
 	if (cell_vertex_indices.is_empty()) {
 		return;
@@ -321,8 +321,8 @@ void ArrayPolyMeshND::calculate_boundary_normals(const ComputeNormalsMode p_mode
 		const PackedInt32Array &vertex_indices = cell_vertex_indices[cell_index];
 		VectorN average;
 		for (int64_t vertex_index : vertex_indices) {
-			ERR_FAIL_COND(vertex_index < 0 || vertex_index >= _poly_cell_vertices.size());
-			average = VectorND::add(average, _poly_cell_vertices[vertex_index]);
+			ERR_FAIL_COND(vertex_index < 0 || vertex_index >= _poly_cell_vertex_positions.size());
+			average = VectorND::add(average, _poly_cell_vertex_positions[vertex_index]);
 		}
 		average = VectorND::divide_scalar(average, (double)vertex_indices.size());
 		if (VectorND::dot(average, poly_cell_boundary_normals[cell_index]) < 0) {
@@ -390,14 +390,14 @@ void ArrayPolyMeshND::set_smooth_shading_normals(const ComputeNormalsMode p_mode
 	Vector<Vector<VectorN>> poly_cell_vertex_normals;
 	poly_cell_vertex_normals.resize(poly_cell_boundary_normals.size());
 	Vector<VectorN> vertex_normals;
-	vertex_normals.resize(_poly_cell_vertices.size());
+	vertex_normals.resize(_poly_cell_vertex_positions.size());
 	// Step 2: Iterate through each island separately such that seams (if they exist)
 	// are respected and are treated as sharp borders that should not be smoothed across.
 	const Vector<PackedInt32Array> islands = collect_all_islands();
 	for (int64_t island_index = 0; island_index < islands.size(); island_index++) {
 		const PackedInt32Array &cells_in_island = islands[island_index];
 		// Step 3: Calculate the average normal of each vertex across each usage in cells in this island.
-		for (int64_t vertex_index = 0; vertex_index < _poly_cell_vertices.size(); vertex_index++) {
+		for (int64_t vertex_index = 0; vertex_index < _poly_cell_vertex_positions.size(); vertex_index++) {
 			vertex_normals.set(vertex_index, VectorN());
 		}
 		for (const int32_t cell_index : cells_in_island) {
@@ -407,7 +407,7 @@ void ArrayPolyMeshND::set_smooth_shading_normals(const ComputeNormalsMode p_mode
 				vertex_normals.set(vertex_index, VectorND::add(vertex_normals[vertex_index], cell_normal));
 			}
 		}
-		for (int64_t vertex_index = 0; vertex_index < _poly_cell_vertices.size(); vertex_index++) {
+		for (int64_t vertex_index = 0; vertex_index < _poly_cell_vertex_positions.size(); vertex_index++) {
 			vertex_normals.set(vertex_index, VectorND::normalized(vertex_normals[vertex_index]));
 		}
 		// Step 4: Assign each cell's vertex normals to the average normal of the vertices that make up that cell.
@@ -617,7 +617,7 @@ void ArrayPolyMeshND::calculate_seams(const double p_angle_threshold_radians, co
 }
 
 int64_t ArrayPolyMeshND::_get_boundary_member_count() const {
-	const int64_t dimension = _poly_cell_vertices.is_empty() ? 0 : _poly_cell_vertices[0].size();
+	const int64_t dimension = _poly_cell_vertex_positions.is_empty() ? 0 : _poly_cell_vertex_positions[0].size();
 	const int64_t boundary_dim_index = dimension - 3;
 	if (boundary_dim_index < 0) {
 		return 0;
@@ -634,7 +634,7 @@ int64_t ArrayPolyMeshND::_get_boundary_member_count() const {
 
 Vector<PackedInt32Array> ArrayPolyMeshND::_get_member_to_cell_map() const {
 	// For efficiency, pre-compute a mapping of boundary member index to the cells that use it.
-	const int64_t dimension = _poly_cell_vertices.is_empty() ? 0 : _poly_cell_vertices[0].size();
+	const int64_t dimension = _poly_cell_vertex_positions.is_empty() ? 0 : _poly_cell_vertex_positions[0].size();
 	const int64_t boundary_dim_index = dimension - 3;
 	Vector<PackedInt32Array> member_to_cells;
 	ERR_FAIL_COND_V(boundary_dim_index < 0 || _poly_cell_indices.size() <= boundary_dim_index, member_to_cells);
@@ -757,13 +757,13 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 	if (p_current_cell_index_index == 0) {
 		// For the first cell in the island, there is nothing to "build on", so project the cell
 		// isometrically onto its own hyperplane, using an orthonormal basis of the cell's spans.
-		const VectorN base = _poly_cell_vertices[cell_vertex_list[0]];
+		const VectorN base = _poly_cell_vertex_positions[cell_vertex_list[0]];
 		Vector<VectorN> ortho_dirs;
 		for (int64_t i = 1; i < cell_vertex_list.size(); i++) {
 			if (ortho_dirs.size() >= texture_dimension) {
 				break;
 			}
-			VectorN direction = VectorND::subtract(_poly_cell_vertices[cell_vertex_list[i]], base);
+			VectorN direction = VectorND::subtract(_poly_cell_vertex_positions[cell_vertex_list[i]], base);
 			const double original_length = VectorND::length(direction);
 			if (Math::is_zero_approx(original_length)) {
 				continue;
@@ -781,7 +781,7 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 		Vector<VectorM> cell_texture_map;
 		cell_texture_map.resize(cell_vertex_list.size());
 		for (int64_t i = 0; i < cell_vertex_list.size(); i++) {
-			const VectorN offset = VectorND::subtract(_poly_cell_vertices[cell_vertex_list[i]], base);
+			const VectorN offset = VectorND::subtract(_poly_cell_vertex_positions[cell_vertex_list[i]], base);
 			VectorM texcoord = VectorND::fill(texture_dimension, 0.0);
 			for (int64_t axis = 0; axis < texture_dimension; axis++) {
 				texcoord.set(axis, VectorND::dot(ortho_dirs[axis], offset));
@@ -817,12 +817,12 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 		}
 		// The shared member is (N-2)-dimensional, so it is spanned by N-2 independent directions.
 		PackedInt32Array picked_positions;
-		const int64_t rank = _pick_spanning_vertices(_poly_cell_vertices, member_vertices, dimension - 2, picked_positions);
+		const int64_t rank = _pick_spanning_vertices(_poly_cell_vertex_positions, member_vertices, dimension - 2, picked_positions);
 		if (rank < dimension - 2) {
 			continue; // The shared member is degenerate, try to build on another neighbor instead.
 		}
 		const int32_t base_vertex = member_vertices[0];
-		const VectorN base = _poly_cell_vertices[base_vertex];
+		const VectorN base = _poly_cell_vertex_positions[base_vertex];
 		// Find a vertex of this cell that is not on the shared member, to unfold away from it.
 		int32_t off_member_vertex = -1;
 		for (const int32_t cell_vertex : cell_vertex_list) {
@@ -838,14 +838,14 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 		world_spans.resize(rank + 1);
 		Vector<VectorN> member_ortho_dirs;
 		for (int64_t i = 0; i < rank; i++) {
-			VectorN span = VectorND::subtract(_poly_cell_vertices[member_vertices[picked_positions[i]]], base);
+			VectorN span = VectorND::subtract(_poly_cell_vertex_positions[member_vertices[picked_positions[i]]], base);
 			world_spans.set(i, span);
 			for (int64_t ortho_index = 0; ortho_index < member_ortho_dirs.size(); ortho_index++) {
 				span = VectorND::subtract(span, VectorND::multiply_scalar(member_ortho_dirs[ortho_index], VectorND::dot(member_ortho_dirs[ortho_index], span)));
 			}
 			member_ortho_dirs.append(VectorND::normalized(span));
 		}
-		VectorN world_perp = VectorND::subtract(_poly_cell_vertices[off_member_vertex], base);
+		VectorN world_perp = VectorND::subtract(_poly_cell_vertex_positions[off_member_vertex], base);
 		for (int64_t ortho_index = 0; ortho_index < member_ortho_dirs.size(); ortho_index++) {
 			world_perp = VectorND::subtract(world_perp, VectorND::multiply_scalar(member_ortho_dirs[ortho_index], VectorND::dot(member_ortho_dirs[ortho_index], world_perp)));
 		}
@@ -895,7 +895,7 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 		cell_texture_map.resize(cell_vertex_list.size());
 		for (int64_t i = 0; i < cell_vertex_list.size(); i++) {
 			VectorN coordinates;
-			if (!_solve_coordinates_in_span(world_spans, VectorND::subtract(_poly_cell_vertices[cell_vertex_list[i]], base), coordinates)) {
+			if (!_solve_coordinates_in_span(world_spans, VectorND::subtract(_poly_cell_vertex_positions[cell_vertex_list[i]], base), coordinates)) {
 				ERR_FAIL_V_MSG(false, "ArrayPolyMeshND: Cell is degenerate.");
 			}
 			VectorM texcoord = VectorND::duplicate(tex_base);
@@ -1133,8 +1133,8 @@ void ArrayPolyMeshND::deduplicate_all_elements() {
 	// Deduplicate vertices.
 	Vector<VectorN> output_vertices;
 	HashMap<int32_t, int32_t> vertex_index_remap;
-	for (int64_t input_vertex_index = 0; input_vertex_index < _poly_cell_vertices.size(); input_vertex_index++) {
-		const VectorN vertex = _poly_cell_vertices[input_vertex_index];
+	for (int64_t input_vertex_index = 0; input_vertex_index < _poly_cell_vertex_positions.size(); input_vertex_index++) {
+		const VectorN vertex = _poly_cell_vertex_positions[input_vertex_index];
 		bool found_duplicate = false;
 		for (int64_t output_vertex_index = 0; output_vertex_index < output_vertices.size(); output_vertex_index++) {
 			if (VectorND::is_equal_approx(vertex, output_vertices[output_vertex_index])) {
@@ -1216,7 +1216,7 @@ void ArrayPolyMeshND::deduplicate_all_elements() {
 	// Write back deduplicated geometry now so that get_all_poly_cell_poly_indices reads the new arrays
 	// when computing the post-dedup sub-element orderings for remapping data bindings.
 	const int64_t input_boundary_cell_count = has_boundary_cells ? _poly_cell_indices[boundary_dim_index].size() : 0;
-	_poly_cell_vertices = output_vertices;
+	_poly_cell_vertex_positions = output_vertices;
 	_edge_vertex_indices = output_edge_vertex_indices;
 	_poly_cell_indices = output_poly_cell_indices;
 	// Snapshot the sub-element traversal order for all decomposed bindings AFTER deduplication.
@@ -1482,9 +1482,9 @@ void ArrayPolyMeshND::deduplicate_all_elements() {
 
 void ArrayPolyMeshND::transform_vertices(const Ref<TransformND> &p_transform) {
 	ERR_FAIL_COND(p_transform.is_null());
-	const int64_t vertex_count = _poly_cell_vertices.size();
+	const int64_t vertex_count = _poly_cell_vertex_positions.size();
 	for (int64_t vertex_index = 0; vertex_index < vertex_count; vertex_index++) {
-		_poly_cell_vertices.set(vertex_index, p_transform->xform(_poly_cell_vertices[vertex_index]));
+		_poly_cell_vertex_positions.set(vertex_index, p_transform->xform(_poly_cell_vertex_positions[vertex_index]));
 	}
 	poly_mesh_clear_cache();
 }
@@ -1494,11 +1494,11 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 	ERR_FAIL_COND_MSG(p_other.is_null() || !p_other->is_mesh_data_valid(), "ArrayPolyMeshND: Cannot merge an invalid PolyMeshND into this mesh.");
 	const bool has_transform = p_transform.is_valid();
 	const Vector<Vector<PackedInt32Array>> other_poly_cell_indices = p_other->get_poly_cell_indices();
-	const Vector<VectorN> other_poly_cell_vertices = p_other->get_poly_cell_vertices();
+	const Vector<VectorN> other_poly_cell_vertices = p_other->get_poly_cell_vertex_positions();
 	const PackedInt32Array other_poly_cell_boundary_pivot_overrides = p_other->get_poly_cell_boundary_pivot_overrides();
 	const PackedInt32Array other_edge_indices = p_other->get_edge_indices();
 	const HashSet<int32_t> other_seam_indices = p_other->get_seam_indices();
-	const int64_t start_vertex_count = _poly_cell_vertices.size();
+	const int64_t start_vertex_count = _poly_cell_vertex_positions.size();
 	const int64_t start_edge_index_count = _edge_vertex_indices.size();
 	const int64_t other_vertex_count = other_poly_cell_vertices.size();
 	const int64_t other_edge_index_count = other_edge_indices.size();
@@ -1524,12 +1524,12 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 		}
 	}
 	// Merge vertices.
-	_poly_cell_vertices.resize(end_vertex_count);
+	_poly_cell_vertex_positions.resize(end_vertex_count);
 	for (int64_t i = 0; i < other_vertex_count; i++) {
-		_poly_cell_vertices.set(start_vertex_count + i, has_transform ? p_transform->xform(other_poly_cell_vertices[i]) : other_poly_cell_vertices[i]);
+		_poly_cell_vertex_positions.set(start_vertex_count + i, has_transform ? p_transform->xform(other_poly_cell_vertices[i]) : other_poly_cell_vertices[i]);
 	}
 	// The dimension and data binding keys of the merged mesh, now that the vertices are merged.
-	const int64_t dimension = _poly_cell_vertices.is_empty() ? 0 : _poly_cell_vertices[0].size();
+	const int64_t dimension = _poly_cell_vertex_positions.is_empty() ? 0 : _poly_cell_vertex_positions[0].size();
 	const int64_t boundary_dim_index = dimension - 3;
 	const Vector2i per_cell_key = Vector2i(dimension - 1, dimension - 1);
 	const Vector2i cell_to_vert_key = Vector2i(dimension - 1, 0);
@@ -1644,7 +1644,7 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 		// Use post-merge counts for padding/filling operations.
 		int64_t cell_count_for_geom_dim = 0;
 		if (key.x == 0) {
-			cell_count_for_geom_dim = _poly_cell_vertices.size();
+			cell_count_for_geom_dim = _poly_cell_vertex_positions.size();
 		} else if (key.x == 1) {
 			cell_count_for_geom_dim = _edge_vertex_indices.size() / 2;
 		} else if (key.x > 1 && (key.x - 2) < poly_cell_indices_dims) {
@@ -1837,7 +1837,7 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 		const Vector2i key = normals_kv.key;
 		int64_t cell_count_for_geom_dim;
 		if (key.x == 0) {
-			cell_count_for_geom_dim = _poly_cell_vertices.size();
+			cell_count_for_geom_dim = _poly_cell_vertex_positions.size();
 		} else if (key.x == 1) {
 			cell_count_for_geom_dim = _edge_vertex_indices.size() / 2;
 		} else if ((key.x - 2) < _poly_cell_indices.size()) {
@@ -1869,7 +1869,7 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 		const Vector2i key = texture_map_kv.key;
 		int64_t cell_count_for_geom_dim;
 		if (key.x == 0) {
-			cell_count_for_geom_dim = _poly_cell_vertices.size();
+			cell_count_for_geom_dim = _poly_cell_vertex_positions.size();
 		} else if (key.x == 1) {
 			cell_count_for_geom_dim = _edge_vertex_indices.size() / 2;
 		} else if ((key.x - 2) < _poly_cell_indices.size()) {
@@ -2184,25 +2184,25 @@ void ArrayPolyMeshND::set_seam_indices_bind(const PackedInt32Array &p_seam_indic
 	}
 }
 
-Vector<VectorN> ArrayPolyMeshND::get_poly_cell_vertices() {
-	return _poly_cell_vertices;
+Vector<VectorN> ArrayPolyMeshND::get_poly_cell_vertex_positions() {
+	return _poly_cell_vertex_positions;
 }
 
-void ArrayPolyMeshND::set_poly_cell_vertices(const Vector<VectorN> &p_vertices) {
-	ERR_FAIL_COND(p_vertices.size() > MAX_POLY_VERTICES); // Prevent overflow.
-	_poly_cell_vertices = p_vertices;
+void ArrayPolyMeshND::set_poly_cell_vertex_positions(const Vector<VectorN> &p_vertex_positions) {
+	ERR_FAIL_COND(p_vertex_positions.size() > MAX_POLY_VERTICES); // Prevent overflow.
+	_poly_cell_vertex_positions = p_vertex_positions;
 	poly_mesh_clear_cache();
 	reset_poly_mesh_data_validation();
 }
 
-void ArrayPolyMeshND::set_poly_cell_vertices_bind(const TypedArray<VectorN> &p_vertices) {
+void ArrayPolyMeshND::set_poly_cell_vertex_positions_bind(const TypedArray<VectorN> &p_vertex_positions) {
 	Vector<VectorN> vertices;
-	vertices.resize(p_vertices.size());
-	for (int i = 0; i < p_vertices.size(); i++) {
-		const VectorN vertex = p_vertices[i];
+	vertices.resize(p_vertex_positions.size());
+	for (int i = 0; i < p_vertex_positions.size(); i++) {
+		const VectorN vertex = p_vertex_positions[i];
 		vertices.set(i, vertex);
 	}
-	set_poly_cell_vertices(vertices);
+	set_poly_cell_vertex_positions(vertices);
 }
 
 void ArrayPolyMeshND::_bind_methods() {
@@ -2238,8 +2238,12 @@ void ArrayPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_poly_cell_indices", "poly_cell_indices"), &ArrayPolyMeshND::set_poly_cell_indices_bind);
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "poly_cell_indices"), "set_poly_cell_indices", "get_poly_cell_indices");
 
-	ClassDB::bind_method(D_METHOD("set_poly_cell_vertices", "poly_cell_vertices"), &ArrayPolyMeshND::set_poly_cell_vertices_bind);
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "poly_cell_vertices"), "set_poly_cell_vertices", "get_poly_cell_vertices");
+	ClassDB::bind_method(D_METHOD("set_poly_cell_vertex_positions", "poly_cell_vertex_positions"), &ArrayPolyMeshND::set_poly_cell_vertex_positions_bind);
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "poly_cell_vertex_positions"), "set_poly_cell_vertex_positions", "get_poly_cell_vertex_positions");
+#ifndef DISABLE_DEPRECATED
+	// Compatibility property to handle reading existing serialized data.
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "poly_cell_vertices", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_INTERNAL), "set_poly_cell_vertex_positions", "get_poly_cell_vertex_positions");
+#endif // DISABLE_DEPRECATED
 
 	ClassDB::bind_method(D_METHOD("set_poly_cell_boundary_pivot_overrides", "poly_cell_boundary_pivot_overrides"), &ArrayPolyMeshND::set_poly_cell_boundary_pivot_overrides);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "poly_cell_boundary_pivot_overrides"), "set_poly_cell_boundary_pivot_overrides", "get_poly_cell_boundary_pivot_overrides");

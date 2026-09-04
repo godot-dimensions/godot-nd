@@ -11,7 +11,7 @@ bool ArrayWireMeshND::validate_mesh_data() {
 	if (edge_indices_count % 2 != 0) {
 		return false; // Must be a multiple of 2.
 	}
-	const int64_t vertex_count = _vertices.size();
+	const int64_t vertex_count = _vertex_positions.size();
 	for (int32_t edge_index : _edge_vertex_indices) {
 		if (edge_index < 0 || edge_index >= vertex_count) {
 			return false; // Edges must reference valid vertices.
@@ -38,16 +38,16 @@ void ArrayWireMeshND::append_edge_indices(int p_index_a, int p_index_b) {
 }
 
 int ArrayWireMeshND::append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
-	const int vertex_count = _vertices.size();
+	const int vertex_count = _vertex_positions.size();
 	if (p_deduplicate_vertices) {
 		for (int i = 0; i < vertex_count; i++) {
-			if (VectorND::is_equal_approx(_vertices[i], p_vertex)) {
+			if (VectorND::is_equal_approx(_vertex_positions[i], p_vertex)) {
 				return i;
 			}
 		}
 	}
-	ERR_FAIL_COND_V(_vertices.size() > MAX_VERTICES, 2147483647);
-	_vertices.push_back(p_vertex);
+	ERR_FAIL_COND_V(_vertex_positions.size() > MAX_VERTICES, 2147483647);
+	_vertex_positions.push_back(p_vertex);
 	reset_mesh_data_validation();
 	return vertex_count;
 }
@@ -75,8 +75,8 @@ void ArrayWireMeshND::deduplicate_all_elements() {
 	// Deduplicate vertices.
 	Vector<VectorN> output_vertices;
 	HashMap<int32_t, int32_t> vertex_index_remap;
-	for (int64_t input_vertex_index = 0; input_vertex_index < _vertices.size(); input_vertex_index++) {
-		const VectorN vertex = _vertices[input_vertex_index];
+	for (int64_t input_vertex_index = 0; input_vertex_index < _vertex_positions.size(); input_vertex_index++) {
+		const VectorN vertex = _vertex_positions[input_vertex_index];
 		bool found_duplicate = false;
 		for (int64_t output_vertex_index = 0; output_vertex_index < output_vertices.size(); output_vertex_index++) {
 			if (VectorND::is_equal_approx(vertex, output_vertices[output_vertex_index])) {
@@ -121,7 +121,7 @@ void ArrayWireMeshND::deduplicate_all_elements() {
 			output_edge_vertex_indices.append(vertex_index_b);
 		}
 	}
-	_vertices = output_vertices;
+	_vertex_positions = output_vertices;
 	_edge_vertex_indices = output_edge_vertex_indices;
 	wire_mesh_clear_cache();
 	reset_mesh_data_validation();
@@ -129,27 +129,27 @@ void ArrayWireMeshND::deduplicate_all_elements() {
 
 void ArrayWireMeshND::transform_vertices(const Ref<TransformND> &p_transform) {
 	ERR_FAIL_COND(p_transform.is_null());
-	const int64_t vertex_count = _vertices.size();
+	const int64_t vertex_count = _vertex_positions.size();
 	for (int64_t vertex_index = 0; vertex_index < vertex_count; vertex_index++) {
-		_vertices.set(vertex_index, p_transform->xform(_vertices[vertex_index]));
+		_vertex_positions.set(vertex_index, p_transform->xform(_vertex_positions[vertex_index]));
 	}
 	wire_mesh_clear_cache();
 }
 
 void ArrayWireMeshND::merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<TransformND> &p_transform) {
 	const int start_edge_count = _edge_vertex_indices.size();
-	const int start_vertex_count = _vertices.size();
+	const int start_vertex_count = _vertex_positions.size();
 	const int other_edge_count = p_other->_edge_vertex_indices.size();
-	const int other_vertex_count = p_other->_vertices.size();
+	const int other_vertex_count = p_other->_vertex_positions.size();
 	const int end_edge_count = start_edge_count + other_edge_count;
 	const int end_vertex_count = start_vertex_count + other_vertex_count;
 	_edge_vertex_indices.resize(end_edge_count);
-	_vertices.resize(end_vertex_count);
+	_vertex_positions.resize(end_vertex_count);
 	for (int i = 0; i < other_edge_count; i++) {
 		_edge_vertex_indices.set(start_edge_count + i, p_other->_edge_vertex_indices[i] + start_vertex_count);
 	}
 	for (int i = 0; i < other_vertex_count; i++) {
-		_vertices.set(start_vertex_count + i, p_transform->xform(p_other->_vertices[i]));
+		_vertex_positions.set(start_vertex_count + i, p_transform->xform(p_other->_vertex_positions[i]));
 	}
 	Ref<MaterialND> self_material = get_material();
 	if (self_material.is_null()) {
@@ -169,22 +169,22 @@ void ArrayWireMeshND::set_edge_indices(const PackedInt32Array &p_edge_indices) {
 	reset_mesh_data_validation();
 }
 
-Vector<VectorN> ArrayWireMeshND::get_vertices() {
-	return _vertices;
+Vector<VectorN> ArrayWireMeshND::get_vertex_positions() {
+	return _vertex_positions;
 }
 
-void ArrayWireMeshND::set_vertices(const Vector<VectorN> &p_vertices) {
-	ERR_FAIL_COND(p_vertices.size() > MAX_VERTICES);
-	_vertices = p_vertices;
+void ArrayWireMeshND::set_vertex_positions(const Vector<VectorN> &p_vertex_positions) {
+	ERR_FAIL_COND(p_vertex_positions.size() > MAX_VERTICES);
+	_vertex_positions = p_vertex_positions;
 	wire_mesh_clear_cache();
 	reset_mesh_data_validation();
 }
 
-void ArrayWireMeshND::set_vertices_bind(const TypedArray<VectorN> &p_vertices) {
-	_vertices.clear();
-	_vertices.resize(p_vertices.size());
-	for (int i = 0; i < p_vertices.size(); i++) {
-		_vertices.set(i, p_vertices[i]);
+void ArrayWireMeshND::set_vertex_positions_bind(const TypedArray<VectorN> &p_vertex_positions) {
+	_vertex_positions.clear();
+	_vertex_positions.resize(p_vertex_positions.size());
+	for (int i = 0; i < p_vertex_positions.size(); i++) {
+		_vertex_positions.set(i, p_vertex_positions[i]);
 	}
 	wire_mesh_clear_cache();
 	reset_mesh_data_validation();
@@ -193,8 +193,8 @@ void ArrayWireMeshND::set_vertices_bind(const TypedArray<VectorN> &p_vertices) {
 void ArrayWireMeshND::set_dimension(int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "ArrayWireMeshND: Dimension must not be negative.");
 	ERR_FAIL_COND_MSG(p_dimension > 1000, "ArrayWireMeshND: Too many dimensions for wireframe mesh.");
-	for (int i = 0; i < _vertices.size(); i++) {
-		_vertices.set(i, VectorND::with_dimension(_vertices[i], p_dimension));
+	for (int i = 0; i < _vertex_positions.size(); i++) {
+		_vertex_positions.set(i, VectorND::with_dimension(_vertex_positions[i], p_dimension));
 	}
 	wire_mesh_clear_cache();
 	reset_mesh_data_validation();
@@ -212,9 +212,13 @@ void ArrayWireMeshND::_bind_methods() {
 
 	// Only bind the setters here because the getters are already bound in WireMeshND.
 	ClassDB::bind_method(D_METHOD("set_edge_indices", "edge_indices"), &ArrayWireMeshND::set_edge_indices);
-	ClassDB::bind_method(D_METHOD("set_vertices", "vertices"), &ArrayWireMeshND::set_vertices_bind);
+	ClassDB::bind_method(D_METHOD("set_vertex_positions", "vertex_positions"), &ArrayWireMeshND::set_vertex_positions_bind);
 	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &ArrayWireMeshND::set_dimension);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "edge_indices"), "set_edge_indices", "get_edge_indices");
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "vertices", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_vertices", "get_vertices");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "vertex_positions", PROPERTY_HINT_ARRAY_TYPE, "PackedFloat64Array"), "set_vertex_positions", "get_vertex_positions");
+#ifndef DISABLE_DEPRECATED
+	// Compatibility property to handle reading existing serialized data.
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "vertices", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_INTERNAL), "set_vertex_positions", "get_vertex_positions");
+#endif // DISABLE_DEPRECATED
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension", PROPERTY_HINT_RANGE, "0,1000,1", PROPERTY_USAGE_EDITOR), "set_dimension", "get_dimension");
 }

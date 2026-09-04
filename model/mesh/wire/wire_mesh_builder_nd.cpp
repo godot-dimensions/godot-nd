@@ -18,7 +18,7 @@ Ref<ArrayWireMeshND> WireMeshBuilderND::extrude_linear(const Ref<ArrayWireMeshND
 	ret->merge_with(p_input_mesh, offset_transform);
 	// Form new edges between the vertices of the two copies of the input mesh.
 	{
-		const Vector<VectorN> &input_vertices = p_input_mesh->get_vertices();
+		const Vector<VectorN> &input_vertices = p_input_mesh->get_vertex_positions();
 		PackedInt32Array edge_indices = ret->get_edge_indices();
 		int64_t edge_indices_iter = edge_indices.size();
 		const int32_t input_vertex_count = (int32_t)input_vertices.size();
