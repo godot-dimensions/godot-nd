@@ -19,7 +19,7 @@ protected:
 	virtual bool validate_mesh_data() override;
 
 public:
-	int append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
+	int32_t append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
 	PackedInt32Array append_vertices(const Vector<VectorN> &p_vertices, const bool p_deduplicate_vertices = true);
 
 	void merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<TransformND> &p_transform);

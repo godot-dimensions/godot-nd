@@ -18,7 +18,7 @@ bool ArrayCellMeshND::validate_mesh_data() {
 	ERR_FAIL_COND_V_MSG(cell_vertex_normals_count > 0 && cell_vertex_normals_count != cell_vertex_indices_count, false, "ArrayCellMeshND: Simplex cell vertex normals size must be the same as simplex cell vertex indices size (or empty).");
 	const int64_t cell_texture_map_count = _simplex_cell_texture_map.size();
 	ERR_FAIL_COND_V_MSG(cell_texture_map_count > 0 && cell_texture_map_count != cell_vertex_indices_count, false, "ArrayCellMeshND: Simplex cell texture map size must be the same as simplex cell vertex indices size (or empty).");
-	const int64_t vertex_count = _vertex_positions.size();
+	const int64_t vertex_pos_count = _vertex_positions.size();
 	for (const VectorN &position : _vertex_positions) {
 		ERR_FAIL_COND_V_MSG(position.size() > dimension, false, "ArrayCellMeshND: Vertex positions must not exceed the mesh dimension defined by the first vertex.");
 	}
@@ -33,15 +33,16 @@ bool ArrayCellMeshND::validate_mesh_data() {
 		ERR_FAIL_COND_V_MSG(texcoord.size() > texture_dimension, false, "ArrayCellMeshND: Texture coordinates must have fewer components than the mesh dimension.");
 	}
 	for (int32_t cell_vertex_index : _simplex_cell_vertex_indices) {
-		ERR_FAIL_COND_V_MSG(cell_vertex_index < 0 || cell_vertex_index >= vertex_count, false, "ArrayCellMeshND: Simplex cell vertex indices must reference valid vertices.");
+		ERR_FAIL_COND_V_MSG(cell_vertex_index < 0 || cell_vertex_index >= vertex_pos_count, false, "ArrayCellMeshND: Simplex cell vertex indices must reference valid vertices.");
 	}
 	return true;
 }
 
-int ArrayCellMeshND::append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
-	const int64_t vertex_count = _vertex_positions.size();
+int32_t ArrayCellMeshND::append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
+	const int64_t vertex_pos_count = _vertex_positions.size();
+	ERR_FAIL_COND_V_MSG(vertex_pos_count > MeshND::MAX_VERTICES, -1, "ArrayCellMeshND: Cannot add more vertices to the mesh. Maximum vertex count exceeded.");
 	if (p_deduplicate_vertices) {
-		for (int64_t i = 0; i < vertex_count; i++) {
+		for (int64_t i = 0; i < vertex_pos_count; i++) {
 			if (VectorND::is_equal_exact(_vertex_positions[i], p_vertex)) {
 				return i;
 			}
@@ -50,7 +51,7 @@ int ArrayCellMeshND::append_vertex(const VectorN &p_vertex, const bool p_dedupli
 	_vertex_positions.push_back(p_vertex);
 	cell_mesh_clear_cache();
 	reset_mesh_data_validation();
-	return vertex_count;
+	return (int32_t)vertex_pos_count;
 }
 
 PackedInt32Array ArrayCellMeshND::append_vertices(const Vector<VectorN> &p_vertex_positions, const bool p_deduplicate_vertices) {
@@ -71,26 +72,26 @@ void ArrayCellMeshND::merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<
 	const int64_t start_cell_face_normal_count = _simplex_cell_boundary_normals.size();
 	const int64_t start_cell_vertex_normal_count = _simplex_cell_vertex_normals.size();
 	const int64_t start_cell_texture_map_count = _simplex_cell_texture_map.size();
-	const int64_t start_vertex_count = _vertex_positions.size();
+	const int64_t start_vertex_pos_count = _vertex_positions.size();
 	const int64_t other_cell_vertex_index_count = p_other->_simplex_cell_vertex_indices.size();
 	const int64_t other_cell_face_normal_count = p_other->_simplex_cell_boundary_normals.size();
 	const int64_t other_cell_vertex_normal_count = p_other->_simplex_cell_vertex_normals.size();
 	const int64_t other_cell_texture_map_count = p_other->_simplex_cell_texture_map.size();
-	const int64_t other_vertex_count = p_other->_vertex_positions.size();
+	const int64_t other_vertex_pos_count = p_other->_vertex_positions.size();
 	const int64_t end_cell_vertex_index_count = start_cell_vertex_index_count + other_cell_vertex_index_count;
-	const int64_t end_vertex_count = start_vertex_count + other_vertex_count;
+	const int64_t end_vertex_pos_count = start_vertex_pos_count + other_vertex_pos_count;
 	const int64_t start_dimension = get_dimension();
 	const int64_t other_dimension = p_other->get_dimension();
-	ERR_FAIL_COND_MSG(start_vertex_count > 0 && other_vertex_count > 0 && start_dimension != other_dimension, "ArrayCellMeshND: Cannot merge meshes with different dimensions.");
-	const int64_t dimension = start_vertex_count == 0 ? other_dimension : start_dimension;
+	ERR_FAIL_COND_MSG(start_vertex_pos_count > 0 && other_vertex_pos_count > 0 && start_dimension != other_dimension, "ArrayCellMeshND: Cannot merge meshes with different dimensions.");
+	const int64_t dimension = start_vertex_pos_count == 0 ? other_dimension : start_dimension;
 	_simplex_cell_vertex_indices.resize(end_cell_vertex_index_count);
-	_vertex_positions.resize(end_vertex_count);
+	_vertex_positions.resize(end_vertex_pos_count);
 	// Copy in the cell indices and vertices from the other mesh.
 	for (int64_t i = 0; i < other_cell_vertex_index_count; i++) {
-		_simplex_cell_vertex_indices.set(start_cell_vertex_index_count + i, p_other->_simplex_cell_vertex_indices[i] + start_vertex_count);
+		_simplex_cell_vertex_indices.set(start_cell_vertex_index_count + i, p_other->_simplex_cell_vertex_indices[i] + start_vertex_pos_count);
 	}
-	for (int64_t i = 0; i < other_vertex_count; i++) {
-		_vertex_positions.set(start_vertex_count + i, p_transform->xform(p_other->_vertex_positions[i]));
+	for (int64_t i = 0; i < other_vertex_pos_count; i++) {
+		_vertex_positions.set(start_vertex_pos_count + i, p_transform->xform(p_other->_vertex_positions[i]));
 	}
 	// Can't simply add these together in case the first mesh has no normals.
 	if (start_cell_face_normal_count > 0 || other_cell_face_normal_count > 0) {

@@ -15,8 +15,8 @@ protected:
 
 public:
 	void append_edge_points(const VectorN &p_point_a, const VectorN &p_point_b, const bool p_deduplicate_vertices = true);
-	void append_edge_indices(int p_index_a, int p_index_b);
-	int append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
+	void append_edge_indices(int32_t p_index_a, int32_t p_index_b);
+	int32_t append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
 	PackedInt32Array append_vertices(const Vector<VectorN> &p_vertices, const bool p_deduplicate_vertices = true);
 	PackedInt32Array append_vertices_bind(const TypedArray<VectorN> &p_vertices, const bool p_deduplicate_vertices = true);
 

@@ -69,7 +69,7 @@ public:
 	int64_t append_edge_points(const VectorN &p_point_a, const VectorN &p_point_b, const bool p_deduplicate = true);
 	int64_t append_edge_indices(int32_t p_index_a, int32_t p_index_b, const bool p_deduplicate = true);
 	int64_t append_poly_cell(const int32_t p_dimension, const PackedInt32Array &p_cell, const bool p_deduplicate = true);
-	int append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
+	int32_t append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
 	PackedInt32Array append_vertices(const TypedArray<VectorN> &p_vertices, const bool p_deduplicate_vertices = true);
 	void delete_poly_element(const int32_t p_dimension, const int32_t p_index);
 

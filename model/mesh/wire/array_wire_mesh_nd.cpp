@@ -11,7 +11,7 @@ bool ArrayWireMeshND::validate_mesh_data() {
 	if (edge_indices_count % 2 != 0) {
 		return false; // Must be a multiple of 2.
 	}
-	const int64_t vertex_count = _vertex_positions.size();
+	const int64_t vertex_pos_count = _vertex_positions.size();
 	const int dimension = get_dimension();
 	for (const VectorN &position : _vertex_positions) {
 		if (position.size() > dimension) {
@@ -19,7 +19,7 @@ bool ArrayWireMeshND::validate_mesh_data() {
 		}
 	}
 	for (int32_t edge_index : _edge_vertex_indices) {
-		if (edge_index < 0 || edge_index >= vertex_count) {
+		if (edge_index < 0 || edge_index >= vertex_pos_count) {
 			return false; // Edges must reference valid vertices.
 		}
 	}
@@ -27,13 +27,13 @@ bool ArrayWireMeshND::validate_mesh_data() {
 }
 
 void ArrayWireMeshND::append_edge_points(const VectorN &p_point_a, const VectorN &p_point_b, const bool p_deduplicate_vertices) {
-	int index_a = append_vertex(p_point_a, p_deduplicate_vertices);
-	int index_b = append_vertex(p_point_b, p_deduplicate_vertices);
+	const int32_t index_a = append_vertex(p_point_a, p_deduplicate_vertices);
+	const int32_t index_b = append_vertex(p_point_b, p_deduplicate_vertices);
 	append_edge_indices(index_a, index_b);
 	reset_mesh_data_validation();
 }
 
-void ArrayWireMeshND::append_edge_indices(int p_index_a, int p_index_b) {
+void ArrayWireMeshND::append_edge_indices(int32_t p_index_a, int32_t p_index_b) {
 	if (p_index_a > p_index_b) {
 		SWAP(p_index_a, p_index_b);
 	}
@@ -43,19 +43,19 @@ void ArrayWireMeshND::append_edge_indices(int p_index_a, int p_index_b) {
 	reset_mesh_data_validation();
 }
 
-int ArrayWireMeshND::append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
-	const int vertex_count = _vertex_positions.size();
+int32_t ArrayWireMeshND::append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
+	const int64_t vertex_pos_count = _vertex_positions.size();
+	ERR_FAIL_COND_V_MSG(vertex_pos_count > MeshND::MAX_VERTICES, -1, "ArrayWireMeshND: Cannot add more vertices to the mesh. Maximum vertex count exceeded.");
 	if (p_deduplicate_vertices) {
-		for (int i = 0; i < vertex_count; i++) {
+		for (int64_t i = 0; i < vertex_pos_count; i++) {
 			if (VectorND::is_equal_approx(_vertex_positions[i], p_vertex)) {
 				return i;
 			}
 		}
 	}
-	ERR_FAIL_COND_V(_vertex_positions.size() > MAX_VERTICES, 2147483647);
 	_vertex_positions.push_back(p_vertex);
 	reset_mesh_data_validation();
-	return vertex_count;
+	return (int32_t)vertex_pos_count;
 }
 
 PackedInt32Array ArrayWireMeshND::append_vertices(const Vector<VectorN> &p_vertices, const bool p_deduplicate_vertices) {
@@ -135,8 +135,8 @@ void ArrayWireMeshND::deduplicate_all_elements() {
 
 void ArrayWireMeshND::transform_vertices(const Ref<TransformND> &p_transform) {
 	ERR_FAIL_COND(p_transform.is_null());
-	const int64_t vertex_count = _vertex_positions.size();
-	for (int64_t vertex_index = 0; vertex_index < vertex_count; vertex_index++) {
+	const int64_t vertex_pos_count = _vertex_positions.size();
+	for (int64_t vertex_index = 0; vertex_index < vertex_pos_count; vertex_index++) {
 		_vertex_positions.set(vertex_index, p_transform->xform(_vertex_positions[vertex_index]));
 	}
 	wire_mesh_clear_cache();
@@ -144,18 +144,18 @@ void ArrayWireMeshND::transform_vertices(const Ref<TransformND> &p_transform) {
 
 void ArrayWireMeshND::merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<TransformND> &p_transform) {
 	const int start_edge_count = _edge_vertex_indices.size();
-	const int start_vertex_count = _vertex_positions.size();
+	const int64_t start_vertex_pos_count = _vertex_positions.size();
 	const int other_edge_count = p_other->_edge_vertex_indices.size();
-	const int other_vertex_count = p_other->_vertex_positions.size();
+	const int64_t other_vertex_pos_count = p_other->_vertex_positions.size();
 	const int end_edge_count = start_edge_count + other_edge_count;
-	const int end_vertex_count = start_vertex_count + other_vertex_count;
+	const int64_t end_vertex_pos_count = start_vertex_pos_count + other_vertex_pos_count;
 	_edge_vertex_indices.resize(end_edge_count);
-	_vertex_positions.resize(end_vertex_count);
+	_vertex_positions.resize(end_vertex_pos_count);
 	for (int i = 0; i < other_edge_count; i++) {
-		_edge_vertex_indices.set(start_edge_count + i, p_other->_edge_vertex_indices[i] + start_vertex_count);
+		_edge_vertex_indices.set(start_edge_count + i, p_other->_edge_vertex_indices[i] + start_vertex_pos_count);
 	}
-	for (int i = 0; i < other_vertex_count; i++) {
-		_vertex_positions.set(start_vertex_count + i, p_transform->xform(p_other->_vertex_positions[i]));
+	for (int64_t i = 0; i < other_vertex_pos_count; i++) {
+		_vertex_positions.set(start_vertex_pos_count + i, p_transform->xform(p_other->_vertex_positions[i]));
 	}
 	Ref<MaterialND> self_material = get_material();
 	if (self_material.is_null()) {
