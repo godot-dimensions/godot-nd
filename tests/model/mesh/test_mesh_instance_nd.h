@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../model/mesh/mesh_instance_nd.h"
-#include "../../model/mesh/wire/array_wire_mesh_nd.h"
+#include "../../../model/mesh/mesh_instance_nd.h"
+#include "../../../model/mesh/wire/array_wire_mesh_nd.h"
 
 #include "tests/test_macros.h"
 

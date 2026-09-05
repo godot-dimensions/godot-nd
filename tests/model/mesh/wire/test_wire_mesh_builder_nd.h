@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../model/mesh/wire/box_wire_mesh_nd.h"
-#include "../../model/mesh/wire/wire_mesh_builder_nd.h"
+#include "../../../../model/mesh/wire/box_wire_mesh_nd.h"
+#include "../../../../model/mesh/wire/wire_mesh_builder_nd.h"
 
 #include "tests/test_macros.h"
 

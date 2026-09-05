@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../../math/math_nd.h"
-#include "../../math/transform_nd.h"
-#include "../../math/vector_nd.h"
-#include "../../model/mesh/poly/array_poly_mesh_nd.h"
+#include "../../../../math/math_nd.h"
+#include "../../../../math/transform_nd.h"
+#include "../../../../math/vector_nd.h"
+#include "../../../../model/mesh/poly/array_poly_mesh_nd.h"
 #include "test_poly_mesh_nd.h"
 
 #include "tests/test_macros.h"
