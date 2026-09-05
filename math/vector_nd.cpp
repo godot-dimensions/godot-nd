@@ -1143,9 +1143,26 @@ VectorN VectorND::zero(const int64_t p_dimension) {
 
 int64_t VectorND::array_append_deduplicate(Vector<VectorN> &r_array, const VectorN &p_vector) {
 	const int64_t array_count = r_array.size();
-	for (int64_t i = 0; i < array_count; i++) {
-		if (r_array[i] == p_vector) {
-			return i;
+	const int64_t vector_size = p_vector.size();
+	for (int64_t vector_index = 0; vector_index < array_count; vector_index++) {
+		const VectorN &existing = r_array[vector_index];
+		// Deliberately size-strict, unlike is_equal_exact: pool entries with a different explicit
+		// dimension must stay distinct even if the extra components are all zero, since callers
+		// (e.g. texture map fitting) rely on the stored dimension of each pool entry.
+		if (existing.size() != vector_size) {
+			continue;
+		}
+		bool equal = true;
+		for (int64_t component_index = 0; component_index < vector_size; component_index++) {
+			// Elementwise comparison (unlike PackedFloat64Array's memcmp-based operator==) so that
+			// -0.0 and 0.0 are treated as equal, avoiding spurious duplicate pool entries.
+			if (existing[component_index] != p_vector[component_index]) {
+				equal = false;
+				break;
+			}
+		}
+		if (equal) {
+			return vector_index;
 		}
 	}
 	r_array.append(p_vector);

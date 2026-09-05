@@ -585,7 +585,7 @@ TEST_CASE("[ArrayPolyMeshND] Make double sided preserves pentagon triangulation"
 		REQUIRE(vertex < vertex_positions.size());
 		const bool flipped = simplex_boundary_normals[i / 3][2] < 0.0;
 		const VectorN expected_normal = flipped ? VectorND::negate(vertex_normals[vertex]) : vertex_normals[vertex];
-		CHECK(simplex_vertex_normals[i] == expected_normal);
+		CHECK(VectorND::is_equal_exact(simplex_vertex_normals[i], expected_normal));
 		CHECK(simplex_texture_map[i] == texture_map[vertex]);
 	}
 	double total_area = 0.0;
@@ -781,7 +781,7 @@ TEST_CASE("[ArrayPolyMeshND] Double sided meshes reuse texture values and negate
 	const Vector<VectorN> values = mesh->get_poly_cell_normal_values();
 	const Vector<PackedInt32Array> normal_indices = mesh->get_poly_cell_normal_indices();
 	for (const int32_t index : normal_indices[1]) {
-		CHECK(values[index] == VectorND::negate(normal));
+		CHECK(VectorND::is_equal_exact(values[index], VectorND::negate(normal)));
 	}
 	mesh->make_double_sided();
 	CHECK(mesh->get_poly_cell_normal_indices().size() == 2);
@@ -832,7 +832,7 @@ TEST_CASE("[ArrayPolyMeshND] Merge remaps shared pools and preserves absent attr
 				REQUIRE(normals[cell].size() == 4);
 				REQUIRE(textures[cell].size() == 4);
 				for (int i = 0; i < 4; i++) {
-					CHECK(normals[cell][i] == (cell == 0 ? normal : VectorND::negate(normal)));
+					CHECK(VectorND::is_equal_exact(normals[cell][i], cell == 0 ? normal : VectorND::negate(normal)));
 					CHECK(textures[cell][i] == (i % 2 == 0 ? texture_a : texture_b));
 				}
 			}
@@ -856,7 +856,7 @@ TEST_CASE("[ArrayPolyMeshND] Deduplication preserves empty bindings when flippin
 	CHECK(mesh->is_poly_mesh_data_valid());
 	CHECK(mesh->get_all_poly_cell_normal_indices()[key][0].is_empty());
 	CHECK(mesh->get_all_poly_cell_texture_map_indices()[key][0].is_empty());
-	CHECK(mesh->get_poly_cell_boundary_normals()[0] == VectorN({ 0, 0, 0, -1 }));
+	CHECK(VectorND::is_equal_exact(mesh->get_poly_cell_boundary_normals()[0], VectorN({ 0, 0, 0, -1 })));
 }
 
 TEST_CASE("[ArrayPolyMeshND] Texture transforms isolate values shared across bindings") {
@@ -946,7 +946,7 @@ TEST_CASE("[ArrayPolyMeshND] Double sided meshes keep per-vertex attributes on t
 	for (int64_t vertex_in_cell = 0; vertex_in_cell < cell_vertices[1].size(); vertex_in_cell++) {
 		const int64_t original_position = cell_vertices[0].find(cell_vertices[1][vertex_in_cell]);
 		REQUIRE(original_position >= 0);
-		CHECK(normals[1][vertex_in_cell] == VectorND::negate(normals[0][original_position]));
+		CHECK(VectorND::is_equal_exact(normals[1][vertex_in_cell], VectorND::negate(normals[0][original_position])));
 		CHECK(textures[1][vertex_in_cell] == textures[0][original_position]);
 	}
 }
@@ -1129,7 +1129,7 @@ TEST_CASE("[ArrayPolyMeshND] Double sided indexed attributes follow boundary ver
 			REQUIRE(textures[flipped_cell_index].size() == flipped_vertices.size());
 			for (int64_t vertex_in_cell = 0; vertex_in_cell < flipped_vertices.size(); vertex_in_cell++) {
 				const int32_t vertex_index = flipped_vertices[vertex_in_cell];
-				CHECK(normals[flipped_cell_index][vertex_in_cell] == VectorND::negate(normal_values[vertex_index]));
+				CHECK(VectorND::is_equal_exact(normals[flipped_cell_index][vertex_in_cell], VectorND::negate(normal_values[vertex_index])));
 				CHECK(textures[flipped_cell_index][vertex_in_cell] == texture_values[vertex_index]);
 			}
 		}
@@ -2219,7 +2219,7 @@ TEST_CASE("[ArrayPolyMeshND] Double sided attributes follow vertex identity and 
 					CHECK(after_vertices[cell] == before_vertices[cell]);
 					CHECK(after_boundary_normals[cell] == before_boundary_normals[cell]);
 					const auto expected_boundary_normal = VectorND::negate(before_boundary_normals[cell]);
-					CHECK(after_boundary_normals[flipped] == expected_boundary_normal);
+					CHECK(VectorND::is_equal_exact(after_boundary_normals[flipped], expected_boundary_normal));
 					const int32_t expected_pivot = cell < before_pivots.size() ? before_pivots[cell] : -1;
 					const int32_t original_pivot = cell < after_pivots.size() ? after_pivots[cell] : -1;
 					const int32_t flipped_pivot = flipped < after_pivots.size() ? after_pivots[flipped] : -1;
@@ -2239,7 +2239,7 @@ TEST_CASE("[ArrayPolyMeshND] Double sided attributes follow vertex identity and 
 						REQUIRE(source_slot >= 0);
 						if (!before_normals.is_empty() && !before_normals[cell].is_empty()) {
 							const auto expected_normal = VectorND::negate(before_normals[cell][source_slot]);
-							CHECK(after_normals[flipped][slot] == expected_normal);
+							CHECK(VectorND::is_equal_exact(after_normals[flipped][slot], expected_normal));
 						}
 						if (!before_texture_map.is_empty() && !before_texture_map[cell].is_empty()) {
 							CHECK(after_texture_map[flipped][slot] == before_texture_map[cell][source_slot]);

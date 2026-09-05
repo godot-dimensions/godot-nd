@@ -144,7 +144,9 @@ TEST_CASE("[VectorND] Perpendicular") {
 			vectors.ptrw()[vector_index].resize(vector_index + 1);
 		}
 		const VectorN compact_perpendicular = VectorND::perpendicular(vectors);
-		CHECK(compact_perpendicular == expected);
+		// Not operator==, which is bitwise and fails on the -0.0 that perpendicular
+		// emits for a sign-flipped zero cofactor.
+		CHECK(VectorND::is_equal_exact(compact_perpendicular, expected));
 		CHECK(vectors[0].size() == 1); // Computing the result must not expand the input arrays.
 	}
 	for (int dimension = 2; dimension <= 5; dimension++) {
@@ -154,10 +156,10 @@ TEST_CASE("[VectorND] Perpendicular") {
 		}
 		const VectorN negative_perpendicular = VectorND::perpendicular(vectors);
 		const VectorN expected = VectorND::value_on_axis_with_dimension(-1.0, dimension - 1, dimension);
-		CHECK(negative_perpendicular == expected);
+		CHECK(VectorND::is_equal_exact(negative_perpendicular, expected));
 		vectors.set(0, VectorN());
 		const VectorN zero_perpendicular = VectorND::perpendicular(vectors);
-		CHECK(zero_perpendicular == VectorND::zero(dimension));
+		CHECK(VectorND::is_equal_exact(zero_perpendicular, VectorND::zero(dimension)));
 		for (const int invalid_index : { 0, dimension - 2 }) {
 			Vector<VectorN> invalid = vectors;
 			invalid.set(invalid_index, VectorND::zero(dimension + 1));
