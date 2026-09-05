@@ -424,6 +424,7 @@ Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {
 	array_mesh->set_simplex_cell_vertex_indices(get_simplex_cell_vertex_indices());
 	array_mesh->set_simplex_cell_boundary_normals(get_simplex_cell_boundary_normals());
 	array_mesh->set_simplex_cell_vertex_normals(get_simplex_cell_vertex_normals());
+	array_mesh->set_simplex_cell_texture_map(get_simplex_cell_texture_map());
 	array_mesh->set_material(get_material());
 	return array_mesh;
 }

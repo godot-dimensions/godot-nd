@@ -7,6 +7,241 @@
 #include "tests/test_macros.h"
 
 namespace TestCellMeshND {
+static Ref<ArrayCellMeshND> make_single_simplex_cell_mesh(const int p_dimension, const bool p_with_attributes) {
+	Ref<ArrayCellMeshND> mesh;
+	mesh.instantiate();
+	Vector<VectorN> vertex_positions;
+	vertex_positions.append(VectorND::zero(p_dimension));
+	for (int axis = 0; axis < p_dimension - 1; axis++) {
+		vertex_positions.append(VectorND::value_on_axis_with_dimension(1.0, axis, p_dimension));
+	}
+	mesh->set_vertex_positions(vertex_positions);
+	PackedInt32Array vertex_indices;
+	for (int index = 0; index < p_dimension; index++) {
+		vertex_indices.append(index);
+	}
+	mesh->set_simplex_cell_vertex_indices(vertex_indices);
+	if (p_with_attributes) {
+		mesh->set_simplex_cell_boundary_normals(Vector<VectorN>{ VectorND::value_on_axis_with_dimension(1.0, p_dimension - 1, p_dimension) });
+		Vector<VectorN> normals;
+		Vector<VectorM> texture_map;
+		for (int index = 0; index < p_dimension; index++) {
+			normals.append(VectorND::value_on_axis_with_dimension(1.0, index, p_dimension));
+			texture_map.append(VectorND::fill(p_dimension - 1, (index + 1) * 0.125));
+		}
+		mesh->set_simplex_cell_vertex_normals(normals);
+		mesh->set_simplex_cell_texture_map(texture_map);
+	}
+	return mesh;
+}
+
+TEST_CASE("[ArrayCellMeshND] Validation handles empty meshes and dense attribute counts") {
+	Ref<ArrayCellMeshND> empty_mesh;
+	empty_mesh.instantiate();
+	CHECK(empty_mesh->is_mesh_data_valid());
+	for (int attribute = 0; attribute < 4; attribute++) {
+		Ref<ArrayCellMeshND> mesh;
+		mesh.instantiate();
+		mesh->set_vertex_positions(Vector<VectorN>{ VectorN() });
+		switch (attribute) {
+			case 0:
+				mesh->set_simplex_cell_vertex_indices(PackedInt32Array{ 0 });
+				break;
+			case 1:
+				mesh->set_simplex_cell_boundary_normals(Vector<VectorN>{ VectorN() });
+				break;
+			case 2:
+				mesh->set_simplex_cell_vertex_normals(Vector<VectorN>{ VectorN() });
+				break;
+			case 3:
+				mesh->set_simplex_cell_texture_map(Vector<VectorM>{ VectorM() });
+				break;
+		}
+		ERR_PRINT_OFF;
+		CHECK_FALSE(mesh->is_mesh_data_valid());
+		ERR_PRINT_ON;
+	}
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, true);
+		CHECK(mesh->is_mesh_data_valid());
+		Vector<VectorM> texture_map = mesh->get_simplex_cell_texture_map();
+		texture_map.remove_at(texture_map.size() - 1);
+		mesh->set_simplex_cell_texture_map(texture_map);
+		ERR_PRINT_OFF;
+		CHECK_FALSE(mesh->is_mesh_data_valid());
+		ERR_PRINT_ON;
+		mesh->set_simplex_cell_texture_map(Vector<VectorM>());
+		CHECK(mesh->is_mesh_data_valid());
+	}
+}
+
+TEST_CASE("[ArrayCellMeshND] Merge preserves dense attributes and fills missing data") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		for (const bool start_has_attributes : { false, true }) {
+			for (const bool other_has_attributes : { false, true }) {
+				Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, start_has_attributes);
+				Ref<ArrayCellMeshND> other = make_single_simplex_cell_mesh(dimension, other_has_attributes);
+				const Vector<VectorN> start_positions = mesh->get_vertex_positions();
+				const Vector<VectorN> start_boundary_normals = mesh->get_simplex_cell_boundary_normals();
+				const Vector<VectorN> start_normals = mesh->get_simplex_cell_vertex_normals();
+				const Vector<VectorM> start_texture_map = mesh->get_simplex_cell_texture_map();
+				const Vector<VectorN> other_boundary_normals = other->get_simplex_cell_boundary_normals();
+				const Vector<VectorN> other_normals = other->get_simplex_cell_vertex_normals();
+				const Vector<VectorM> other_texture_map = other->get_simplex_cell_texture_map();
+				Ref<TransformND> transform = TransformND::from_scale(VectorND::fill(dimension, -1.0));
+				transform->set_origin(VectorND::value_on_axis_with_dimension(10.0, 0, dimension));
+				REQUIRE(mesh->get_simplex_cell_positions().size() == dimension);
+				mesh->merge_with(other, transform);
+				REQUIRE(mesh->is_mesh_data_valid());
+				const Vector<VectorN> positions = mesh->get_vertex_positions();
+				const PackedInt32Array indices = mesh->get_simplex_cell_vertex_indices();
+				REQUIRE(positions.size() == dimension * 2);
+				REQUIRE(indices.size() == dimension * 2);
+				CHECK(mesh->get_simplex_cell_positions() == positions);
+				for (int i = 0; i < dimension; i++) {
+					CHECK(positions[i] == start_positions[i]);
+					CHECK(positions[dimension + i] == transform->xform(start_positions[i]));
+					CHECK(indices[i] == i);
+					CHECK(indices[dimension + i] == dimension + i);
+				}
+				const Vector<VectorN> boundary_normals = mesh->get_simplex_cell_boundary_normals();
+				const Vector<VectorN> normals = mesh->get_simplex_cell_vertex_normals();
+				const Vector<VectorM> texture_map = mesh->get_simplex_cell_texture_map();
+				const bool has_attributes = start_has_attributes || other_has_attributes;
+				REQUIRE(boundary_normals.size() == (has_attributes ? 2 : 0));
+				REQUIRE(normals.size() == (has_attributes ? dimension * 2 : 0));
+				REQUIRE(texture_map.size() == normals.size());
+				if (has_attributes) {
+					CHECK(boundary_normals[0] == (start_has_attributes ? start_boundary_normals[0] : VectorN()));
+					CHECK(boundary_normals[1] == (other_has_attributes ? VectorND::negate(other_boundary_normals[0]) : VectorN()));
+					for (int i = 0; i < dimension; i++) {
+						CHECK(normals[i] == (start_has_attributes ? start_normals[i] : VectorN()));
+						CHECK(normals[dimension + i] == (other_has_attributes ? VectorND::negate(other_normals[i]) : VectorN()));
+						CHECK(texture_map[i] == (start_has_attributes ? start_texture_map[i] : VectorM()));
+						CHECK(texture_map[dimension + i] == (other_has_attributes ? other_texture_map[i] : VectorM()));
+					}
+				}
+				CHECK(other->get_vertex_positions() == start_positions);
+				CHECK(other->get_simplex_cell_boundary_normals() == other_boundary_normals);
+				CHECK(other->get_simplex_cell_vertex_normals() == other_normals);
+				CHECK(other->get_simplex_cell_texture_map() == other_texture_map);
+			}
+		}
+	}
+}
+
+TEST_CASE("[ArrayCellMeshND] Empty merges preserve the incoming dimension and data") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		for (const bool with_attributes : { false, true }) {
+			Ref<ArrayCellMeshND> mesh;
+			mesh.instantiate();
+			Ref<ArrayCellMeshND> other = make_single_simplex_cell_mesh(dimension, with_attributes);
+			const Ref<TransformND> transform = TransformND::identity_transform(dimension);
+			mesh->merge_with(other, transform);
+			REQUIRE(mesh->is_mesh_data_valid());
+			CHECK(mesh->get_dimension() == dimension);
+			Ref<ArrayCellMeshND> empty_mesh;
+			empty_mesh.instantiate();
+			mesh->merge_with(empty_mesh, transform);
+			REQUIRE(mesh->is_mesh_data_valid());
+			CHECK(mesh->get_vertex_positions() == other->get_vertex_positions());
+			CHECK(mesh->get_simplex_cell_vertex_indices() == other->get_simplex_cell_vertex_indices());
+			CHECK(mesh->get_simplex_cell_boundary_normals() == other->get_simplex_cell_boundary_normals());
+			CHECK(mesh->get_simplex_cell_vertex_normals() == other->get_simplex_cell_vertex_normals());
+			CHECK(mesh->get_simplex_cell_texture_map() == other->get_simplex_cell_texture_map());
+		}
+	}
+	Ref<ArrayCellMeshND> mesh;
+	mesh.instantiate();
+	Ref<ArrayCellMeshND> other;
+	other.instantiate();
+	mesh->merge_with(other, TransformND::identity_transform(0));
+	CHECK(mesh->is_mesh_data_valid());
+	CHECK(mesh->get_vertex_positions().is_empty());
+}
+
+TEST_CASE("[ArrayCellMeshND] Invalid merges leave the destination unchanged") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		for (int invalid_case = 0; invalid_case < 6; invalid_case++) {
+			Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, true);
+			Ref<ArrayCellMeshND> other = make_single_simplex_cell_mesh(dimension, true);
+			Ref<TransformND> transform = TransformND::identity_transform(dimension);
+			switch (invalid_case) {
+				case 0:
+					other.unref();
+					break;
+				case 1:
+					transform.unref();
+					break;
+				case 2:
+					other->set_simplex_cell_texture_map(Vector<VectorM>{ VectorM() });
+					break;
+				case 3:
+					mesh->set_simplex_cell_texture_map(Vector<VectorM>{ VectorM() });
+					break;
+				case 4:
+					other = make_single_simplex_cell_mesh(dimension + 1, true);
+					break;
+				case 5:
+					mesh.instantiate();
+					mesh->set_vertex_positions(Vector<VectorN>{ VectorN() });
+					break;
+			}
+			const Vector<VectorN> positions = mesh->get_vertex_positions();
+			const PackedInt32Array indices = mesh->get_simplex_cell_vertex_indices();
+			const Vector<VectorN> boundary_normals = mesh->get_simplex_cell_boundary_normals();
+			const Vector<VectorN> normals = mesh->get_simplex_cell_vertex_normals();
+			const Vector<VectorM> texture_map = mesh->get_simplex_cell_texture_map();
+			ERR_PRINT_OFF;
+			mesh->merge_with(other, transform);
+			ERR_PRINT_ON;
+			CHECK(mesh->get_vertex_positions() == positions);
+			CHECK(mesh->get_simplex_cell_vertex_indices() == indices);
+			CHECK(mesh->get_simplex_cell_boundary_normals() == boundary_normals);
+			CHECK(mesh->get_simplex_cell_vertex_normals() == normals);
+			CHECK(mesh->get_simplex_cell_texture_map() == texture_map);
+		}
+	}
+}
+
+TEST_CASE("[CellMeshND] Array conversion preserves dense attributes") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, true);
+		Ref<ArrayCellMeshND> converted = mesh->to_array_cell_mesh();
+		REQUIRE(converted->is_mesh_data_valid());
+		CHECK(converted->get_vertex_positions() == mesh->get_vertex_positions());
+		CHECK(converted->get_simplex_cell_vertex_indices() == mesh->get_simplex_cell_vertex_indices());
+		CHECK(converted->get_simplex_cell_boundary_normals() == mesh->get_simplex_cell_boundary_normals());
+		CHECK(converted->get_simplex_cell_vertex_normals() == mesh->get_simplex_cell_vertex_normals());
+		CHECK(converted->get_simplex_cell_texture_map() == mesh->get_simplex_cell_texture_map());
+	}
+}
+
+TEST_CASE("[ArrayCellMeshND] Self merge preserves the source prefixes") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, true);
+		const Vector<VectorN> positions = mesh->get_vertex_positions();
+		const Vector<VectorN> boundary_normals = mesh->get_simplex_cell_boundary_normals();
+		const Vector<VectorN> normals = mesh->get_simplex_cell_vertex_normals();
+		const Vector<VectorM> texture_map = mesh->get_simplex_cell_texture_map();
+		Ref<TransformND> transform = TransformND::from_scale(VectorND::fill(dimension, -1.0));
+		transform->set_origin(VectorND::fill(dimension, 10.0));
+		mesh->merge_with(mesh, transform);
+		REQUIRE(mesh->is_mesh_data_valid());
+		CHECK(mesh->get_simplex_cell_boundary_normals()[0] == boundary_normals[0]);
+		CHECK(mesh->get_simplex_cell_boundary_normals()[1] == VectorND::negate(boundary_normals[0]));
+		for (int i = 0; i < dimension; i++) {
+			CHECK(mesh->get_vertex_positions()[i] == positions[i]);
+			CHECK(mesh->get_vertex_positions()[dimension + i] == transform->xform(positions[i]));
+			CHECK(mesh->get_simplex_cell_vertex_normals()[i] == normals[i]);
+			CHECK(mesh->get_simplex_cell_vertex_normals()[dimension + i] == VectorND::negate(normals[i]));
+			CHECK(mesh->get_simplex_cell_texture_map()[i] == texture_map[i]);
+			CHECK(mesh->get_simplex_cell_texture_map()[dimension + i] == texture_map[i]);
+			CHECK(mesh->get_simplex_cell_vertex_indices()[dimension + i] == dimension + i);
+		}
+	}
+}
+
 TEST_CASE("[CellMeshND] Decompose Box Polytope Cell into Simplexes") {
 	// 0D case.
 	Vector<VectorN> vertex_positions;

@@ -132,6 +132,7 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 	const PackedInt32Array poly_cell_boundary_pivot_overrides = get_poly_cell_boundary_pivot_overrides();
 	if (poly_cell_boundary_pivot_overrides.size() != 0) {
 		ERR_FAIL_COND_V_MSG(boundary_dim_index < 0 || poly_cell_dims <= boundary_dim_index, false, "PolyMeshND: Boundary pivot overrides provided without any boundary cells.");
+		ERR_FAIL_COND_V_MSG(poly_cell_boundary_pivot_overrides.size() > poly_cell_indices[boundary_dim_index].size(), false, "PolyMeshND: Boundary pivot overrides must have at most one entry per boundary cell.");
 		for (int64_t i = 0; i < poly_cell_boundary_pivot_overrides.size(); i++) {
 			const int32_t pivot_vertex_index = poly_cell_boundary_pivot_overrides[i];
 			if (pivot_vertex_index == -1) {

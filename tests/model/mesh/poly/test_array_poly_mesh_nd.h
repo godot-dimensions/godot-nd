@@ -609,4 +609,69 @@ TEST_CASE("[ArrayPolyMeshND] Duplicate preserves the normals and texture map dic
 	REQUIRE(duplicated_texture_maps[face_to_vert_key].size() == 1);
 	CHECK(duplicated_texture_maps[face_to_vert_key][0].size() == 3);
 }
+
+TEST_CASE("[ArrayPolyMeshND] Boundary pivot overrides follow mesh edits") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		Ref<BoxPolyMeshND> box;
+		box.instantiate();
+		box->set_size(VectorND::fill(dimension, 2.0));
+		Ref<ArrayPolyMeshND> base = box->to_array_poly_mesh();
+		// Keep these geometry tests independent of normal and texture binding maintenance.
+		base->set_all_poly_cell_normals(HashMap<Vector2i, Vector<Vector<VectorN>>>());
+		base->set_all_poly_cell_texture_maps(HashMap<Vector2i, Vector<Vector<VectorM>>>());
+		const int32_t vertex_count = (int32_t)base->get_poly_cell_vertex_positions().size();
+		const int64_t cell_count = base->get_poly_cell_indices()[dimension - 3].size();
+		for (const bool source_has_overrides : { false, true }) {
+			Ref<ArrayPolyMeshND> mesh = base->duplicate();
+			Ref<ArrayPolyMeshND> other = base->duplicate();
+			mesh->set_poly_cell_boundary_pivot_overrides(PackedInt32Array{ 2 });
+			if (source_has_overrides) {
+				other->set_poly_cell_boundary_pivot_overrides(PackedInt32Array{ -1, vertex_count - 1 });
+			}
+			mesh->merge_with(other, TransformND::from_position(VectorND::value_on_axis_with_dimension(10.0, 0, dimension)));
+			PackedInt32Array expected;
+			expected.resize(cell_count * 2);
+			expected.fill(-1);
+			expected.set(0, 2);
+			if (source_has_overrides) {
+				expected.set(cell_count + 1, vertex_count * 2 - 1);
+			}
+			CHECK(mesh->get_poly_cell_boundary_pivot_overrides() == expected);
+			CHECK(mesh->is_poly_mesh_data_valid());
+		}
+		{
+			Ref<ArrayPolyMeshND> mesh = base->duplicate();
+			PackedInt32Array too_many;
+			too_many.resize(cell_count + 1);
+			too_many.fill(-1);
+			mesh->set_poly_cell_boundary_pivot_overrides(too_many);
+			ERR_PRINT_OFF;
+			CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+			ERR_PRINT_ON;
+			mesh->set_poly_cell_boundary_pivot_overrides(PackedInt32Array{ -1 });
+			CHECK(mesh->is_poly_mesh_data_valid());
+		}
+		{
+			Ref<ArrayPolyMeshND> mesh = base->duplicate();
+			mesh->set_poly_cell_boundary_pivot_overrides(PackedInt32Array{ 2, vertex_count - 1 });
+			mesh->delete_poly_element(dimension - 1, 0);
+			CHECK(mesh->get_poly_cell_boundary_pivot_overrides() == PackedInt32Array({ vertex_count - 1 }));
+			CHECK(mesh->is_poly_mesh_data_valid());
+		}
+		{
+			Ref<ArrayPolyMeshND> mesh = base->duplicate();
+			// Deleting an external pivot resets its override and shifts later pivot indices.
+			mesh->append_vertex(VectorND::value_on_axis_with_dimension(7.0, 0, dimension));
+			mesh->append_vertex(VectorND::value_on_axis_with_dimension(8.0, 0, dimension));
+			mesh->set_poly_cell_boundary_pivot_overrides(PackedInt32Array{ vertex_count, vertex_count + 1 });
+			mesh->delete_poly_element(0, vertex_count);
+			CHECK(mesh->get_poly_cell_boundary_pivot_overrides() == PackedInt32Array({ -1, vertex_count }));
+			CHECK(mesh->is_poly_mesh_data_valid());
+			mesh->delete_poly_element(0, vertex_count);
+			CHECK(mesh->get_poly_cell_boundary_pivot_overrides() == PackedInt32Array({ -1, -1 }));
+			CHECK(mesh->is_poly_mesh_data_valid());
+		}
+	}
+}
 } // namespace TestArrayPolyMeshND

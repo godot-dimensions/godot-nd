@@ -44,7 +44,7 @@ TEST_CASE("[ArrayCellMeshND] Bounds cache invalidation on merge") {
 	Ref<ArrayCellMeshND> cell1;
 	cell1.instantiate();
 	cell1->set_vertex_positions(Vector<VectorN>({ VectorN{ 0, 0, 0 }, VectorN{ 1, 0, 0 }, VectorN{ 0, 1, 0 }, VectorN{ 0, 0, 1 } }));
-	cell1->set_simplex_cell_vertex_indices(PackedInt32Array({ 0, 1, 2, 3 }));
+	cell1->set_simplex_cell_vertex_indices(PackedInt32Array({ 0, 1, 2, 0, 2, 3 }));
 
 	Ref<RectND> bounds1 = cell1->get_rect_bounds();
 	CHECK(VectorND::is_equal_exact(bounds1->get_position(), VectorN{ 0, 0, 0 }));
@@ -54,7 +54,7 @@ TEST_CASE("[ArrayCellMeshND] Bounds cache invalidation on merge") {
 	Ref<ArrayCellMeshND> cell2;
 	cell2.instantiate();
 	cell2->set_vertex_positions(Vector<VectorN>({ VectorN{ 5, 5, 5 }, VectorN{ 6, 5, 5 }, VectorN{ 5, 6, 5 }, VectorN{ 5, 5, 6 } }));
-	cell2->set_simplex_cell_vertex_indices(PackedInt32Array({ 0, 1, 2, 3 }));
+	cell2->set_simplex_cell_vertex_indices(PackedInt32Array({ 0, 1, 2, 0, 2, 3 }));
 
 	cell1->merge_with(cell2, TransformND::identity_transform(3));
 
