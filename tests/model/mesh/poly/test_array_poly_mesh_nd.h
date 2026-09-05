@@ -555,12 +555,35 @@ TEST_CASE("[ArrayPolyMeshND] Make double sided preserves pentagon triangulation"
 	faces.append(PackedInt32Array{ 0, 1, 2, 3, 4 });
 	mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ faces });
 	mesh->set_poly_cell_boundary_normals(Vector<VectorN>{ VectorN{ 0.0, 0.0, 1.0 } });
+	Vector<VectorN> vertex_normals;
+	Vector<VectorM> texture_map;
+	for (int64_t i = 0; i < vertex_positions.size(); i++) {
+		vertex_normals.append(VectorN{ double(i + 1) });
+		texture_map.append(VectorM{ vertex_positions[i][0], vertex_positions[i][1] });
+	}
+	mesh->set_poly_cell_vertex_normals({ vertex_normals });
+	mesh->set_poly_cell_texture_map({ texture_map });
 	REQUIRE(mesh->is_mesh_data_valid());
 	mesh->make_double_sided(true);
 	CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "The double-sided mesh must have valid poly mesh data.");
 	REQUIRE(mesh->get_poly_cell_indices()[0].size() == 2);
 	const PackedInt32Array simplex_indices = mesh->get_simplex_cell_vertex_indices();
 	const Vector<VectorN> simplex_vertex_positions = mesh->get_vertex_positions();
+	const Vector<VectorN> simplex_boundary_normals = mesh->get_simplex_cell_boundary_normals();
+	const Vector<VectorN> simplex_vertex_normals = mesh->get_simplex_cell_vertex_normals();
+	const Vector<VectorM> simplex_texture_map = mesh->get_simplex_cell_texture_map();
+	REQUIRE(simplex_boundary_normals.size() * 3 == simplex_indices.size());
+	REQUIRE(simplex_vertex_normals.size() == simplex_indices.size());
+	REQUIRE(simplex_texture_map.size() == simplex_indices.size());
+	for (int64_t i = 0; i < simplex_indices.size(); i++) {
+		const int32_t vertex = simplex_indices[i];
+		REQUIRE(vertex >= 0);
+		REQUIRE(vertex < vertex_positions.size());
+		const bool flipped = simplex_boundary_normals[i / 3][2] < 0.0;
+		const VectorN expected_normal = flipped ? VectorND::negate(vertex_normals[vertex]) : vertex_normals[vertex];
+		CHECK(simplex_vertex_normals[i] == expected_normal);
+		CHECK(simplex_texture_map[i] == texture_map[vertex]);
+	}
 	double total_area = 0.0;
 	for (int64_t simplex_start = 0; simplex_start < simplex_indices.size(); simplex_start += 3) {
 		Vector<VectorN> edges = {
@@ -1424,4 +1447,162 @@ TEST_CASE("[ArrayPolyMeshND] Fitting existing compact texture coordinates includ
 		}
 	}
 }
+TEST_CASE("[ArrayPolyMeshND] Double sided attributes follow vertex identity and preserve missing data") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		// Missing keys, empty arrays, missing cells, full data, texture-only data, and normal-only data.
+		for (int pattern = 0; pattern < 7; pattern++) {
+			CAPTURE(pattern);
+			Ref<ArrayPolyMeshND> mesh = make_binding_test_mesh(dimension);
+			mesh->set_all_poly_cell_normals(HashMap<Vector2i, Vector<Vector<VectorN>>>());
+			mesh->set_all_poly_cell_texture_maps(HashMap<Vector2i, Vector<Vector<VectorM>>>());
+			const Vector<PackedInt32Array> cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+			Vector<Vector<VectorN>> normals;
+			Vector<Vector<VectorM>> texture_map;
+			for (int64_t cell = 0; cell < cell_vertices.size(); cell++) {
+				Vector<VectorN> cell_normals;
+				Vector<VectorM> cell_map;
+				for (const int32_t vertex : cell_vertices[cell]) {
+					cell_normals.append(vertex % 3 == 0 ? VectorN() : VectorN{ double(vertex + 1), double(cell + 2) });
+					cell_map.append(vertex % 3 == 0 ? VectorM() : VectorM{ vertex + 0.25, cell + 0.5 });
+				}
+				if (pattern == 2 || (pattern == 3 && (cell == 0 || cell == cell_vertices.size() - 1))) {
+					cell_normals.clear();
+				}
+				if (pattern == 2 || (pattern == 3 && cell == cell_vertices.size() / 2)) {
+					cell_map.clear();
+				}
+				normals.append(cell_normals);
+				texture_map.append(cell_map);
+			}
+			if (pattern == 1 || pattern == 5) {
+				normals.clear();
+			}
+			if (pattern == 1 || pattern == 6) {
+				texture_map.clear();
+			}
+			if (pattern != 0) {
+				mesh->set_poly_cell_vertex_normals(normals);
+				mesh->set_poly_cell_texture_map(texture_map);
+			}
+			// A short pivot array includes an explicit missing sentinel and implicit missing tail.
+			mesh->set_poly_cell_boundary_pivot_overrides(PackedInt32Array{ cell_vertices[0][0], -1, cell_vertices[2][0] });
+			mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY, false);
+			REQUIRE(mesh->is_poly_mesh_data_valid());
+			if (pattern == 3) {
+				ERR_PRINT_OFF; // Validation samples the deliberately partial attributes.
+			}
+			const bool initially_valid = mesh->is_mesh_data_valid();
+			if (pattern == 3) {
+				ERR_PRINT_ON;
+			}
+			REQUIRE(initially_valid);
+			for (int pass = 0; pass < 3; pass++) {
+				CAPTURE(pass);
+				const auto before_geometry = mesh->get_poly_cell_indices();
+				const auto before_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+				const auto before_normals = mesh->get_poly_cell_vertex_normals();
+				const auto before_texture_map = mesh->get_poly_cell_texture_map();
+				const auto before_boundary_normals = mesh->get_poly_cell_boundary_normals();
+				const PackedInt32Array before_pivots = mesh->get_poly_cell_boundary_pivot_overrides();
+				mesh->make_double_sided(pass != 2);
+				const auto after_geometry = mesh->get_poly_cell_indices();
+				if (pattern == 3) {
+					ERR_PRINT_OFF; // This getter validates and samples the deliberately partial attributes.
+				}
+				const auto after_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+				if (pattern == 3) {
+					ERR_PRINT_ON;
+				}
+				const auto after_normals = mesh->get_poly_cell_vertex_normals();
+				const auto after_texture_map = mesh->get_poly_cell_texture_map();
+				const auto after_boundary_normals = mesh->get_poly_cell_boundary_normals();
+				const PackedInt32Array after_pivots = mesh->get_poly_cell_boundary_pivot_overrides();
+				if (pass == 1) {
+					CHECK(after_geometry == before_geometry);
+					CHECK(after_normals == before_normals);
+					CHECK(after_texture_map == before_texture_map);
+					CHECK(after_boundary_normals == before_boundary_normals);
+					CHECK(after_pivots == before_pivots);
+					continue;
+				}
+				const int64_t original_count = before_vertices.size();
+				REQUIRE(after_vertices.size() == original_count * 2);
+				REQUIRE(after_boundary_normals.size() == original_count * 2);
+				REQUIRE(after_normals.size() == before_normals.size() * 2);
+				REQUIRE(after_texture_map.size() == before_texture_map.size() * 2);
+				bool order_changed = false;
+				for (int64_t cell = 0; cell < original_count; cell++) {
+					const int64_t flipped = original_count + cell;
+					CHECK(after_geometry[dimension - 3][cell] == before_geometry[dimension - 3][cell]);
+					CHECK(after_vertices[cell] == before_vertices[cell]);
+					CHECK(after_boundary_normals[cell] == before_boundary_normals[cell]);
+					const auto expected_boundary_normal = VectorND::negate(before_boundary_normals[cell]);
+					CHECK(after_boundary_normals[flipped] == expected_boundary_normal);
+					const int32_t expected_pivot = cell < before_pivots.size() ? before_pivots[cell] : -1;
+					const int32_t original_pivot = cell < after_pivots.size() ? after_pivots[cell] : -1;
+					const int32_t flipped_pivot = flipped < after_pivots.size() ? after_pivots[flipped] : -1;
+					CHECK(original_pivot == expected_pivot);
+					CHECK(flipped_pivot == expected_pivot);
+					order_changed |= before_vertices[cell] != after_vertices[flipped];
+					if (!before_normals.is_empty()) {
+						CHECK(after_normals[cell] == before_normals[cell]);
+						REQUIRE(after_normals[flipped].size() == before_normals[cell].size());
+					}
+					if (!before_texture_map.is_empty()) {
+						CHECK(after_texture_map[cell] == before_texture_map[cell]);
+						REQUIRE(after_texture_map[flipped].size() == before_texture_map[cell].size());
+					}
+					for (int64_t slot = 0; slot < after_vertices[flipped].size(); slot++) {
+						const int64_t source_slot = before_vertices[cell].find(after_vertices[flipped][slot]);
+						REQUIRE(source_slot >= 0);
+						if (!before_normals.is_empty() && !before_normals[cell].is_empty()) {
+							const auto expected_normal = VectorND::negate(before_normals[cell][source_slot]);
+							CHECK(after_normals[flipped][slot] == expected_normal);
+						}
+						if (!before_texture_map.is_empty() && !before_texture_map[cell].is_empty()) {
+							CHECK(after_texture_map[flipped][slot] == before_texture_map[cell][source_slot]);
+						}
+					}
+				}
+				CHECK(order_changed);
+				for (int64_t volume = 0; volume < before_geometry[dimension - 2].size(); volume++) {
+					CHECK(after_geometry[dimension - 2][volume].size() == before_geometry[dimension - 2][volume].size() * 2);
+					for (const int32_t cell : before_geometry[dimension - 2][volume]) {
+						CHECK(after_geometry[dimension - 2][volume].has(cell + original_count));
+					}
+				}
+				CHECK(mesh->is_poly_mesh_data_valid());
+				const bool valid = mesh->is_mesh_data_valid();
+				CHECK(valid);
+			}
+		}
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Double sided empty boundary levels are unchanged") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		for (const bool idempotent : { false, true }) {
+			Ref<ArrayPolyMeshND> mesh;
+			mesh.instantiate();
+			const Vector<VectorN> positions = { VectorND::zero(dimension) };
+			mesh->set_poly_cell_vertex_positions(positions);
+			Vector<Vector<PackedInt32Array>> poly;
+			poly.resize(dimension - 2);
+			mesh->set_poly_cell_indices(poly);
+			REQUIRE(mesh->is_mesh_data_valid());
+			mesh->make_double_sided(idempotent);
+			CHECK(mesh->get_poly_cell_vertex_positions() == positions);
+			CHECK(mesh->get_poly_cell_indices() == poly);
+			CHECK(mesh->get_all_poly_cell_normals().is_empty());
+			CHECK(mesh->get_all_poly_cell_texture_maps().is_empty());
+			CHECK(mesh->get_poly_cell_boundary_pivot_overrides().is_empty());
+			CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
+			CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+			CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+			CHECK(mesh->is_mesh_data_valid());
+		}
+	}
+}
+
 } // namespace TestArrayPolyMeshND

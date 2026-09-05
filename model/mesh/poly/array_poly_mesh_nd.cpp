@@ -505,6 +505,9 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	ERR_FAIL_COND_MSG(boundary_dim_index < 0 || _poly_cell_indices.size() <= boundary_dim_index, "ArrayPolyMeshND: Cannot make double sided because there are no boundary cells.");
 	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot make double sided for an invalid mesh.");
+	if (_poly_cell_indices[boundary_dim_index].is_empty()) {
+		return;
+	}
 	const Vector2i per_cell_key = _get_per_cell_key();
 	const Vector2i cell_to_vert_key = _get_cell_to_vert_key();
 	if (!_all_poly_cell_normals.has(per_cell_key) || _all_poly_cell_normals[per_cell_key].is_empty() || _all_poly_cell_normals[per_cell_key][0].size() != _poly_cell_indices[boundary_dim_index].size()) {
@@ -512,6 +515,13 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 	}
 	Vector<PackedInt32Array> cell_member_indices = Vector<PackedInt32Array>(_poly_cell_indices[boundary_dim_index]);
 	const int64_t original_cell_count = cell_member_indices.size();
+	const int64_t original_pivot_count = _poly_cell_boundary_pivot_overrides.size();
+	const bool has_vertex_normals = _all_poly_cell_normals.has(cell_to_vert_key) && !_all_poly_cell_normals[cell_to_vert_key].is_empty();
+	const bool has_texture_map = _all_poly_cell_texture_maps.has(cell_to_vert_key) && !_all_poly_cell_texture_maps[cell_to_vert_key].is_empty();
+	Vector<PackedInt32Array> original_cell_vertices;
+	if (has_vertex_normals || has_texture_map) {
+		original_cell_vertices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, false);
+	}
 	// This has to be a copy, it's set back in place at the end of the function.
 	Vector<VectorN> poly_cell_boundary_normals = _all_poly_cell_normals[per_cell_key][0];
 	CRASH_COND(poly_cell_boundary_normals.size() != original_cell_count);
@@ -542,29 +552,49 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 				continue;
 			}
 		}
-		// Copy the texture map if it exists for this cell before adding the flipped cell.
-		if (_all_poly_cell_texture_maps.has(cell_to_vert_key)) {
-			Vector<Vector<VectorM>> &poly_cell_texture_maps = _all_poly_cell_texture_maps[cell_to_vert_key];
-			ERR_FAIL_COND(poly_cell_texture_maps.size() != poly_cell_boundary_normals.size());
-			if (cell_index < poly_cell_texture_maps.size()) {
-				const Vector<VectorM> flipped_cell_texture_map = poly_cell_texture_maps[cell_index];
-				poly_cell_texture_maps.append(flipped_cell_texture_map);
+		// Flipping a cell can permute its derived vertex order. Match attributes by vertex identity.
+		PackedInt32Array vertex_remap;
+		if (has_vertex_normals || has_texture_map) {
+			Vector<Vector<PackedInt32Array>> flipped_geometry = _poly_cell_indices;
+			flipped_geometry.set(boundary_dim_index, Vector<PackedInt32Array>{ flipped_cell_members });
+			const PackedInt32Array flipped_vertices = _get_vertex_indices_of_boundary_cells(flipped_geometry, _edge_vertex_indices, boundary_dim_index, false)[0];
+			vertex_remap.resize(flipped_vertices.size());
+			for (int64_t i = 0; i < flipped_vertices.size(); i++) {
+				const int64_t original_vertex = original_cell_vertices[cell_index].find(flipped_vertices[i]);
+				CRASH_COND(original_vertex < 0);
+				vertex_remap.set(i, original_vertex);
 			}
 		}
-		// Copy and flip the vertex normals if they exist for this cell before adding the flipped cell.
-		if (_all_poly_cell_normals.has(cell_to_vert_key)) {
-			Vector<Vector<VectorN>> &poly_cell_vertex_normals = _all_poly_cell_normals[cell_to_vert_key];
-			ERR_FAIL_COND(poly_cell_vertex_normals.size() != poly_cell_boundary_normals.size());
-			if (cell_index < poly_cell_vertex_normals.size()) {
-				Vector<VectorN> flipped_cell_vertex_normals = Vector<VectorN>(poly_cell_vertex_normals[cell_index]);
-				for (int64_t vertex_in_cell = 0; vertex_in_cell < flipped_cell_vertex_normals.size(); vertex_in_cell++) {
-					flipped_cell_vertex_normals.set(vertex_in_cell, VectorND::negate(flipped_cell_vertex_normals[vertex_in_cell]));
-				}
-				poly_cell_vertex_normals.append(flipped_cell_vertex_normals);
+		// Copy texture coordinates without changing their values.
+		if (has_texture_map) {
+			Vector<Vector<VectorM>> &poly_cell_texture_maps = _all_poly_cell_texture_maps[cell_to_vert_key];
+			const Vector<VectorM> &source_texture_map = poly_cell_texture_maps[cell_index];
+			Vector<VectorM> flipped_cell_texture_map;
+			flipped_cell_texture_map.resize(source_texture_map.size());
+			for (int64_t i = 0; i < source_texture_map.size(); i++) {
+				flipped_cell_texture_map.set(i, source_texture_map[vertex_remap[i]]);
 			}
+			poly_cell_texture_maps.append(flipped_cell_texture_map);
+		}
+		// Copy and flip the vertex normals if they exist for this cell before adding the flipped cell.
+		if (has_vertex_normals) {
+			Vector<Vector<VectorN>> &poly_cell_vertex_normals = _all_poly_cell_normals[cell_to_vert_key];
+			const Vector<VectorN> &source_normals = poly_cell_vertex_normals[cell_index];
+			Vector<VectorN> flipped_cell_vertex_normals;
+			flipped_cell_vertex_normals.resize(source_normals.size());
+			for (int64_t vertex_in_cell = 0; vertex_in_cell < source_normals.size(); vertex_in_cell++) {
+				flipped_cell_vertex_normals.set(vertex_in_cell, VectorND::negate(source_normals[vertex_remap[vertex_in_cell]]));
+			}
+			poly_cell_vertex_normals.append(flipped_cell_vertex_normals);
 		}
 		// Append the flipped cell, and record its index for later when we update volumetric cells.
 		const int32_t new_flipped_cell_index = cell_member_indices.size();
+		if (cell_index < original_pivot_count) {
+			while (_poly_cell_boundary_pivot_overrides.size() < new_flipped_cell_index) {
+				_poly_cell_boundary_pivot_overrides.append(-1);
+			}
+			_poly_cell_boundary_pivot_overrides.append(_poly_cell_boundary_pivot_overrides[cell_index]);
+		}
 		cell_member_indices.append(flipped_cell_members);
 		flipped_cell_index_for_original.set(cell_index, new_flipped_cell_index);
 		poly_cell_boundary_normals.append(VectorND::negate(poly_cell_boundary_normals[cell_index]));

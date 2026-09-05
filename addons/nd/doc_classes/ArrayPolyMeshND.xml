@@ -112,7 +112,8 @@
 			<return type="void" />
 			<param index="0" name="idempotent" type="bool" default="true" />
 			<description>
-				Makes the polyhedral mesh double-sided by appending a flipped copy of every boundary cell, made by swapping the first two members of each cell, so that both sides of the boundary are rendered. Existing vertex normals and texture maps are extended to cover the flipped cells, with the vertex normals negated. If this is a volumetric mesh with N-dimensional cells, the flipped cells are also added to the volumetric cells that contain their originals.
+				Makes the polyhedral mesh double-sided by appending a flipped copy of every boundary cell, so that both sides of the boundary are rendered. For 3D meshes, polygon edge loops are reversed; for higher dimensions, the first two members of each boundary cell are swapped. If this is a volumetric mesh with N-dimensional cells, the flipped cells are also added to the volumetric cells that contain their originals.
+				The copies have negated boundary and vertex normals. Vertex normals and texture coordinates remain associated with the same vertices even when flipping changes their order, and texture coordinate values are unchanged. Missing vertex-normal and texture-map data remains missing, and compact vectors are not expanded. Boundary pivot overrides are copied to the flipped cells.
 				If [param idempotent] is [code]true[/code] (default), flipped cells that already exist in the mesh are not appended again, so calling this function multiple times has the same effect as calling it once.
 			</description>
 		</method>
