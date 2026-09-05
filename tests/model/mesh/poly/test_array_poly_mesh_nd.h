@@ -674,4 +674,587 @@ TEST_CASE("[ArrayPolyMeshND] Boundary pivot overrides follow mesh edits") {
 		}
 	}
 }
+
+inline Ref<ArrayPolyMeshND> make_binding_test_mesh(const int p_dimension) {
+	Ref<BoxPolyMeshND> box;
+	box.instantiate();
+	box->set_size(VectorND::fill(p_dimension, 2.0));
+	Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
+	mesh->set_all_poly_cell_normals(HashMap<Vector2i, Vector<Vector<VectorN>>>());
+	mesh->set_all_poly_cell_texture_maps(HashMap<Vector2i, Vector<Vector<VectorM>>>());
+	return mesh;
+}
+
+inline Vector<Vector<VectorN>> make_test_binding(const Ref<ArrayPolyMeshND> &p_mesh, const Vector2i p_key, const int p_value_dimension, const double p_offset = 100.0) {
+	const Vector<PackedInt32Array> elements = p_mesh->get_all_poly_cell_poly_indices(p_key.x, p_key.y);
+	Vector<Vector<VectorN>> binding;
+	if (p_key.x == p_key.y) {
+		Vector<VectorN> flat;
+		for (int64_t i = 0; i < elements.size(); i++) {
+			flat.append(VectorND::value_on_axis_with_dimension(p_offset + i, 0, p_value_dimension));
+		}
+		binding.append(flat);
+	} else {
+		for (int64_t i = 0; i < elements.size(); i++) {
+			Vector<VectorN> data;
+			for (const int32_t element : elements[i]) {
+				data.append(VectorND::value_on_axis_with_dimension(p_offset + i * 1000 + element, 0, p_value_dimension));
+			}
+			binding.append(data);
+		}
+	}
+	return binding;
+}
+
+TEST_CASE("[ArrayPolyMeshND] Dense binding shapes across dimensions") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		const Ref<ArrayPolyMeshND> base = make_binding_test_mesh(dimension);
+		for (int geometry_dimension = 0; geometry_dimension <= dimension; geometry_dimension++) {
+			for (int decomposition_dimension = 0; decomposition_dimension <= geometry_dimension; decomposition_dimension++) {
+				const Vector2i key(geometry_dimension, decomposition_dimension);
+				CAPTURE(key);
+				for (int texture = 0; texture < 2; texture++) {
+					CAPTURE(texture);
+					Ref<ArrayPolyMeshND> mesh = base->duplicate();
+					HashMap<Vector2i, Vector<Vector<VectorN>>> bindings;
+					const Vector<Vector<VectorN>> full = make_test_binding(base, key, dimension - texture);
+					auto set_binding = [&](const Vector<Vector<VectorN>> &p_binding) {
+						bindings.insert(key, p_binding);
+						if (texture) {
+							mesh->set_all_poly_cell_texture_maps(bindings);
+						} else {
+							mesh->set_all_poly_cell_normals(bindings);
+						}
+					};
+					set_binding(full);
+					CHECK(mesh->is_poly_mesh_data_valid());
+					set_binding(Vector<Vector<VectorN>>());
+					CHECK(mesh->is_poly_mesh_data_valid());
+					Vector<Vector<VectorN>> partial = full;
+					const bool boundary_full_count = geometry_dimension == dimension - 1 && (decomposition_dimension == 0 || (!texture && decomposition_dimension == geometry_dimension));
+					if (!boundary_full_count) {
+						if (geometry_dimension == decomposition_dimension) {
+							partial.ptrw()[0].resize(1);
+						} else {
+							partial.resize(1);
+						}
+						set_binding(partial);
+						CHECK(mesh->is_poly_mesh_data_valid());
+					}
+					Vector<Vector<VectorN>> malformed = full;
+					if (geometry_dimension == decomposition_dimension) {
+						set_binding(Vector<Vector<VectorN>>{ Vector<VectorN>() });
+						CHECK(mesh->is_poly_mesh_data_valid());
+						malformed.append(Vector<VectorN>());
+						set_binding(malformed);
+						ERR_PRINT_OFF;
+						CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+						ERR_PRINT_ON;
+						malformed = full;
+						malformed.ptrw()[0].append(VectorN());
+					} else {
+						partial = full;
+						partial.set(0, Vector<VectorN>());
+						set_binding(partial);
+						CHECK(mesh->is_poly_mesh_data_valid());
+						malformed.ptrw()[0].remove_at(0);
+						set_binding(malformed);
+						ERR_PRINT_OFF;
+						CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+						ERR_PRINT_ON;
+						malformed = full;
+						malformed.append(Vector<VectorN>());
+					}
+					set_binding(malformed);
+					ERR_PRINT_OFF;
+					CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+					ERR_PRINT_ON;
+				}
+			}
+		}
+		for (const Vector2i key : { Vector2i(-1, 0), Vector2i(1, -1), Vector2i(1, 2), Vector2i(dimension + 1, dimension + 1) }) {
+			Ref<ArrayPolyMeshND> mesh = base->duplicate();
+			HashMap<Vector2i, Vector<Vector<VectorN>>> bindings;
+			bindings.insert(key, key.x > dimension ? Vector<Vector<VectorN>>{ Vector<VectorN>{ VectorN() } } : Vector<Vector<VectorN>>());
+			mesh->set_all_poly_cell_normals(bindings);
+			ERR_PRINT_OFF;
+			CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+			ERR_PRINT_ON;
+			mesh->set_all_poly_cell_normals(HashMap<Vector2i, Vector<Vector<VectorN>>>());
+			mesh->set_all_poly_cell_texture_maps(bindings);
+			ERR_PRINT_OFF;
+			CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+			ERR_PRINT_ON;
+		}
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Deletion maintains every dense binding") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		const Ref<ArrayPolyMeshND> base = make_binding_test_mesh(dimension);
+		HashMap<Vector2i, Vector<Vector<VectorN>>> normals;
+		HashMap<Vector2i, Vector<Vector<VectorM>>> texture_maps;
+		for (int geometry_dimension = 0; geometry_dimension <= dimension; geometry_dimension++) {
+			for (int decomposition_dimension = 0; decomposition_dimension <= geometry_dimension; decomposition_dimension++) {
+				const Vector2i key(geometry_dimension, decomposition_dimension);
+				normals.insert(key, make_test_binding(base, key, dimension));
+				texture_maps.insert(key, make_test_binding(base, key, dimension - 1));
+			}
+		}
+		for (int deleted_dimension = 0; deleted_dimension <= dimension; deleted_dimension++) {
+			CAPTURE(deleted_dimension);
+			Ref<ArrayPolyMeshND> mesh = base->duplicate();
+			mesh->set_all_poly_cell_normals(normals);
+			mesh->set_all_poly_cell_texture_maps(texture_maps);
+			REQUIRE(mesh->is_poly_mesh_data_valid());
+			mesh->delete_poly_element(deleted_dimension, 0);
+			CHECK(mesh->is_poly_mesh_data_valid());
+			const Vector2i flat_key(deleted_dimension, deleted_dimension);
+			const auto remaining_normals = mesh->get_all_poly_cell_normals();
+			const auto remaining_maps = mesh->get_all_poly_cell_texture_maps();
+			CHECK(remaining_normals[flat_key][0].size() == normals[flat_key][0].size() - 1);
+			CHECK(remaining_maps[flat_key][0].size() == texture_maps[flat_key][0].size() - 1);
+			if (!remaining_normals[flat_key][0].is_empty()) {
+				CHECK(remaining_normals[flat_key][0][0] == normals[flat_key][0][1]);
+				CHECK(remaining_maps[flat_key][0][0] == texture_maps[flat_key][0][1]);
+			}
+			if (deleted_dimension > 0) {
+				const Vector2i decomposed_key(deleted_dimension, 0);
+				CHECK(remaining_normals[decomposed_key].size() == normals[decomposed_key].size() - 1);
+				CHECK(remaining_maps[decomposed_key].size() == texture_maps[decomposed_key].size() - 1);
+				if (!remaining_normals[decomposed_key].is_empty()) {
+					CHECK(remaining_normals[decomposed_key][0] == normals[decomposed_key][1]);
+					CHECK(remaining_maps[decomposed_key][0] == texture_maps[decomposed_key][1]);
+				}
+			}
+			for (const auto &binding : remaining_normals) {
+				const Vector<Vector<PackedInt32Array>> poly = mesh->get_poly_cell_indices();
+				const int geometry_dimension = binding.key.x;
+				int64_t count = 0;
+				if (geometry_dimension == 0) {
+					count = mesh->get_poly_cell_vertex_positions().size();
+				} else if (geometry_dimension == 1) {
+					count = mesh->get_edge_indices().size() / 2;
+				} else if (geometry_dimension - 2 < poly.size()) {
+					count = poly[geometry_dimension - 2].size();
+				}
+				CHECK((binding.key.x == binding.key.y ? binding.value[0].size() : binding.value.size()) == count);
+				const auto texture_binding = remaining_maps[binding.key];
+				CHECK((binding.key.x == binding.key.y ? texture_binding[0].size() : texture_binding.size()) == count);
+			}
+		}
+		Ref<ArrayPolyMeshND> mesh = base->duplicate();
+		const Vector2i key(1, 0);
+		Vector<Vector<VectorN>> partial_normals = normals[key];
+		Vector<Vector<VectorM>> partial_maps = texture_maps[key];
+		partial_normals.resize(1);
+		partial_maps.resize(1);
+		normals.clear();
+		texture_maps.clear();
+		normals.insert(key, partial_normals);
+		texture_maps.insert(key, partial_maps);
+		mesh->set_all_poly_cell_normals(normals);
+		mesh->set_all_poly_cell_texture_maps(texture_maps);
+		mesh->delete_poly_element(1, mesh->get_edge_indices().size() / 2 - 1);
+		CHECK(mesh->get_all_poly_cell_normals()[key] == partial_normals);
+		CHECK(mesh->get_all_poly_cell_texture_maps()[key] == partial_maps);
+		CHECK(mesh->is_poly_mesh_data_valid());
+		mesh->delete_poly_element(1, 0);
+		CHECK(mesh->get_all_poly_cell_normals()[key].is_empty());
+		CHECK(mesh->get_all_poly_cell_texture_maps()[key].is_empty());
+		CHECK(mesh->is_poly_mesh_data_valid());
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Deduplication preserves missing and partial dense bindings") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		Ref<ArrayPolyMeshND> mesh = make_binding_test_mesh(dimension);
+		mesh->calculate_boundary_normals();
+		Vector<VectorN> boundary_normals = mesh->get_poly_cell_boundary_normals();
+		for (int64_t i = 0; i < boundary_normals.size(); i++) {
+			boundary_normals.set(i, VectorND::negate(boundary_normals[i]));
+		}
+		mesh->set_poly_cell_boundary_normals(boundary_normals);
+		HashMap<Vector2i, Vector<Vector<VectorN>>> normals = mesh->get_all_poly_cell_normals();
+		HashMap<Vector2i, Vector<Vector<VectorM>>> texture_maps;
+		const Vector2i absent_key(dimension + 1, 0);
+		const Vector2i absent_flat_key(dimension + 1, dimension + 1);
+		normals.insert(absent_key, Vector<Vector<VectorN>>());
+		texture_maps.insert(absent_flat_key, Vector<Vector<VectorM>>{ Vector<VectorM>() });
+		for (int target_dimension = 1; target_dimension < dimension - 1; target_dimension++) {
+			const Vector2i key(dimension - 1, target_dimension);
+			Vector<Vector<VectorN>> binding = make_test_binding(mesh, key, dimension);
+			Vector<Vector<VectorM>> texture_binding = make_test_binding(mesh, key, dimension - 1);
+			binding.resize(2);
+			texture_binding.resize(2);
+			binding.set(0, Vector<VectorN>());
+			texture_binding.set(0, Vector<VectorM>());
+			normals.insert(key, binding);
+			texture_maps.insert(key, texture_binding);
+		}
+		mesh->set_all_poly_cell_normals(normals);
+		mesh->set_all_poly_cell_texture_maps(texture_maps);
+		REQUIRE(mesh->is_poly_mesh_data_valid());
+		mesh->deduplicate_all_elements();
+		CHECK(mesh->is_poly_mesh_data_valid());
+		const auto dedup_normals = mesh->get_all_poly_cell_normals();
+		const auto dedup_maps = mesh->get_all_poly_cell_texture_maps();
+		REQUIRE(dedup_normals.has(absent_key));
+		CHECK(dedup_normals[absent_key].is_empty());
+		REQUIRE(dedup_maps.has(absent_flat_key));
+		CHECK(dedup_maps[absent_flat_key].size() == 1);
+		CHECK(dedup_maps[absent_flat_key][0].is_empty());
+		for (int target_dimension = 1; target_dimension < dimension - 1; target_dimension++) {
+			const Vector2i key(dimension - 1, target_dimension);
+			REQUIRE(dedup_normals[key].size() == 2);
+			REQUIRE(dedup_maps[key].size() == 2);
+			CHECK(dedup_normals[key][0].is_empty());
+			CHECK(dedup_maps[key][0].is_empty());
+			const auto elements = mesh->get_all_poly_cell_poly_indices(key.x, key.y);
+			for (int64_t i = 0; i < elements[1].size(); i++) {
+				CHECK(dedup_normals[key][1][i][0] == 1100.0 + elements[1][i]);
+				CHECK(dedup_maps[key][1][i][0] == 1100.0 + elements[1][i]);
+			}
+		}
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Deduplication remaps reversed edge vertex bindings") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		Ref<ArrayPolyMeshND> mesh = make_binding_test_mesh(dimension);
+		const PackedInt32Array original_edges = mesh->get_edge_indices();
+		PackedInt32Array edges = { original_edges[1], original_edges[0] };
+		edges.append_array(original_edges);
+		mesh->set_edge_vertex_indices(edges);
+		Vector<Vector<PackedInt32Array>> poly = mesh->get_poly_cell_indices();
+		for (int64_t face = 0; face < poly[0].size(); face++) {
+			PackedInt32Array face_edges = poly[0][face];
+			for (int64_t i = 0; i < face_edges.size(); i++) {
+				face_edges.set(i, face_edges[i] + 1);
+			}
+			poly.ptrw()[0].set(face, face_edges);
+		}
+		mesh->set_poly_cell_indices(poly);
+		HashMap<Vector2i, Vector<Vector<VectorN>>> normals;
+		HashMap<Vector2i, Vector<Vector<VectorM>>> texture_maps;
+		for (const Vector2i key : { Vector2i(1, 0), Vector2i(2, 0) }) {
+			// Use only vertex IDs as tags; the duplicate edge's outer position will disappear.
+			auto binding = make_test_binding(mesh, key, dimension);
+			auto texture_binding = make_test_binding(mesh, key, dimension - 1);
+			for (int64_t i = 0; i < binding.size(); i++) {
+				for (int64_t j = 0; j < binding[i].size(); j++) {
+					binding.ptrw()[i].ptrw()[j].ptrw()[0] -= i * 1000;
+					texture_binding.ptrw()[i].ptrw()[j].ptrw()[0] -= i * 1000;
+				}
+			}
+			normals.insert(key, binding);
+			texture_maps.insert(key, texture_binding);
+		}
+		mesh->set_all_poly_cell_normals(normals);
+		mesh->set_all_poly_cell_texture_maps(texture_maps);
+		mesh->deduplicate_all_elements();
+		CHECK(mesh->is_poly_mesh_data_valid());
+		CHECK(mesh->get_edge_indices().size() == original_edges.size());
+		for (const Vector2i key : { Vector2i(1, 0), Vector2i(2, 0) }) {
+			const auto elements = mesh->get_all_poly_cell_poly_indices(key.x, key.y);
+			const auto output_normals = mesh->get_all_poly_cell_normals()[key];
+			const auto output_maps = mesh->get_all_poly_cell_texture_maps()[key];
+			REQUIRE(output_normals.size() == elements.size());
+			REQUIRE(output_maps.size() == elements.size());
+			for (int64_t i = 0; i < elements.size(); i++) {
+				REQUIRE(output_normals[i].size() == elements[i].size());
+				REQUIRE(output_maps[i].size() == elements[i].size());
+				for (int64_t j = 0; j < elements[i].size(); j++) {
+					CHECK(output_normals[i][j][0] == 100.0 + elements[i][j]);
+					CHECK(output_maps[i][j][0] == 100.0 + elements[i][j]);
+				}
+			}
+		}
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Coincident vertices shrink decomposed binding cardinality") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		Ref<ArrayPolyMeshND> mesh;
+		mesh.instantiate();
+		const VectorN right = VectorND::value_on_axis_with_dimension(1.0, 0, dimension);
+		const VectorN up = VectorND::value_on_axis_with_dimension(1.0, 1, dimension);
+		mesh->set_poly_cell_vertex_positions(Vector<VectorN>{ VectorND::zero(dimension), right, up, up });
+		mesh->set_edge_vertex_indices(PackedInt32Array{ 0, 1, 1, 2, 2, 3, 3, 0 });
+		mesh->set_poly_cell_indices(Vector<Vector<PackedInt32Array>>{ Vector<PackedInt32Array>{ PackedInt32Array{ 0, 1, 2, 3 } } });
+		const Vector2i key(2, 0);
+		HashMap<Vector2i, Vector<Vector<VectorN>>> normals;
+		HashMap<Vector2i, Vector<Vector<VectorM>>> maps;
+		normals.insert(key, make_test_binding(mesh, key, dimension));
+		maps.insert(key, make_test_binding(mesh, key, dimension - 1));
+		mesh->set_all_poly_cell_normals(normals);
+		mesh->set_all_poly_cell_texture_maps(maps);
+		REQUIRE(normals[key][0].size() == 4);
+		mesh->deduplicate_all_elements();
+		CHECK(mesh->is_poly_mesh_data_valid());
+		const auto output_normals = mesh->get_all_poly_cell_normals()[key][0];
+		const auto output_maps = mesh->get_all_poly_cell_texture_maps()[key][0];
+		REQUIRE(output_normals.size() == 3);
+		REQUIRE(output_maps.size() == 3);
+		CHECK(output_normals[2][0] == 102.0);
+		CHECK(output_maps[2][0] == 102.0);
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Dense merge bindings preserve prefixes and geometry offsets") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		const Ref<ArrayPolyMeshND> base = make_binding_test_mesh(dimension);
+		const Ref<TransformND> transform = TransformND::from_position_scale(VectorND::fill(dimension, 7.0), VectorND::fill(dimension, 2.0));
+		for (int geometry_dimension = 0; geometry_dimension <= dimension; geometry_dimension++) {
+			for (int decomposition_dimension = 0; decomposition_dimension <= geometry_dimension; decomposition_dimension++) {
+				const Vector2i key(geometry_dimension, decomposition_dimension);
+				CAPTURE(key);
+				const int64_t element_count = base->get_all_poly_cell_poly_indices(key.x, key.y).size();
+				const bool flat = key.x == key.y;
+				const bool boundary_normals = key == Vector2i(dimension - 1, dimension - 1) || key == Vector2i(dimension - 1, 0);
+				for (int states = 0; states < 9; states++) {
+					CAPTURE(states);
+					// Each input is absent, a partial prefix, or full. Boundary views require full counts.
+					const int first_state = states % 3;
+					const int other_state = states / 3;
+					if (boundary_normals && (first_state == 1 || other_state == 1)) {
+						continue;
+					}
+					const int presence = (first_state != 0 ? 1 : 0) | (other_state != 0 ? 2 : 0);
+					Vector<Vector<VectorN>> first_normals = make_test_binding(base, key, dimension);
+					Vector<Vector<VectorN>> other_normals = make_test_binding(base, key, dimension, 500.0);
+					Vector<Vector<VectorM>> first_maps = make_test_binding(base, key, dimension - 1);
+					Vector<Vector<VectorM>> other_maps = make_test_binding(base, key, dimension - 1, 500.0);
+					if (first_state == 1) {
+						if (flat) {
+							first_normals.ptrw()[0].resize(1);
+							first_maps.ptrw()[0].resize(1);
+						} else {
+							first_normals.resize(1);
+							first_maps.resize(1);
+						}
+					}
+					if (other_state == 1) {
+						if (flat) {
+							other_normals.ptrw()[0].resize(1);
+							other_maps.ptrw()[0].resize(1);
+						} else {
+							other_normals.resize(1);
+							other_maps.resize(1);
+						}
+					}
+					Ref<ArrayPolyMeshND> mesh = base->duplicate();
+					Ref<ArrayPolyMeshND> other = base->duplicate();
+					HashMap<Vector2i, Vector<Vector<VectorN>>> normals;
+					HashMap<Vector2i, Vector<Vector<VectorM>>> maps;
+					if (presence & 1) {
+						normals.insert(key, first_normals);
+						maps.insert(key, first_maps);
+						mesh->set_all_poly_cell_normals(normals);
+						mesh->set_all_poly_cell_texture_maps(maps);
+					}
+					if (presence & 2) {
+						normals.insert(key, other_normals);
+						maps.insert(key, other_maps);
+						other->set_all_poly_cell_normals(normals);
+						other->set_all_poly_cell_texture_maps(maps);
+					}
+					const bool warns_missing_normals = !boundary_normals && presence != 0 && (presence != 3 || (element_count > 1 && (first_state == 1 || other_state == 1)));
+					if (warns_missing_normals) {
+						ERR_PRINT_OFF;
+						mesh->merge_with(other, transform);
+						ERR_PRINT_ON;
+					} else {
+						mesh->merge_with(other, transform);
+					}
+					CHECK(mesh->is_poly_mesh_data_valid());
+					const auto merged_normals = mesh->get_all_poly_cell_normals();
+					const auto merged_maps = mesh->get_all_poly_cell_texture_maps();
+					if (presence == 0) {
+						CHECK_FALSE(merged_normals.has(key));
+						CHECK_FALSE(merged_maps.has(key));
+						continue;
+					}
+					REQUIRE(merged_normals.has(key));
+					REQUIRE(merged_maps.has(key));
+					REQUIRE((flat ? merged_normals[key][0].size() : merged_normals[key].size()) == element_count * 2);
+					REQUIRE((flat ? merged_maps[key][0].size() : merged_maps[key].size()) == element_count * 2);
+					for (int half = 0; half < 2; half++) {
+						const auto input_normals = half == 0 ? first_normals : other_normals;
+						const auto input_maps = half == 0 ? first_maps : other_maps;
+						const bool has_binding = (presence & (1 << half)) != 0;
+						const int64_t input_count = has_binding ? (flat ? input_normals[0].size() : input_normals.size()) : 0;
+						for (int64_t i = 0; i < element_count; i++) {
+							const int64_t output_index = half * element_count + i;
+							if (flat) {
+								VectorN expected_normal;
+								VectorM expected_map;
+								if (i < input_count) {
+									expected_normal = half == 0 ? input_normals[0][i] : transform->xform_basis(input_normals[0][i]);
+									expected_map = input_maps[0][i];
+								}
+								if (i < input_count || !boundary_normals) {
+									CHECK(merged_normals[key][0][output_index] == expected_normal);
+								}
+								CHECK(merged_maps[key][0][output_index] == expected_map);
+							} else {
+								Vector<VectorN> expected_normals;
+								Vector<VectorM> expected_maps;
+								if (i < input_count) {
+									expected_normals = input_normals[i];
+									expected_maps = input_maps[i];
+									if (half == 1) {
+										for (int64_t j = 0; j < expected_normals.size(); j++) {
+											expected_normals.set(j, transform->xform_basis(expected_normals[j]));
+										}
+									}
+								}
+								if (i < input_count || !boundary_normals) {
+									CHECK(merged_normals[key][output_index] == expected_normals);
+								}
+								CHECK(merged_maps[key][output_index] == expected_maps);
+							}
+						}
+					}
+					if (presence & 2) {
+						CHECK(other->get_all_poly_cell_normals()[key] == other_normals);
+						CHECK(other->get_all_poly_cell_texture_maps()[key] == other_maps);
+					}
+				}
+			}
+		}
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Merge preserves empty binding representations") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		const Ref<ArrayPolyMeshND> base = make_binding_test_mesh(dimension);
+		HashMap<Vector2i, Vector<Vector<VectorN>>> empty_bindings;
+		empty_bindings.insert(Vector2i(0, 0), Vector<Vector<VectorN>>{ Vector<VectorN>() });
+		empty_bindings.insert(Vector2i(1, 0), Vector<Vector<VectorN>>());
+		empty_bindings.insert(Vector2i(2, 2), Vector<Vector<VectorN>>{ Vector<VectorN>() });
+		empty_bindings.insert(Vector2i(dimension - 1, dimension - 1), Vector<Vector<VectorN>>{ Vector<VectorN>() });
+		empty_bindings.insert(Vector2i(dimension - 1, 0), Vector<Vector<VectorN>>());
+		empty_bindings.insert(Vector2i(dimension + 1, 0), Vector<Vector<VectorN>>());
+		empty_bindings.insert(Vector2i(dimension + 1, dimension + 1), Vector<Vector<VectorN>>{ Vector<VectorN>() });
+		Ref<ArrayPolyMeshND> with_empty = base->duplicate();
+		with_empty->set_all_poly_cell_normals(empty_bindings);
+		with_empty->set_all_poly_cell_texture_maps(empty_bindings);
+		Ref<ArrayPolyMeshND> without = base->duplicate();
+		without->merge_with(with_empty);
+		CHECK(without->is_poly_mesh_data_valid());
+		CHECK(without->get_all_poly_cell_normals().is_empty());
+		CHECK(without->get_all_poly_cell_texture_maps().is_empty());
+		with_empty->merge_with(base);
+		CHECK(with_empty->is_poly_mesh_data_valid());
+		const auto normals = with_empty->get_all_poly_cell_normals();
+		const auto maps = with_empty->get_all_poly_cell_texture_maps();
+		CHECK(normals.size() == empty_bindings.size());
+		CHECK(maps.size() == empty_bindings.size());
+		for (const auto &binding : empty_bindings) {
+			CHECK(normals[binding.key] == binding.value);
+			CHECK(maps[binding.key] == binding.value);
+		}
+		while (!with_empty->get_poly_cell_indices().is_empty()) {
+			with_empty->delete_poly_element(2, 0);
+		}
+		with_empty->deduplicate_all_elements();
+		CHECK(with_empty->is_poly_mesh_data_valid());
+		CHECK(with_empty->get_all_poly_cell_normals().size() == empty_bindings.size());
+		CHECK(with_empty->get_all_poly_cell_texture_maps().size() == empty_bindings.size());
+		for (const auto &binding : empty_bindings) {
+			CHECK(with_empty->get_all_poly_cell_normals()[binding.key] == binding.value);
+			CHECK(with_empty->get_all_poly_cell_texture_maps()[binding.key] == binding.value);
+		}
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Self merge snapshots attributes and refreshes primed caches") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		Ref<ArrayPolyMeshND> mesh = make_binding_test_mesh(dimension);
+		const Vector2i key(dimension - 1, 0);
+		const Vector2i flat_key(0, 0);
+		mesh->calculate_boundary_normals();
+		auto normals = mesh->get_all_poly_cell_normals();
+		HashMap<Vector2i, Vector<Vector<VectorM>>> texture_maps;
+		for (const Vector2i binding_key : { key, flat_key }) {
+			normals.insert(binding_key, make_test_binding(mesh, binding_key, dimension));
+			texture_maps.insert(binding_key, make_test_binding(mesh, binding_key, dimension - 1));
+		}
+		mesh->set_all_poly_cell_normals(normals);
+		mesh->set_all_poly_cell_texture_maps(texture_maps);
+		const int64_t simplex_index_count = mesh->get_simplex_cell_vertex_indices().size();
+		const auto simplex_positions = mesh->get_simplex_cell_positions();
+		const auto simplex_normals = mesh->get_simplex_cell_vertex_normals();
+		const auto simplex_maps = mesh->get_simplex_cell_texture_map();
+		const int64_t vertex_count = mesh->get_poly_cell_vertex_positions().size();
+		REQUIRE(simplex_index_count > 0);
+		REQUIRE(simplex_positions.size() == simplex_index_count);
+		REQUIRE(simplex_normals.size() == simplex_index_count);
+		REQUIRE(simplex_maps.size() == simplex_index_count);
+		const Ref<TransformND> transform = TransformND::from_position_scale(VectorND::fill(dimension, 10.0), VectorND::fill(dimension, 2.0));
+		mesh->merge_with(mesh, transform);
+		CHECK(mesh->is_poly_mesh_data_valid());
+		CHECK(mesh->get_poly_cell_vertex_positions().size() == vertex_count * 2);
+		CHECK(mesh->get_simplex_cell_vertex_indices().size() == simplex_index_count * 2);
+		const auto merged_normals = mesh->get_all_poly_cell_normals();
+		const auto merged_maps = mesh->get_all_poly_cell_texture_maps();
+		for (const auto &binding : normals) {
+			const auto merged = merged_normals[binding.key];
+			if (binding.key.x == binding.key.y) {
+				const int64_t count = binding.value[0].size();
+				REQUIRE(merged[0].size() == count * 2);
+				for (int64_t i = 0; i < count; i++) {
+					CHECK(merged[0][i] == binding.value[0][i]);
+					CHECK(merged[0][i + count] == transform->xform_basis(binding.value[0][i]));
+				}
+			} else {
+				const int64_t count = binding.value.size();
+				REQUIRE(merged.size() == count * 2);
+				for (int64_t i = 0; i < count; i++) {
+					CHECK(merged[i] == binding.value[i]);
+					REQUIRE(merged[i + count].size() == binding.value[i].size());
+					for (int64_t j = 0; j < binding.value[i].size(); j++) {
+						CHECK(merged[i + count][j] == transform->xform_basis(binding.value[i][j]));
+					}
+				}
+			}
+		}
+		for (const auto &binding : texture_maps) {
+			const auto merged = merged_maps[binding.key];
+			if (binding.key.x == binding.key.y) {
+				Vector<VectorM> expected = binding.value[0];
+				expected.append_array(binding.value[0]);
+				CHECK(merged[0] == expected);
+			} else {
+				const int64_t count = binding.value.size();
+				REQUIRE(merged.size() == count * 2);
+				for (int64_t i = 0; i < count; i++) {
+					CHECK(merged[i] == binding.value[i]);
+					CHECK(merged[i + count] == binding.value[i]);
+				}
+			}
+		}
+		const auto merged_simplex_positions = mesh->get_simplex_cell_positions();
+		const auto merged_simplex_normals = mesh->get_simplex_cell_vertex_normals();
+		const auto merged_simplex_maps = mesh->get_simplex_cell_texture_map();
+		REQUIRE(merged_simplex_positions.size() == simplex_index_count * 2);
+		REQUIRE(merged_simplex_normals.size() == simplex_index_count * 2);
+		REQUIRE(merged_simplex_maps.size() == simplex_index_count * 2);
+		for (int64_t i = 0; i < simplex_index_count; i++) {
+			CHECK(merged_simplex_positions[i] == simplex_positions[i]);
+			CHECK(merged_simplex_positions[i + simplex_index_count] == transform->xform(simplex_positions[i]));
+			CHECK(merged_simplex_normals[i] == simplex_normals[i]);
+			CHECK(merged_simplex_normals[i + simplex_index_count] == transform->xform_basis(simplex_normals[i]));
+			CHECK(merged_simplex_maps[i] == simplex_maps[i]);
+			CHECK(merged_simplex_maps[i + simplex_index_count] == simplex_maps[i]);
+		}
+	}
+}
 } // namespace TestArrayPolyMeshND
