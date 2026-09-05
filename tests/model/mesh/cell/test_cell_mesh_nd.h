@@ -316,10 +316,10 @@ TEST_CASE("[ArrayCellMeshND] Merge preserves sampled attributes and fills missin
 				REQUIRE(texture_map.size() == normals.size());
 				if (has_attributes) {
 					CHECK(boundary_normals[0] == (start_has_attributes ? start_boundary_normals[0] : VectorN()));
-					CHECK(boundary_normals[1] == (other_has_attributes ? VectorND::negate(other_boundary_normals[0]) : VectorN()));
+					CHECK(VectorND::is_equal_exact(boundary_normals[1], other_has_attributes ? VectorND::negate(other_boundary_normals[0]) : VectorN()));
 					for (int i = 0; i < dimension; i++) {
 						CHECK(normals[i] == (start_has_attributes ? start_normals[i] : VectorN()));
-						CHECK(normals[dimension + i] == (other_has_attributes ? VectorND::negate(other_normals[i]) : VectorN()));
+						CHECK(VectorND::is_equal_exact(normals[dimension + i], other_has_attributes ? VectorND::negate(other_normals[i]) : VectorN()));
 						CHECK(texture_map[i] == (start_has_attributes ? start_texture_map[i] : VectorM()));
 						CHECK(texture_map[dimension + i] == (other_has_attributes ? other_texture_map[i] : VectorM()));
 					}
@@ -432,12 +432,12 @@ TEST_CASE("[ArrayCellMeshND] Self merge preserves the source prefixes") {
 		mesh->merge_with(mesh, transform);
 		REQUIRE(mesh->is_mesh_data_valid());
 		CHECK(mesh->get_simplex_cell_boundary_normals()[0] == boundary_normals[0]);
-		CHECK(mesh->get_simplex_cell_boundary_normals()[1] == VectorND::negate(boundary_normals[0]));
+		CHECK(VectorND::is_equal_exact(mesh->get_simplex_cell_boundary_normals()[1], VectorND::negate(boundary_normals[0])));
 		for (int i = 0; i < dimension; i++) {
 			CHECK(mesh->get_vertex_positions()[i] == positions[i]);
 			CHECK(mesh->get_vertex_positions()[dimension + i] == transform->xform(positions[i]));
 			CHECK(TestMeshDataND::get_simplex_normals(mesh)[i] == normals[i]);
-			CHECK(TestMeshDataND::get_simplex_normals(mesh)[dimension + i] == VectorND::negate(normals[i]));
+			CHECK(VectorND::is_equal_exact(TestMeshDataND::get_simplex_normals(mesh)[dimension + i], VectorND::negate(normals[i])));
 			CHECK(TestMeshDataND::get_simplex_texture_map(mesh)[i] == texture_map[i]);
 			CHECK(TestMeshDataND::get_simplex_texture_map(mesh)[dimension + i] == texture_map[i]);
 			CHECK(mesh->get_simplex_cell_vertex_indices()[dimension + i] == dimension + i);
