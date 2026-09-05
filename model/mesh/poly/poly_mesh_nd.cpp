@@ -639,6 +639,9 @@ void PolyMeshND::_decompose_boundary_cells_into_simplexes() {
 			surface_cells_to_use.set(i, i);
 		}
 	}
+	if (surface_cells_to_use.is_empty()) {
+		return; // There is no exposed boundary to decompose.
+	}
 	HashSet<int32_t> surface_cell_set;
 	for (const int32_t surface_cell : surface_cells_to_use) {
 		surface_cell_set.insert(surface_cell);
@@ -1320,7 +1323,8 @@ PackedInt32Array PolyMeshND::get_simplex_cell_vertex_indices() {
 Vector<VectorN> PolyMeshND::get_simplex_cell_boundary_normals() {
 	if (_simplex_cell_boundary_normals_cache.is_empty()) {
 		if (_simplex_cell_vertex_indices_cache.is_empty()) {
-			_decompose_boundary_cells_into_simplexes();
+			// This populates `_simplex_cell_vertex_indices_cache`. This is internal, so we don't need the returned value (same array).
+			get_simplex_cell_vertex_indices();
 		}
 		const int64_t dimension = get_dimension();
 		if (dimension < 3 || _simplex_cell_vertex_indices_cache.is_empty()) {

@@ -35,6 +35,7 @@ int ArrayCellMeshND::append_vertex(const VectorN &p_vertex, const bool p_dedupli
 		}
 	}
 	_vertex_positions.push_back(p_vertex);
+	cell_mesh_clear_cache();
 	reset_mesh_data_validation();
 	return vertex_count;
 }

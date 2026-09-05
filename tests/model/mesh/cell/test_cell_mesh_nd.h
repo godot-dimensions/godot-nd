@@ -431,4 +431,31 @@ TEST_CASE("[CellMeshND] Signed distance to mesh") {
 		CHECK_MESSAGE(box->get_signed_distance_to_mesh(VectorN{ 3.0, 0.0, 0.0 }, nullptr, nullptr) == doctest::Approx(1.0), "The closest-point cache must be invalidated when the mesh data changes.");
 	}
 }
+
+TEST_CASE("[ArrayCellMeshND] Appending a missing vertex repairs cached simplex positions") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, false);
+		PackedInt32Array indices = mesh->get_simplex_cell_vertex_indices();
+		indices.set(dimension - 1, dimension);
+		mesh->set_simplex_cell_vertex_indices(indices);
+		ERR_PRINT_OFF;
+		CHECK_FALSE(mesh->is_mesh_data_valid());
+		ERR_PRINT_ON;
+		// The direct getter caches the valid prefix before it encounters the missing vertex.
+		ERR_PRINT_OFF;
+		const Vector<VectorN> partial_positions = mesh->get_simplex_cell_positions();
+		ERR_PRINT_ON;
+		REQUIRE(partial_positions.size() == dimension - 1);
+		const VectorN new_position = VectorND::value_on_axis_with_dimension(2.0, dimension - 2, dimension);
+		CHECK(mesh->append_vertex(new_position) == dimension);
+		CHECK(mesh->is_mesh_data_valid());
+		const Vector<VectorN> repaired_positions = mesh->get_simplex_cell_positions();
+		REQUIRE(repaired_positions.size() == dimension);
+		for (int64_t i = 0; i < partial_positions.size(); i++) {
+			CHECK(repaired_positions[i] == partial_positions[i]);
+		}
+		CHECK(repaired_positions[dimension - 1] == new_position);
+	}
+}
 } // namespace TestCellMeshND

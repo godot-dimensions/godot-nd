@@ -1000,4 +1000,243 @@ TEST_CASE("[PolyMeshND] Conformed and interior cells") {
 		}
 	}
 }
+
+inline Ref<ArrayPolyMeshND> make_attributed_array_mesh(const int p_dimension) {
+	Ref<ArrayPolyMeshND> mesh = make_box_poly_mesh(p_dimension)->to_array_poly_mesh();
+	const Vector<PackedInt32Array> cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+	Vector<Vector<VectorN>> normals;
+	Vector<Vector<VectorM>> texture_maps;
+	for (int64_t cell_index = 0; cell_index < cell_vertices.size(); cell_index++) {
+		Vector<VectorN> cell_normals;
+		Vector<VectorM> cell_texture_map;
+		for (const int32_t vertex : cell_vertices[cell_index]) {
+			const double tag = 1.0 + cell_index * 100 + vertex;
+			cell_normals.append(VectorND::value_on_axis_with_dimension(tag, 0, p_dimension));
+			cell_texture_map.append(VectorND::value_on_axis_with_dimension(tag, 0, p_dimension - 1));
+		}
+		normals.append(cell_normals);
+		texture_maps.append(cell_texture_map);
+	}
+	mesh->set_poly_cell_vertex_normals(normals);
+	mesh->set_poly_cell_texture_map(texture_maps);
+	mesh->poly_mesh_clear_cache();
+	return mesh;
+}
+
+TEST_CASE("[PolyMeshND] Derived attributes are independent of the first getter") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		for (int presence = 0; presence < 5; presence++) {
+			CAPTURE(presence);
+			const Ref<ArrayPolyMeshND> base = make_attributed_array_mesh(dimension);
+			if (presence == 4) {
+				// Full outer arrays with empty per-cell entries also mean no attributes.
+				auto normals = base->get_poly_cell_vertex_normals();
+				auto texture_map = base->get_poly_cell_texture_map();
+				for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
+					normals.set(cell_index, Vector<VectorN>());
+					texture_map.set(cell_index, Vector<VectorM>());
+				}
+				base->set_poly_cell_vertex_normals(normals);
+				base->set_poly_cell_texture_map(texture_map);
+			} else {
+				if (!(presence & 1)) {
+					base->set_poly_cell_vertex_normals(Vector<Vector<VectorN>>());
+				}
+				if (!(presence & 2)) {
+					base->set_poly_cell_texture_map(Vector<Vector<VectorM>>());
+				}
+			}
+			Ref<ArrayPolyMeshND> reference = base->duplicate();
+			const PackedInt32Array expected_indices = reference->get_simplex_cell_vertex_indices();
+			const Vector<VectorN> expected_positions = reference->get_vertex_positions();
+			const Vector<VectorN> expected_boundary_normals = reference->get_simplex_cell_boundary_normals();
+			const Vector<VectorN> expected_normals = reference->get_simplex_cell_vertex_normals();
+			const Vector<VectorM> expected_texture_map = reference->get_simplex_cell_texture_map();
+			REQUIRE(!expected_indices.is_empty());
+			REQUIRE(expected_normals.size() == ((presence & 1) ? expected_indices.size() : 0));
+			REQUIRE(expected_texture_map.size() == ((presence & 2) ? expected_indices.size() : 0));
+			const auto source_cell_vertices = base->get_all_boundary_cell_vertex_indices(false);
+			const auto source_normals = base->get_poly_cell_vertex_normals();
+			const auto source_texture_map = base->get_poly_cell_texture_map();
+			const auto source_boundary_normals = base->get_poly_cell_boundary_normals();
+			REQUIRE(expected_boundary_normals.size() == expected_indices.size() / dimension);
+			for (int64_t i = 0; i < expected_indices.size(); i++) {
+				const int32_t source_cell = reference->get_source_poly_cell_for_simplex_cell(i / dimension);
+				REQUIRE(source_cell >= 0);
+				REQUIRE(source_cell < source_cell_vertices.size());
+				CHECK(VectorND::is_equal_approx(expected_boundary_normals[i / dimension], source_boundary_normals[source_cell]));
+				const int64_t source_vertex = source_cell_vertices[source_cell].find(expected_indices[i]);
+				// This fixture has no pivot overrides. Generated centroid vertices use the
+				// source cell's average; original vertices retain their individually tagged data.
+				if (!expected_normals.is_empty()) {
+					const auto &cell_normals = source_normals[source_cell];
+					const VectorN source_normal = source_vertex == -1 ? VectorND::average(cell_normals) : cell_normals[source_vertex];
+					CHECK(expected_normals[i] == source_normal);
+				}
+				if (!expected_texture_map.is_empty()) {
+					const auto &cell_texture_map = source_texture_map[source_cell];
+					const VectorM source_texcoord = source_vertex == -1 ? VectorND::average(cell_texture_map) : cell_texture_map[source_vertex];
+					CHECK(expected_texture_map[i] == source_texcoord);
+				}
+			}
+			for (int first_getter = 0; first_getter < 5; first_getter++) {
+				CAPTURE(first_getter);
+				Ref<ArrayPolyMeshND> mesh = base->duplicate();
+				mesh->poly_mesh_clear_cache();
+				switch (first_getter) {
+					case 0:
+						CHECK(mesh->get_simplex_cell_vertex_indices() == expected_indices);
+						break;
+					case 1:
+						CHECK(mesh->get_vertex_positions() == expected_positions);
+						break;
+					case 2:
+						CHECK(mesh->get_simplex_cell_boundary_normals() == expected_boundary_normals);
+						break;
+					case 3:
+						CHECK(mesh->get_simplex_cell_vertex_normals() == expected_normals);
+						break;
+					case 4:
+						CHECK(mesh->get_simplex_cell_texture_map() == expected_texture_map);
+						break;
+				}
+				CHECK(mesh->get_simplex_cell_vertex_indices() == expected_indices);
+				CHECK(mesh->get_vertex_positions() == expected_positions);
+				CHECK(mesh->get_simplex_cell_boundary_normals() == expected_boundary_normals);
+				CHECK(mesh->get_simplex_cell_vertex_normals() == expected_normals);
+				CHECK(mesh->get_simplex_cell_texture_map() == expected_texture_map);
+				for (int64_t i = 0; i < expected_indices.size() / dimension; i++) {
+					CHECK(mesh->get_source_poly_cell_for_simplex_cell(i) == reference->get_source_poly_cell_for_simplex_cell(i));
+				}
+				CHECK(mesh->get_poly_cell_vertex_normals() == base->get_poly_cell_vertex_normals());
+				CHECK(mesh->get_poly_cell_texture_map() == base->get_poly_cell_texture_map());
+				mesh->poly_mesh_clear_cache(true);
+				CHECK(mesh->get_simplex_cell_vertex_normals() == expected_normals);
+				CHECK(mesh->get_simplex_cell_boundary_normals() == expected_boundary_normals);
+				CHECK(mesh->get_simplex_cell_texture_map() == expected_texture_map);
+				CHECK(mesh->get_simplex_cell_vertex_indices() == expected_indices);
+				mesh->poly_mesh_clear_cache();
+				CHECK(mesh->get_simplex_cell_texture_map() == expected_texture_map);
+				CHECK(mesh->get_simplex_cell_vertex_normals() == expected_normals);
+				CHECK(mesh->get_simplex_cell_vertex_indices() == expected_indices);
+				CHECK(mesh->is_mesh_data_valid());
+			}
+		}
+	}
+}
+
+TEST_CASE("[PolyMeshND] Valid meshes without exposed boundary return empty derived data") {
+	{
+		// A fresh mesh has no boundary data.
+		Ref<ArrayPolyMeshND> mesh;
+		mesh.instantiate();
+		CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
+		CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+		CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+		CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
+		CHECK(mesh->get_vertex_positions().is_empty());
+		CHECK(mesh->is_mesh_data_valid());
+	}
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		{
+			// Lower-dimensional geometry has no boundary data.
+			Ref<ArrayPolyMeshND> mesh;
+			mesh.instantiate();
+			mesh->append_edge_points(VectorND::zero(dimension), VectorND::value_on_axis_with_dimension(1.0, 0, dimension));
+			CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
+			CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+			CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+			CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
+			CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
+			CHECK(mesh->is_mesh_data_valid());
+			// Extending the wire must invalidate its already populated derived vertex cache.
+			mesh->append_edge_points(VectorND::value_on_axis_with_dimension(1.0, 0, dimension), VectorND::value_on_axis_with_dimension(1.0, 1, dimension));
+			CHECK(mesh->get_vertex_positions().size() == 3);
+			CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
+			if (dimension > 3) {
+				mesh->append_edge_indices(2, 0);
+				mesh->append_poly_cell(2, PackedInt32Array{ 0, 1, 2 });
+				CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
+				CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+				CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+				CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
+				CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
+				CHECK(mesh->is_mesh_data_valid());
+			}
+		}
+		{
+			// Explicit empty topology levels also represent a mesh without a surface.
+			Ref<ArrayPolyMeshND> mesh;
+			mesh.instantiate();
+			mesh->append_vertex(VectorND::zero(dimension));
+			Vector<Vector<PackedInt32Array>> poly;
+			poly.resize(dimension - 2);
+			mesh->set_poly_cell_indices(poly);
+			CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
+			CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+			CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+			CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
+			CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
+			CHECK(mesh->is_mesh_data_valid());
+		}
+		{
+			// All boundary cells are covered by volumetric cells.
+			const Ref<ArrayPolyMeshND> base = make_attributed_array_mesh(dimension);
+			Vector<Vector<PackedInt32Array>> poly = base->get_poly_cell_indices();
+			const int volume_index = dimension - 2;
+			REQUIRE(poly[volume_index].size() == 1);
+			// Two identical enclosing volumes use every boundary cell twice, hiding the entire surface.
+			const PackedInt32Array volume = poly[volume_index][0];
+			const auto original_normals = base->get_poly_cell_vertex_normals();
+			const auto original_texture_map = base->get_poly_cell_texture_map();
+			REQUIRE(!base->get_simplex_cell_vertex_indices().is_empty());
+			REQUIRE(!base->get_simplex_cell_vertex_normals().is_empty());
+			REQUIRE(!base->get_simplex_cell_texture_map().is_empty());
+			REQUIRE(base->is_mesh_data_valid());
+			CHECK(base->append_poly_cell(dimension, volume, false) == 1);
+			CHECK(base->get_simplex_cell_vertex_indices().is_empty());
+			CHECK(base->get_simplex_cell_vertex_normals().is_empty());
+			CHECK(base->get_simplex_cell_texture_map().is_empty());
+			CHECK(base->is_mesh_data_valid());
+			for (int first_getter = 0; first_getter < 4; first_getter++) {
+				Ref<ArrayPolyMeshND> mesh = base->duplicate();
+				mesh->poly_mesh_clear_cache();
+				if (first_getter == 0) {
+					CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+				} else if (first_getter == 1) {
+					CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+				} else if (first_getter == 2) {
+					CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
+				} else {
+					CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
+				}
+				CHECK(mesh->is_mesh_data_valid());
+				CHECK(mesh->get_simplex_cell_vertex_indices().is_empty());
+				CHECK(mesh->get_simplex_cell_boundary_normals().is_empty());
+				CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+				CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+				CHECK(mesh->get_simplex_cell_positions().is_empty());
+				CHECK(mesh->get_source_poly_cell_for_simplex_cell(0) == -1);
+				CHECK(mesh->get_vertex_positions() == mesh->get_poly_cell_vertex_positions());
+				CHECK(mesh->get_poly_cell_vertex_normals() == original_normals);
+				CHECK(mesh->get_poly_cell_texture_map() == original_texture_map);
+			}
+		}
+		{
+			// Adding the first cell of a new dimension must invalidate validation too.
+			const Ref<ArrayPolyMeshND> mesh = make_attributed_array_mesh(dimension);
+			Vector<Vector<PackedInt32Array>> poly = mesh->get_poly_cell_indices();
+			poly.resize(dimension - 2); // Remove the volumetric level, preserving the surface.
+			mesh->set_poly_cell_indices(poly);
+			REQUIRE(mesh->is_mesh_data_valid());
+			// This reference exists, but a volumetric cell needs more than one boundary cell.
+			CHECK(mesh->append_poly_cell(dimension, PackedInt32Array{ 0 }, false) == 0);
+			ERR_PRINT_OFF;
+			CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+			ERR_PRINT_ON;
+		}
+	}
+}
 } // namespace TestPolyMeshND
