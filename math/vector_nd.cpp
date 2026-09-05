@@ -820,11 +820,9 @@ VectorN VectorND::perpendicular(const Vector<VectorN> &p_input_vectors) {
 	// Handle edge cases and determine if the input is valid.
 	ERR_FAIL_COND_V_MSG(p_input_vectors.is_empty(), VectorN(), "VectorND.perpendicular: Cannot compute a vector perpendicular to nothing.");
 	const int64_t count = p_input_vectors.size();
-	const int64_t dimension = p_input_vectors[0].size();
-	ERR_FAIL_COND_V_MSG(count != dimension - 1, VectorN(), "VectorND.perpendicular: Expected exactly N-1 vectors for N-dimensional space.");
-	for (int64_t input_vec_index = 1; input_vec_index < count; input_vec_index++) {
-		const VectorN input_vector = p_input_vectors[input_vec_index];
-		ERR_FAIL_COND_V_MSG(input_vector.size() != dimension, VectorN(), "VectorND.perpendicular: All input vectors must have the same dimension.");
+	const int64_t dimension = count + 1;
+	for (const VectorN &input_vector : p_input_vectors) {
+		ERR_FAIL_COND_V_MSG(input_vector.size() > dimension, VectorN(), "VectorND.perpendicular: Input vectors must have at most one more component than the number of input vectors.");
 	}
 	if (dimension > 100) {
 		WARN_PRINT("VectorND.perpendicular: Calculating a perpendicular vector in " + itos(dimension) + "-dimensional space will be very slow.");
@@ -847,7 +845,7 @@ VectorN VectorND::perpendicular(const Vector<VectorN> &p_input_vectors) {
 				if (column_index == dimension_index) {
 					continue;
 				}
-				row.set(row_col_index++, p_input_vectors[row_index][column_index]);
+				row.set(row_col_index++, VectorND::get_component(p_input_vectors[row_index], column_index));
 			}
 			sub_matrix.set(row_index, row);
 		}

@@ -83,7 +83,7 @@
 		<method name="get_poly_cell_boundary_normals">
 			<return type="PackedFloat64Array[]" />
 			<description>
-				Returns the boundary normals of the (N-1)-dimensional boundary cells, one per cell.
+				Returns the boundary normals of the (N-1)-dimensional boundary cells, one per cell. Each normal may have at most N components, with missing trailing components treated as zero.
 			</description>
 		</method>
 		<method name="get_poly_cell_boundary_pivot_overrides">
@@ -105,14 +105,14 @@
 		<method name="get_poly_cell_texture_map">
 			<return type="Array[]" />
 			<description>
-				Returns the texture mapping of the polyhedral boundary cells. Each item in this array is an array of [PackedFloat64Array]s containing the texture space mapping for the vertex instances of the corresponding boundary cell. Each [PackedFloat64Array] in these arrays defines the (N-1)-dimensional texture coordinates for the corresponding vertex instance in the cell, and is usually on the range from 0.0 to 1.0 on each axis. For example, a 4D mesh has 3D texture coordinates.
+				Returns the texture mapping of the polyhedral boundary cells. Each item in this array is an array of [PackedFloat64Array]s containing the texture space mapping for the vertex instances of the corresponding boundary cell. Each [PackedFloat64Array] may have at most N-1 components, with missing trailing components treated as zero, and is usually on the range from 0.0 to 1.0 on each axis. For example, a 4D mesh may have texture coordinates with up to 3 components.
 				The outer array may be empty for no texture mapping. Otherwise, it must contain one array per boundary cell; an individual cell's array may be empty for no texture mapping on that cell.
 			</description>
 		</method>
 		<method name="get_poly_cell_vertex_normals">
 			<return type="Array[]" />
 			<description>
-				Returns the normals of the vertex instances for each polyhedral boundary cell. Each item in this array is an array of [PackedFloat64Array]s containing the normals for each vertex instance in the corresponding boundary cell. Each [PackedFloat64Array] in these arrays is an N-dimensional vector that should be normalized.
+				Returns the normals of the vertex instances for each polyhedral boundary cell. Each item in this array is an array of [PackedFloat64Array]s containing the normals for each vertex instance in the corresponding boundary cell. Each normal may have at most N components, with missing trailing components treated as zero, and should be normalized.
 			</description>
 		</method>
 		<method name="get_poly_cell_vertex_positions">

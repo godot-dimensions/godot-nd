@@ -66,13 +66,13 @@
 	</methods>
 	<members>
 		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">
-			The dimension of the mesh. This is calculated as the length of the first vertex. Setting this will resize all vertices to the new dimension, either truncating them or padding them with zeros as necessary.
+			The dimension of the mesh, defined by the number of components in the first vertex position. Setting this resizes the first position to the new dimension, truncating or padding it with zeros as necessary. Other positions are truncated if too long, but shorter and empty positions remain compact. Setting this on a mesh without vertices does not create a vertex, so its dimension remains zero.
 		</member>
 		<member name="edge_indices" type="PackedInt32Array" setter="set_edge_indices" getter="get_edge_indices" default="PackedInt32Array()">
 			The indices of the edges. Every 2 integers defines an edge. Each integer is an index to the [member vertex_positions] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
 		</member>
 		<member name="vertex_positions" type="PackedFloat64Array[]" setter="set_vertex_positions" getter="get_vertex_positions" default="[]">
-			The vertices of the wireframe mesh. Each vertex is a VectorN ([PackedFloat64Array]) with a length equal to the number of dimensions. Indices of edges refer to the items in this array. The vertices array must be kept consistent with the edge indices array, such that each edge index points to a valid vertex index, or else the mesh is invalid.
+			The vertices of the wireframe mesh. Each vertex is a VectorN ([PackedFloat64Array]). The first position defines the mesh dimension; subsequent positions may omit trailing zero components, but must not exceed that dimension. Indices of edges refer to the items in this array. The vertices array must be kept consistent with the edge indices array, such that each edge index points to a valid vertex index, or else the mesh is invalid.
 		</member>
 	</members>
 </class>

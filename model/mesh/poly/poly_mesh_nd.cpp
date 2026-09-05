@@ -58,7 +58,7 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 	const int64_t vertex_count = poly_cell_vertices.size();
 	const int64_t dimension = vertex_count == 0 ? 0 : poly_cell_vertices[0].size();
 	for (int64_t i = 0; i < vertex_count; i++) {
-		ERR_FAIL_COND_V_MSG(poly_cell_vertices[i].size() != dimension, false, "PolyMeshND: All vertices must have the same number of dimensions.");
+		ERR_FAIL_COND_V_MSG(poly_cell_vertices[i].size() > dimension, false, "PolyMeshND: Vertex positions must not exceed the mesh dimension defined by the first vertex.");
 	}
 	for (int64_t i = 0; i < edge_index_count; i++) {
 		ERR_FAIL_COND_V_MSG(edge_indices[i] < 0 || edge_indices[i] >= vertex_count, false, "PolyMeshND: Edge index " + itos(i) + " references invalid vertex " + itos(edge_indices[i]) + " (valid range: 0-" + itos(vertex_count - 1) + ").");
@@ -126,7 +126,7 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 		const Vector<PackedInt32Array> &boundary_cells = poly_cell_indices[boundary_dim_index];
 		ERR_FAIL_COND_V_MSG(boundary_cells.size() != poly_cell_boundary_normals_count, false, "PolyMeshND: Boundary normals count (" + itos(poly_cell_boundary_normals_count) + ") does not match boundary cells count (" + itos(boundary_cells.size()) + ").");
 		for (int64_t i = 0; i < poly_cell_boundary_normals_count; i++) {
-			ERR_FAIL_COND_V_MSG(!poly_cell_boundary_normals[i].is_empty() && poly_cell_boundary_normals[i].size() != dimension, false, "PolyMeshND: Boundary normal " + itos(i) + " does not match the dimension of the mesh.");
+			ERR_FAIL_COND_V_MSG(poly_cell_boundary_normals[i].size() > dimension, false, "PolyMeshND: Boundary normal " + itos(i) + " exceeds the dimension of the mesh.");
 		}
 	}
 	const PackedInt32Array poly_cell_boundary_pivot_overrides = get_poly_cell_boundary_pivot_overrides();
@@ -153,6 +153,9 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 				continue; // Allow cells without vertex normals.
 			}
 			ERR_FAIL_COND_V_MSG(poly_cell_vertex_normals[i].size() != cell_vert[i].size(), false, "PolyMeshND: Vertex normal array " + itos(i) + " has " + itos(poly_cell_vertex_normals[i].size()) + " entries but cell has " + itos(cell_vert[i].size()) + " vertices.");
+			for (const VectorN &normal : poly_cell_vertex_normals[i]) {
+				ERR_FAIL_COND_V_MSG(normal.size() > dimension, false, "PolyMeshND: Vertex normals must not exceed the mesh dimension.");
+			}
 		}
 	}
 	const Vector<Vector<VectorM>> poly_cell_texture_map = get_poly_cell_texture_map();
@@ -167,6 +170,9 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 				continue; // Allow unmapped boundary cells.
 			}
 			ERR_FAIL_COND_V_MSG(poly_cell_texture_map[i].size() != cell_vert[i].size(), false, "PolyMeshND: Texture map " + itos(i) + " has " + itos(poly_cell_texture_map[i].size()) + " entries but cell has " + itos(cell_vert[i].size()) + " vertices.");
+			for (const VectorM &texcoord : poly_cell_texture_map[i]) {
+				ERR_FAIL_COND_V_MSG(texcoord.size() > dimension - 1, false, "PolyMeshND: Texture coordinates must have fewer components than the mesh dimension.");
+			}
 		}
 	}
 	return true;

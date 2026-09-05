@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../../model/mesh/cell/array_cell_mesh_nd.h"
+#include "../../../model/mesh/poly/array_poly_mesh_nd.h"
 #include "../../../model/mesh/wire/array_wire_mesh_nd.h"
 
 #include "tests/test_macros.h"
@@ -100,5 +101,38 @@ TEST_CASE("[MeshND] Bounds cache persists across multiple accesses") {
 	Ref<RectND> bounds_after_change = mesh->get_rect_bounds();
 	CHECK(bounds_after_change != bounds1);
 	CHECK(VectorND::is_equal_exact(bounds_after_change->get_end(), VectorN{ 1, 1, 1, 1 }));
+}
+
+TEST_CASE("[MeshND] Array mesh validators share the first-vertex dimension contract") {
+	for (const int dimension : { 0, 3, 4, 5 }) {
+		CAPTURE(dimension);
+		Ref<ArrayCellMeshND> cell;
+		cell.instantiate();
+		Ref<ArrayWireMeshND> wire;
+		wire.instantiate();
+		Ref<ArrayPolyMeshND> poly;
+		poly.instantiate();
+		const Vector<Ref<MeshND>> meshes = { cell, wire, poly };
+		const Vector<VectorN> positions = { VectorND::fill(dimension, 1.0), VectorN(), dimension == 0 ? VectorN() : VectorN{ 2.0 } };
+		cell->set_vertex_positions(positions);
+		wire->set_vertex_positions(positions);
+		poly->set_poly_cell_vertex_positions(positions);
+		for (const Ref<MeshND> &mesh : meshes) {
+			CHECK(mesh->get_dimension() == dimension);
+			CHECK(mesh->is_mesh_data_valid());
+			CHECK(mesh->get_vertex_positions() == positions);
+		}
+		Vector<VectorN> invalid = positions;
+		invalid.set(1, VectorND::zero(dimension + 1));
+		cell->set_vertex_positions(invalid);
+		wire->set_vertex_positions(invalid);
+		poly->set_poly_cell_vertex_positions(invalid);
+		for (const Ref<MeshND> &mesh : meshes) {
+			CHECK(mesh->get_dimension() == dimension);
+			ERR_PRINT_OFF;
+			CHECK_FALSE(mesh->is_mesh_data_valid());
+			ERR_PRINT_ON;
+		}
+	}
 }
 } // namespace TestMeshND

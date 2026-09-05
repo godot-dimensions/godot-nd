@@ -19,6 +19,19 @@ bool ArrayCellMeshND::validate_mesh_data() {
 	const int64_t cell_texture_map_count = _simplex_cell_texture_map.size();
 	ERR_FAIL_COND_V_MSG(cell_texture_map_count > 0 && cell_texture_map_count != cell_vertex_indices_count, false, "ArrayCellMeshND: Simplex cell texture map size must be the same as simplex cell vertex indices size (or empty).");
 	const int64_t vertex_count = _vertex_positions.size();
+	for (const VectorN &position : _vertex_positions) {
+		ERR_FAIL_COND_V_MSG(position.size() > dimension, false, "ArrayCellMeshND: Vertex positions must not exceed the mesh dimension defined by the first vertex.");
+	}
+	for (const VectorN &normal : _simplex_cell_boundary_normals) {
+		ERR_FAIL_COND_V_MSG(normal.size() > dimension, false, "ArrayCellMeshND: Boundary normals must not exceed the mesh dimension.");
+	}
+	for (const VectorN &normal : _simplex_cell_vertex_normals) {
+		ERR_FAIL_COND_V_MSG(normal.size() > dimension, false, "ArrayCellMeshND: Vertex normals must not exceed the mesh dimension.");
+	}
+	const int texture_dimension = MAX(dimension - 1, 0);
+	for (const VectorM &texcoord : _simplex_cell_texture_map) {
+		ERR_FAIL_COND_V_MSG(texcoord.size() > texture_dimension, false, "ArrayCellMeshND: Texture coordinates must have fewer components than the mesh dimension.");
+	}
 	for (int32_t cell_vertex_index : _simplex_cell_vertex_indices) {
 		ERR_FAIL_COND_V_MSG(cell_vertex_index < 0 || cell_vertex_index >= vertex_count, false, "ArrayCellMeshND: Simplex cell vertex indices must reference valid vertices.");
 	}
@@ -233,8 +246,38 @@ void ArrayCellMeshND::set_vertex_positions_bind(const TypedArray<VectorN> &p_ver
 void ArrayCellMeshND::set_dimension(int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "ArrayCellMeshND: Dimension must not be negative.");
 	ERR_FAIL_COND_MSG(p_dimension > 1000, "ArrayCellMeshND: Too many dimensions for cell mesh.");
+	if (p_dimension != get_dimension()) {
+		// Changing dimension changes the number of vertices per simplex. Callers must
+		// rebuild its topology and per-cell data instead of reinterpreting the old arrays.
+		_simplex_cell_vertex_indices.clear();
+		_simplex_cell_boundary_normals.clear();
+		_simplex_cell_vertex_normals.clear();
+		_simplex_cell_texture_map.clear();
+	} else {
+		// For setting the same dimension, truncate all the vectors to ensure consistency with this dimension.
+		for (int i = 0; i < _simplex_cell_boundary_normals.size(); i++) {
+			if (_simplex_cell_boundary_normals[i].size() > p_dimension) {
+				_simplex_cell_boundary_normals.set(i, VectorND::with_dimension(_simplex_cell_boundary_normals[i], p_dimension));
+			}
+		}
+		for (int i = 0; i < _simplex_cell_vertex_normals.size(); i++) {
+			if (_simplex_cell_vertex_normals[i].size() > p_dimension) {
+				_simplex_cell_vertex_normals.set(i, VectorND::with_dimension(_simplex_cell_vertex_normals[i], p_dimension));
+			}
+		}
+		const int texture_dimension = MAX(p_dimension - 1, 0);
+		for (int i = 0; i < _simplex_cell_texture_map.size(); i++) {
+			if (_simplex_cell_texture_map[i].size() > texture_dimension) {
+				_simplex_cell_texture_map.set(i, VectorND::with_dimension(_simplex_cell_texture_map[i], texture_dimension));
+			}
+		}
+	}
+	// Resize vectors in the arrays that are sampled from.
 	for (int i = 0; i < _vertex_positions.size(); i++) {
-		_vertex_positions.set(i, VectorND::with_dimension(_vertex_positions[i], p_dimension));
+		// For vertex positions only, always resize the first vertex to set the mesh dimension.
+		if (i == 0 || _vertex_positions[i].size() > p_dimension) {
+			_vertex_positions.set(i, VectorND::with_dimension(_vertex_positions[i], p_dimension));
+		}
 	}
 	_clear_cache();
 	reset_mesh_data_validation();

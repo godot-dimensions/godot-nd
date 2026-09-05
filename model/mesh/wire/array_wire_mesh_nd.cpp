@@ -12,6 +12,12 @@ bool ArrayWireMeshND::validate_mesh_data() {
 		return false; // Must be a multiple of 2.
 	}
 	const int64_t vertex_count = _vertex_positions.size();
+	const int dimension = get_dimension();
+	for (const VectorN &position : _vertex_positions) {
+		if (position.size() > dimension) {
+			return false; // The first vertex defines the mesh dimension.
+		}
+	}
 	for (int32_t edge_index : _edge_vertex_indices) {
 		if (edge_index < 0 || edge_index >= vertex_count) {
 			return false; // Edges must reference valid vertices.
@@ -194,7 +200,9 @@ void ArrayWireMeshND::set_dimension(int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "ArrayWireMeshND: Dimension must not be negative.");
 	ERR_FAIL_COND_MSG(p_dimension > 1000, "ArrayWireMeshND: Too many dimensions for wireframe mesh.");
 	for (int i = 0; i < _vertex_positions.size(); i++) {
-		_vertex_positions.set(i, VectorND::with_dimension(_vertex_positions[i], p_dimension));
+		if (i == 0 || _vertex_positions[i].size() > p_dimension) {
+			_vertex_positions.set(i, VectorND::with_dimension(_vertex_positions[i], p_dimension));
+		}
 	}
 	wire_mesh_clear_cache();
 	reset_mesh_data_validation();

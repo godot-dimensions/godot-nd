@@ -458,4 +458,109 @@ TEST_CASE("[ArrayCellMeshND] Appending a missing vertex repairs cached simplex p
 		CHECK(repaired_positions[dimension - 1] == new_position);
 	}
 }
+
+TEST_CASE("[ArrayCellMeshND] Compact positions and attributes remain compact through conversion and resizing") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, true);
+		Vector<VectorN> positions = mesh->get_vertex_positions();
+		for (int i = 1; i < dimension; i++) {
+			positions.set(i, VectorND::with_dimension(positions[i], i));
+		}
+		Vector<VectorN> normals = mesh->get_simplex_cell_vertex_normals();
+		Vector<VectorM> texture_map = mesh->get_simplex_cell_texture_map();
+		normals.set(0, VectorN());
+		normals.set(1, VectorN{ 2.0 });
+		texture_map.set(0, VectorM());
+		texture_map.set(1, VectorM{ 3.0 });
+		const Vector<VectorN> boundary_normals = { VectorN{ 1.0 } };
+		mesh->set_vertex_positions(positions);
+		mesh->set_simplex_cell_boundary_normals(boundary_normals);
+		mesh->set_simplex_cell_vertex_normals(normals);
+		mesh->set_simplex_cell_texture_map(texture_map);
+		REQUIRE(mesh->is_mesh_data_valid());
+		const PackedInt32Array indices = mesh->get_simplex_cell_vertex_indices();
+		Ref<ArrayCellMeshND> converted = mesh->to_array_cell_mesh();
+		CHECK(converted->is_mesh_data_valid());
+		CHECK(converted->get_vertex_positions() == positions);
+		CHECK(converted->get_simplex_cell_boundary_normals() == boundary_normals);
+		CHECK(converted->get_simplex_cell_vertex_normals() == normals);
+		CHECK(converted->get_simplex_cell_texture_map() == texture_map);
+
+		for (int attribute = 0; attribute < 4; attribute++) {
+			Ref<ArrayCellMeshND> invalid = mesh->duplicate();
+			Vector<VectorN> values;
+			switch (attribute) {
+				case 0:
+					values = positions;
+					values.set(1, VectorND::fill(dimension + 1, 4.0));
+					invalid->set_vertex_positions(values);
+					break;
+				case 1:
+					invalid->set_simplex_cell_boundary_normals({ VectorND::fill(dimension + 1, 4.0) });
+					break;
+				case 2:
+					values = normals;
+					values.set(1, VectorND::fill(dimension + 1, 4.0));
+					invalid->set_simplex_cell_vertex_normals(values);
+					break;
+				case 3:
+					values = texture_map;
+					values.set(1, VectorND::fill(dimension, 4.0));
+					invalid->set_simplex_cell_texture_map(values);
+					break;
+			}
+			ERR_PRINT_OFF;
+			CHECK_FALSE(invalid->is_mesh_data_valid());
+			ERR_PRINT_ON;
+			invalid->set_dimension(dimension);
+			CHECK(invalid->is_mesh_data_valid());
+			CHECK(invalid->get_simplex_cell_vertex_indices() == indices);
+			CHECK(invalid->get_simplex_cell_vertex_normals()[0].is_empty());
+			CHECK(invalid->get_simplex_cell_texture_map()[0].is_empty());
+			CHECK(invalid->get_vertex_positions()[1] == (attribute == 0 ? VectorND::fill(dimension, 4.0) : positions[1]));
+			CHECK(invalid->get_simplex_cell_boundary_normals()[0] == (attribute == 1 ? VectorND::fill(dimension, 4.0) : boundary_normals[0]));
+			CHECK(invalid->get_simplex_cell_vertex_normals()[1] == (attribute == 2 ? VectorND::fill(dimension, 4.0) : normals[1]));
+			CHECK(invalid->get_simplex_cell_texture_map()[1] == (attribute == 3 ? VectorND::fill(dimension - 1, 4.0) : texture_map[1]));
+		}
+
+		for (const int target_dimension : { dimension - 1, dimension, dimension + 1, 0 }) {
+			Ref<ArrayCellMeshND> resized = mesh->duplicate();
+			resized->set_dimension(target_dimension);
+			CHECK(resized->get_dimension() == target_dimension);
+			CHECK(resized->is_mesh_data_valid());
+			const Vector<VectorN> resized_positions = resized->get_vertex_positions();
+			REQUIRE(resized_positions.size() == positions.size());
+			for (int64_t i = 0; i < positions.size(); i++) {
+				const int64_t size = i == 0 ? target_dimension : MIN(positions[i].size(), target_dimension);
+				CHECK(resized_positions[i] == VectorND::with_dimension(positions[i], size));
+			}
+			if (target_dimension == dimension) {
+				CHECK(resized->get_simplex_cell_vertex_indices() == indices);
+				CHECK(resized->get_simplex_cell_boundary_normals() == boundary_normals);
+				CHECK(resized->get_simplex_cell_vertex_normals() == normals);
+				CHECK(resized->get_simplex_cell_texture_map() == texture_map);
+			} else {
+				CHECK(resized->get_simplex_cell_vertex_indices().is_empty());
+				CHECK(resized->get_simplex_cell_boundary_normals().is_empty());
+				CHECK(resized->get_simplex_cell_vertex_normals().is_empty());
+				CHECK(resized->get_simplex_cell_texture_map().is_empty());
+			}
+		}
+		Ref<ArrayCellMeshND> empty;
+		empty.instantiate();
+		empty->set_dimension(dimension);
+		CHECK(empty->get_dimension() == 0);
+		CHECK(empty->get_vertex_positions().is_empty());
+		CHECK(empty->is_mesh_data_valid());
+		mesh->set_simplex_cell_boundary_normals({ VectorN() });
+		mesh->set_simplex_cell_vertex_normals(Vector<VectorN>());
+		mesh->set_simplex_cell_texture_map(Vector<VectorM>());
+		mesh->set_dimension(dimension);
+		CHECK(mesh->is_mesh_data_valid());
+		CHECK(mesh->get_simplex_cell_boundary_normals()[0].is_empty());
+		CHECK(mesh->get_simplex_cell_vertex_normals().is_empty());
+		CHECK(mesh->get_simplex_cell_texture_map().is_empty());
+	}
+}
 } // namespace TestCellMeshND

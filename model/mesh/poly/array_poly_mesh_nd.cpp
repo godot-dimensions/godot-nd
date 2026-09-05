@@ -3,10 +3,15 @@
 #include "../../../math/math_nd.h"
 #include "../../../math/vector_nd.h"
 
-bool ArrayPolyMeshND::_validate_data_binding_shape_internal(const Vector2i p_key, const Vector<Vector<VectorN>> &p_binding, const String &p_binding_name) const {
+bool ArrayPolyMeshND::_validate_data_binding_shape_internal(const Vector2i p_key, const Vector<Vector<VectorN>> &p_binding, const int p_value_dimension, const String &p_binding_name) const {
 	ERR_FAIL_COND_V_MSG(p_key.x < 0 || p_key.y < 0 || p_key.y > p_key.x, false, "ArrayPolyMeshND: " + p_binding_name + " binding key " + String(p_key) + " must have a decomposition dimension between zero and its geometry dimension.");
 	if (p_binding.is_empty()) {
 		return true; // An empty binding represents missing data, even for an absent geometry dimension.
+	}
+	for (const Vector<VectorN> &element_data : p_binding) {
+		for (const VectorN &value : element_data) {
+			ERR_FAIL_COND_V_MSG(value.size() > p_value_dimension, false, "ArrayPolyMeshND: " + p_binding_name + " binding values exceed the permitted vector dimension.");
+		}
 	}
 	int64_t element_count = 0;
 	if (p_key.x == 0) {
@@ -57,13 +62,14 @@ bool ArrayPolyMeshND::_validate_poly_mesh_data_only() {
 	if (!PolyMeshND::_validate_poly_mesh_data_only()) {
 		return false;
 	}
+	const int dimension = get_dimension();
 	for (const KeyValue<Vector2i, Vector<Vector<VectorN>>> &binding : _all_poly_cell_normals) {
-		if (!_validate_data_binding_shape_internal(binding.key, binding.value, "Normal")) {
+		if (!_validate_data_binding_shape_internal(binding.key, binding.value, dimension, "Normal")) {
 			return false;
 		}
 	}
 	for (const KeyValue<Vector2i, Vector<Vector<VectorM>>> &binding : _all_poly_cell_texture_maps) {
-		if (!_validate_data_binding_shape_internal(binding.key, binding.value, "Texture map")) {
+		if (!_validate_data_binding_shape_internal(binding.key, binding.value, MAX(dimension - 1, 0), "Texture map")) {
 			return false;
 		}
 	}
@@ -239,6 +245,7 @@ void ArrayPolyMeshND::_delete_edge_internal(const int32_t p_index) {
 void ArrayPolyMeshND::_delete_vertex_internal(const int32_t p_index) {
 	const int64_t vertex_count = _poly_cell_vertex_positions.size();
 	ERR_FAIL_COND_MSG(p_index < 0 || p_index >= vertex_count, "ArrayPolyMeshND: Vertex index is out of range.");
+	const int dimension = get_dimension();
 	// Before deleting this vertex, we need to delete any edges that reference it,
 	// and any poly cells in higher dimensions that reference those edges.
 	const int32_t edge_count = _edge_vertex_indices.size() / 2;
@@ -254,6 +261,10 @@ void ArrayPolyMeshND::_delete_vertex_internal(const int32_t p_index) {
 	// Delete the vertex itself now that all dependent edges (and higher dimensions) are gone.
 	_delete_data_binding_element_internal(0, p_index);
 	_poly_cell_vertex_positions.remove_at(p_index);
+	if (p_index == 0 && !_poly_cell_vertex_positions.is_empty() && _poly_cell_vertex_positions[0].size() < dimension) {
+		// The first position anchors the dimension; other positions may remain compact.
+		_poly_cell_vertex_positions.set(0, VectorND::with_dimension(_poly_cell_vertex_positions[0], dimension));
+	}
 	for (int64_t cell_index = 0; cell_index < _poly_cell_boundary_pivot_overrides.size(); cell_index++) {
 		const int32_t pivot = _poly_cell_boundary_pivot_overrides[cell_index];
 		if (pivot == p_index) {
@@ -1083,19 +1094,20 @@ void ArrayPolyMeshND::_fit_island_texture_map_into_box(const PackedInt32Array &p
 	Vector<Vector<VectorM>> &poly_cell_texture_map = _all_poly_cell_texture_maps[cell_to_vert_key];
 	ERR_FAIL_COND_MSG(poly_cell_texture_map[p_cells_in_island[0]].is_empty(), "ArrayPolyMeshND: Cannot fit island texture map into a box because at least one cell in the island has an empty texture map.");
 	const int64_t texture_dimension = p_target_position.size();
-	VectorM minimum = VectorND::duplicate(poly_cell_texture_map[p_cells_in_island[0]][0]);
+	VectorM minimum = VectorND::with_dimension(poly_cell_texture_map[p_cells_in_island[0]][0], texture_dimension);
 	VectorM maximum = VectorND::duplicate(minimum);
 	for (int64_t cell_index_index = 0; cell_index_index < p_cells_in_island.size(); cell_index_index++) {
 		const int32_t cell_index = p_cells_in_island[cell_index_index];
 		const Vector<VectorM> &cell_texture_map = poly_cell_texture_map[cell_index];
 		for (int64_t vertex_index = 0; vertex_index < cell_texture_map.size(); vertex_index++) {
 			const VectorM &texcoord = cell_texture_map[vertex_index];
-			for (int64_t axis = 0; axis < texture_dimension && axis < texcoord.size(); axis++) {
-				if (texcoord[axis] < minimum[axis]) {
-					minimum.set(axis, texcoord[axis]);
+			for (int64_t axis = 0; axis < texture_dimension; axis++) {
+				const double component = VectorND::get_component(texcoord, axis);
+				if (component < minimum[axis]) {
+					minimum.set(axis, component);
 				}
-				if (texcoord[axis] > maximum[axis]) {
-					maximum.set(axis, texcoord[axis]);
+				if (component > maximum[axis]) {
+					maximum.set(axis, component);
 				}
 			}
 		}
@@ -1116,8 +1128,8 @@ void ArrayPolyMeshND::_fit_island_texture_map_into_box(const PackedInt32Array &p
 		const int32_t cell_index = p_cells_in_island[cell_index_index];
 		Vector<VectorM> cell_texture_map = poly_cell_texture_map[cell_index];
 		for (int64_t vertex_index = 0; vertex_index < cell_texture_map.size(); vertex_index++) {
-			VectorM texcoord = VectorND::duplicate(cell_texture_map[vertex_index]);
-			for (int64_t axis = 0; axis < texture_dimension && axis < texcoord.size(); axis++) {
+			VectorM texcoord = VectorND::with_dimension(cell_texture_map[vertex_index], texture_dimension);
+			for (int64_t axis = 0; axis < texture_dimension; axis++) {
 				texcoord.set(axis, p_target_position[axis] + (texcoord[axis] - minimum[axis]) * scale[axis]);
 			}
 			cell_texture_map.set(vertex_index, texcoord);

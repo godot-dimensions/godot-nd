@@ -113,8 +113,8 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 				edge_vertices.push_back(projected_vertices[b_index]);
 				edge_color = _get_material_edge_color(material, mesh_inst->get_mesh(), edge_index);
 			} else {
-				const double a_z = a_vert_nd[2];
-				const double b_z = b_vert_nd[2];
+				const double a_z = VectorND::get_component(a_vert_nd, 2);
+				const double b_z = VectorND::get_component(b_vert_nd, 2);
 				if (a_z > -camera_clip_near) {
 					if (b_z > -camera_clip_near) {
 						// Both points are behind the camera, so we skip this edge.

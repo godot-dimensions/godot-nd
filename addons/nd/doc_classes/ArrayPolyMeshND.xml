@@ -193,6 +193,7 @@
 	<members>
 		<member name="all_poly_cell_normals" type="Dictionary[Vector2i, Array]" setter="set_all_poly_cell_normals" getter="get_all_poly_cell_normals" default="{}">
 			All normal data for this mesh, including per-boundary-cell ([member poly_cell_boundary_normals]), boundary cell vertices ([member poly_cell_vertex_normals]), and more. This is a low-level member intended for advanced use cases, the other normal-related members are recommended for most users.
+			Every normal vector may have at most N components, with missing trailing components treated as zero.
 			The keys are a [Vector2i], where X is the geometry dimension and Y is the decomposition dimension. Both components must be non-negative, and Y must not exceed X. For an N-dimensional mesh, boundary normals use (N-1, N-1), and boundary cell vertex normals use (N-1, 0). Each dictionary value is effectively [code]Array[Array[PackedFloat64Array]][/code].
 			When X is greater than Y, the outer array contains one inner array per geometry element of dimension X. Each non-empty inner array must contain one normal per decomposed element of dimension Y, in the order returned by [method PolyMeshND.get_all_poly_cell_poly_indices]. An empty inner array means that geometry element has no data for this binding.
 			When X equals Y, the outer array is empty or contains exactly one inner array, with one normal per geometry element. A missing key or an empty outer array means no data for the binding.
@@ -200,6 +201,7 @@
 		</member>
 		<member name="all_poly_cell_texture_maps" type="Dictionary[Vector2i, Array]" setter="set_all_poly_cell_texture_maps" getter="get_all_poly_cell_texture_maps" default="{}">
 			All texture map data for this mesh, including boundary cell vertices ([member poly_cell_texture_map]) and more. This is a low-level member intended for advanced use cases, the other texture map member is recommended for most users.
+			Every texture coordinate may have at most N-1 components, with missing trailing components treated as zero.
 			The keys are a [Vector2i], where X is the geometry dimension and Y is the decomposition dimension. Both components must be non-negative, and Y must not exceed X. For an N-dimensional mesh, boundary cell texture maps use (N-1, 0). Each dictionary value is effectively [code]Array[Array[PackedFloat64Array]][/code].
 			When X is greater than Y, the outer array contains one inner array per geometry element of dimension X. Each non-empty inner array must contain one texture coordinate per decomposed element of dimension Y, in the order returned by [method PolyMeshND.get_all_poly_cell_poly_indices]. An empty inner array means that geometry element has no data for this binding.
 			When X equals Y, the outer array is empty or contains exactly one inner array, with one texture coordinate per geometry element. A missing key or an empty outer array means no data for the binding.
@@ -209,7 +211,7 @@
 			The flat array of edge indices. Every 2 integers defines an edge. Each integer is an index to the [member poly_cell_vertex_positions] array. Integers in this array should not exceed the length of the vertices array, or else the mesh is invalid.
 		</member>
 		<member name="poly_cell_boundary_normals" type="PackedFloat64Array[]" setter="set_poly_cell_boundary_normals" getter="get_poly_cell_boundary_normals" default="[]">
-			The normals of the polyhedral boundary cells themselves. Boundary normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each [PackedFloat64Array] in this array is an N-dimensional normal vector for one cell, and should be normalized.
+			The normals of the polyhedral boundary cells themselves. Boundary normals define which side of the cell is the front side, and therefore should be drawn. Boundary normals can also be used to calculate vertex normals to determine how lighting angles are calculated for the cell. Each [PackedFloat64Array] in this array is a normal vector for one cell with at most N components, and should be normalized. Missing trailing components are treated as zero.
 			This array may be empty for no stored boundary normals. Otherwise, it must contain one entry per boundary cell.
 		</member>
 		<member name="poly_cell_boundary_pivot_overrides" type="PackedInt32Array" setter="set_poly_cell_boundary_pivot_overrides" getter="get_poly_cell_boundary_pivot_overrides" default="PackedInt32Array()">
@@ -223,15 +225,16 @@
 			Since edges are always made of exactly 2 vertices, they are not included in this array. Edges use a simpler data structure where all edges are stored in a single [PackedInt32Array], and every 2 items represent one edge. See [member edge_indices].
 		</member>
 		<member name="poly_cell_texture_map" type="Array[]" setter="set_poly_cell_texture_map" getter="get_poly_cell_texture_map" default="[]">
-			The texture mapping of the polyhedral boundary cells. Each item in this array is an array of [PackedFloat64Array]s containing the texture space mapping for the vertex instances of the corresponding cell in the [member poly_cell_indices] array. Each [PackedFloat64Array] in these arrays defines the (N-1)-dimensional texture coordinates for the corresponding vertex instance in the cell, and is usually on the range from 0.0 to 1.0 on each axis.
+			The texture mapping of the polyhedral boundary cells. Each item in this array is an array of [PackedFloat64Array]s containing the texture space mapping for the vertex instances of the corresponding cell in the [member poly_cell_indices] array. Each [PackedFloat64Array] may have at most N-1 components, with missing trailing components treated as zero, and is usually on the range from 0.0 to 1.0 on each axis.
 			This array may be empty for no texture map. Otherwise, it must contain one inner array per boundary cell. Each inner array must be empty for a cell without data, or contain one entry per vertex instance in the order returned by [method PolyMeshND.get_all_cell_vertex_indices] with [code]start_with_canonical_span[/code] set to [code]false[/code].
 		</member>
 		<member name="poly_cell_vertex_normals" type="Array[]" setter="set_poly_cell_vertex_normals" getter="get_poly_cell_vertex_normals" default="[]">
-			The normals of the vertex instances for each polyhedral boundary cell. Each item in this array is an array of [PackedFloat64Array]s containing the normals for each vertex instance in the corresponding cell in the [member poly_cell_indices] array. Each [PackedFloat64Array] in these arrays is an N-dimensional vector that should be normalized.
+			The normals of the vertex instances for each polyhedral boundary cell. Each item in this array is an array of [PackedFloat64Array]s containing the normals for each vertex instance in the corresponding cell in the [member poly_cell_indices] array. Each normal may have at most N components, with missing trailing components treated as zero, and should be normalized.
 			This array may be empty for no vertex normals. Otherwise, it must contain one inner array per boundary cell. Each inner array must be empty for a cell without data, or contain one entry per vertex instance in the order returned by [method PolyMeshND.get_all_cell_vertex_indices] with [code]start_with_canonical_span[/code] set to [code]false[/code].
 		</member>
 		<member name="poly_cell_vertex_positions" type="PackedFloat64Array[]" setter="set_poly_cell_vertex_positions" getter="get_poly_cell_vertex_positions" default="[]">
 			The vertex positions of the polyhedral mesh. Each [PackedFloat64Array] in the array is a position in meters in ND space. The items in this array are referenced by the [member edge_indices] array.
+			The first position defines the mesh dimension; subsequent positions may omit trailing zero components, but must not exceed that dimension. Deleting the first vertex preserves the mesh dimension by padding the new first position with zeros as needed, unless no vertices remain.
 			[b]Note:[/b] The vertices returned by [method MeshND.get_vertex_positions] may be longer than this array. This is because [method MeshND.get_vertex_positions] returns the vertices used for decomposing the polyhedral mesh into simplexes, which may include extra virtual vertices added to keep the simplexes of adjacent cells aligned with each other. Regardless, the start of the array returned by [method MeshND.get_vertex_positions] will always match this array, such that it is either a superset of this array, or identical to it.
 		</member>
 		<member name="seam_indices" type="PackedInt32Array" setter="set_seam_indices" getter="get_seam_indices" default="PackedInt32Array()">

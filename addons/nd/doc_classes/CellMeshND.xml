@@ -5,6 +5,7 @@
 	</brief_description>
 	<description>
 		CellMeshND is the base class for all ND cell meshes. Cell meshes are defined using vertices and cells, where each cell of an N-dimensional mesh is an (N-1)-dimensional simplex defined by N vertices. Cell meshes are used to represent rendered ND objects similar to how 3D objects are represented using triangles.
+		Positions and normals may have at most N components, and texture coordinates may have at most N-1 components. Missing trailing components are treated as zero. The first vertex position must have N components because it defines the dimension of an array mesh.
 		To use CellMeshND, use one of the descendant classes, such as [ArrayCellMeshND] or [BoxPolyMeshND].
 	</description>
 	<tutorials>

@@ -140,6 +140,36 @@ TEST_CASE("[VectorND] Perpendicular") {
 		const VectorN perpendicular = VectorND::perpendicular(vectors);
 		const VectorN expected = VectorND::value_on_axis_with_dimension(1.0, vector_amount, dimension);
 		CHECK_MESSAGE(VectorND::is_equal_exact(perpendicular, expected), "VectorND perpendicular in N dimensions should return the correct perpendicular vector.");
+		for (int64_t vector_index = 0; vector_index < vector_amount; vector_index++) {
+			vectors.ptrw()[vector_index].resize(vector_index + 1);
+		}
+		const VectorN compact_perpendicular = VectorND::perpendicular(vectors);
+		CHECK(compact_perpendicular == expected);
+		CHECK(vectors[0].size() == 1); // Computing the result must not expand the input arrays.
 	}
+	for (int dimension = 2; dimension <= 5; dimension++) {
+		Vector<VectorN> vectors;
+		for (int axis = 0; axis < dimension - 1; axis++) {
+			vectors.append(VectorND::value_on_axis_with_dimension(axis == 0 ? -1.0 : 1.0, axis, axis + 1));
+		}
+		const VectorN negative_perpendicular = VectorND::perpendicular(vectors);
+		const VectorN expected = VectorND::value_on_axis_with_dimension(-1.0, dimension - 1, dimension);
+		CHECK(negative_perpendicular == expected);
+		vectors.set(0, VectorN());
+		const VectorN zero_perpendicular = VectorND::perpendicular(vectors);
+		CHECK(zero_perpendicular == VectorND::zero(dimension));
+		for (const int invalid_index : { 0, dimension - 2 }) {
+			Vector<VectorN> invalid = vectors;
+			invalid.set(invalid_index, VectorND::zero(dimension + 1));
+			ERR_PRINT_OFF;
+			const VectorN invalid_perpendicular = VectorND::perpendicular(invalid);
+			ERR_PRINT_ON;
+			CHECK(invalid_perpendicular.is_empty());
+		}
+	}
+	ERR_PRINT_OFF;
+	const VectorN empty_perpendicular = VectorND::perpendicular(Vector<VectorN>());
+	ERR_PRINT_ON;
+	CHECK(empty_perpendicular.is_empty());
 }
 } // namespace TestVectorND

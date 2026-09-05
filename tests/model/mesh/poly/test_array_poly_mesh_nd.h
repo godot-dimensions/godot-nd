@@ -3,6 +3,7 @@
 #include "../../../../math/math_nd.h"
 #include "../../../../math/transform_nd.h"
 #include "../../../../math/vector_nd.h"
+#include "../../../../model/mesh/cell/array_cell_mesh_nd.h"
 #include "../../../../model/mesh/poly/array_poly_mesh_nd.h"
 #include "test_poly_mesh_nd.h"
 
@@ -1254,6 +1255,172 @@ TEST_CASE("[ArrayPolyMeshND] Self merge snapshots attributes and refreshes prime
 			CHECK(merged_simplex_normals[i + simplex_index_count] == transform->xform_basis(simplex_normals[i]));
 			CHECK(merged_simplex_maps[i] == simplex_maps[i]);
 			CHECK(merged_simplex_maps[i + simplex_index_count] == simplex_maps[i]);
+		}
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Compact boundary geometry survives deleting the dimension anchor") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		// Embed an (N-1)-cube as one boundary cell, with an unused full-dimensional anchor.
+		Ref<ArrayPolyMeshND> mesh = make_binding_test_mesh(dimension - 1);
+		Vector<VectorN> positions = { VectorND::fill(dimension, 99.0) };
+		for (const VectorN &box_position : mesh->get_poly_cell_vertex_positions()) {
+			VectorN position = VectorND::add(box_position, VectorND::fill(dimension - 1, 1.0));
+			while (!position.is_empty() && position[position.size() - 1] == 0.0) {
+				position.resize(position.size() - 1);
+			}
+			positions.append(position);
+		}
+		PackedInt32Array edges = mesh->get_edge_indices();
+		for (int64_t i = 0; i < edges.size(); i++) {
+			edges.set(i, edges[i] + 1);
+		}
+		mesh->set_poly_cell_vertex_positions(positions);
+		mesh->set_edge_vertex_indices(edges);
+		REQUIRE(mesh->is_poly_mesh_data_valid());
+		REQUIRE(positions[1].is_empty());
+		Ref<ArrayPolyMeshND> expanded = mesh->duplicate();
+		Vector<VectorN> expanded_positions;
+		for (const VectorN &position : positions) {
+			expanded_positions.append(VectorND::with_dimension(position, dimension));
+		}
+		expanded->set_poly_cell_vertex_positions(expanded_positions);
+		mesh->calculate_boundary_normals();
+		expanded->calculate_boundary_normals();
+		const Vector<VectorN> boundary_normals = mesh->get_poly_cell_boundary_normals();
+		REQUIRE(boundary_normals.size() == 1);
+		REQUIRE(boundary_normals[0].size() == dimension);
+		CHECK(VectorND::is_equal_approx(boundary_normals[0], expanded->get_poly_cell_boundary_normals()[0]));
+		for (int axis = 0; axis < dimension; axis++) {
+			CHECK(Math::abs(boundary_normals[0][axis]) == doctest::Approx(axis == dimension - 1 ? 1.0 : 0.0));
+		}
+		const Vector<VectorN> simplex_positions = mesh->get_simplex_cell_positions();
+		const Vector<VectorN> expanded_simplex_positions = expanded->get_simplex_cell_positions();
+		REQUIRE(simplex_positions.size() > 0);
+		REQUIRE(simplex_positions.size() == expanded_simplex_positions.size());
+		CHECK(mesh->get_simplex_cell_vertex_indices() == expanded->get_simplex_cell_vertex_indices());
+		for (int64_t i = 0; i < simplex_positions.size(); i++) {
+			CHECK(VectorND::is_equal_approx(simplex_positions[i], expanded_simplex_positions[i]));
+		}
+		const Ref<ArrayCellMeshND> cell_mesh = mesh->to_array_cell_mesh();
+		CHECK(cell_mesh->is_mesh_data_valid());
+
+		mesh->delete_poly_element(0, 0);
+		CHECK(mesh->get_dimension() == dimension);
+		CHECK(mesh->is_mesh_data_valid());
+		const Vector<VectorN> remaining_positions = mesh->get_poly_cell_vertex_positions();
+		REQUIRE(remaining_positions.size() == positions.size() - 1);
+		CHECK(remaining_positions[0] == VectorND::zero(dimension));
+		for (int64_t i = 1; i < remaining_positions.size(); i++) {
+			CHECK(remaining_positions[i] == positions[i + 1]);
+		}
+		const Vector<VectorN> remaining_simplex_positions = mesh->get_simplex_cell_positions();
+		REQUIRE(remaining_simplex_positions.size() == simplex_positions.size());
+		for (int64_t i = 0; i < simplex_positions.size(); i++) {
+			CHECK(VectorND::is_equal_approx(remaining_simplex_positions[i], simplex_positions[i]));
+		}
+		mesh->calculate_boundary_normals();
+		CHECK(mesh->get_poly_cell_boundary_normals() == boundary_normals);
+
+		Ref<ArrayPolyMeshND> point_mesh;
+		point_mesh.instantiate();
+		point_mesh->set_poly_cell_vertex_positions({ VectorND::zero(dimension), VectorN(), VectorN{ 2.0 } });
+		point_mesh->delete_poly_element(0, 2);
+		CHECK(point_mesh->get_dimension() == dimension);
+		CHECK(point_mesh->get_poly_cell_vertex_positions()[1].is_empty());
+		point_mesh->delete_poly_element(0, 0);
+		CHECK(point_mesh->get_dimension() == dimension);
+		CHECK(point_mesh->get_poly_cell_vertex_positions()[0] == VectorND::zero(dimension));
+		point_mesh->delete_poly_element(0, 0);
+		CHECK(point_mesh->get_dimension() == 0);
+		CHECK(point_mesh->get_poly_cell_vertex_positions().is_empty());
+		CHECK(point_mesh->is_mesh_data_valid());
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] All dense bindings accept compact values and reject excess components") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		CAPTURE(dimension);
+		for (const Vector2i key : { Vector2i(0, 0), Vector2i(1, 0), Vector2i(dimension - 1, 0), Vector2i(dimension - 1, dimension - 1) }) {
+			Ref<ArrayPolyMeshND> mesh = make_binding_test_mesh(dimension);
+			Vector<Vector<VectorN>> normals = make_test_binding(mesh, key, dimension);
+			Vector<Vector<VectorM>> maps = make_test_binding(mesh, key, dimension - 1);
+			for (int64_t i = 0; i < normals.size(); i++) {
+				Vector<VectorN> cell_normals = normals[i];
+				Vector<VectorM> cell_maps = maps[i];
+				for (int64_t j = 0; j < cell_normals.size(); j++) {
+					cell_normals.set(j, j % 2 == 0 ? VectorN() : VectorN{ 2.0 });
+					cell_maps.set(j, j % 2 == 0 ? VectorM() : VectorM{ 3.0 });
+				}
+				normals.set(i, cell_normals);
+				maps.set(i, cell_maps);
+			}
+			HashMap<Vector2i, Vector<Vector<VectorN>>> all_normals;
+			HashMap<Vector2i, Vector<Vector<VectorM>>> all_maps;
+			all_normals.insert(key, normals);
+			all_maps.insert(key, maps);
+			mesh->set_all_poly_cell_normals(all_normals);
+			mesh->set_all_poly_cell_texture_maps(all_maps);
+			CHECK(mesh->is_mesh_data_valid());
+			const Ref<ArrayCellMeshND> cell_mesh = mesh->to_array_cell_mesh();
+			CHECK(cell_mesh->is_mesh_data_valid());
+			CHECK(mesh->get_all_poly_cell_normals()[key] == normals);
+			CHECK(mesh->get_all_poly_cell_texture_maps()[key] == maps);
+			Vector<VectorN> invalid_normals = normals[0];
+			invalid_normals.set(0, VectorND::zero(dimension + 1));
+			all_normals[key].set(0, invalid_normals);
+			mesh->set_all_poly_cell_normals(all_normals);
+			ERR_PRINT_OFF;
+			CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+			ERR_PRINT_ON;
+			all_normals[key] = normals;
+			mesh->set_all_poly_cell_normals(all_normals);
+			Vector<VectorM> invalid_maps = maps[0];
+			invalid_maps.set(0, VectorND::zero(dimension));
+			all_maps[key].set(0, invalid_maps);
+			mesh->set_all_poly_cell_texture_maps(all_maps);
+			ERR_PRINT_OFF;
+			CHECK_FALSE(mesh->is_poly_mesh_data_valid());
+			ERR_PRINT_ON;
+		}
+	}
+}
+
+TEST_CASE("[ArrayPolyMeshND] Fitting existing compact texture coordinates includes omitted zero components") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		for (const int first_pattern : { 0, 2 }) {
+			CAPTURE(dimension);
+			CAPTURE(first_pattern);
+			Ref<ArrayPolyMeshND> mesh = make_binding_test_mesh(dimension);
+			const Vector<VectorM> patterns = { VectorM(), VectorM{ 2.0 }, VectorM{ 2.0, 2.0 }, VectorM{ 0.0, 2.0 } };
+			Vector<Vector<VectorM>> texture_map;
+			for (const PackedInt32Array &cell_vertices : mesh->get_all_boundary_cell_vertex_indices(false)) {
+				Vector<VectorM> cell_map;
+				for (int64_t i = 0; i < cell_vertices.size(); i++) {
+					cell_map.append(patterns[(i + first_pattern) % patterns.size()]);
+				}
+				if (first_pattern == 2) {
+					cell_map.set(0, VectorND::with_dimension(cell_map[0], dimension - 1));
+				}
+				texture_map.append(cell_map);
+			}
+			mesh->set_poly_cell_texture_map(texture_map);
+			REQUIRE(mesh->is_poly_mesh_data_valid());
+			mesh->unwrap_texture_map(ArrayPolyMeshND::UNWRAP_MODE_EACH_CELL_FILLS, 1.0, false, true);
+			CHECK(mesh->is_mesh_data_valid());
+			const Vector<Vector<VectorM>> fitted = mesh->get_poly_cell_texture_map();
+			REQUIRE(fitted.size() == texture_map.size());
+			for (int64_t i = 0; i < fitted.size(); i++) {
+				REQUIRE(fitted[i].size() == texture_map[i].size());
+				for (int64_t j = 0; j < fitted[i].size(); j++) {
+					REQUIRE(fitted[i][j].size() == dimension - 1);
+					for (int axis = 0; axis < dimension - 1; axis++) {
+						const double expected = 0.25 + VectorND::get_component(texture_map[i][j], axis) * 0.25;
+						CHECK(fitted[i][j][axis] == doctest::Approx(expected));
+					}
+				}
+			}
 		}
 	}
 }

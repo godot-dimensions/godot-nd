@@ -51,7 +51,7 @@
 		<method name="get_dimension">
 			<return type="int" />
 			<description>
-				Returns the dimension of the mesh. This is calculated as the length of the first vertex. Setting this will resize all vertices to the new dimension, either truncating them or padding them with zeros as necessary. For [CellMeshND], the amount of indices making up a simplex cell is usually equal to the dimension.
+				Returns the dimension of the mesh. For array meshes, this is the number of components in the first vertex position, or zero if there are no vertices. Other positions may omit trailing zero components, but must not have more components than the mesh dimension. For [CellMeshND], the amount of indices making up a simplex cell is usually equal to the dimension.
 			</description>
 		</method>
 		<method name="get_edge_indices">
@@ -83,6 +83,7 @@
 			<return type="PackedFloat64Array[]" />
 			<description>
 				Gets the vertices of the mesh. Each VectorN ([PackedFloat64Array]) in the array is a vertex defined as a position in meters in ND space. Vertices are referenced by many other arrays in the mesh, such as the edge indices or cell indices.
+				For an N-dimensional mesh, the first position has N components. Other positions may have fewer components to save memory, with missing trailing components treated as zero, but must not have more than N components.
 			</description>
 		</method>
 		<method name="has_edge_indices">

@@ -112,4 +112,26 @@ TEST_CASE("[OrthoplexWireMeshND] Edges and Vertices") {
 	const PackedInt32Array correct_edge_indices = { 0, 2, 0, 3, 1, 2, 1, 3, 0, 4, 0, 5, 1, 4, 1, 5, 2, 4, 2, 5, 3, 4, 3, 5 };
 	CHECK(edge_indices == correct_edge_indices);
 }
+
+TEST_CASE("[ArrayWireMeshND] Dimension changes preserve compact positions") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		const Vector<VectorN> original = { VectorND::fill(dimension, 2.0), VectorN(), VectorN{ 3.0 }, VectorND::fill(dimension, 4.0) };
+		for (const int target_dimension : { dimension - 1, dimension, dimension + 1, 0 }) {
+			Ref<ArrayWireMeshND> mesh;
+			mesh.instantiate();
+			mesh->set_vertex_positions(original);
+			const PackedInt32Array edges = { 0, 1, 1, 2, 2, 3 };
+			mesh->set_edge_indices(edges);
+			mesh->set_dimension(target_dimension);
+			CHECK(mesh->get_dimension() == target_dimension);
+			CHECK(mesh->get_edge_indices() == edges);
+			CHECK(mesh->is_mesh_data_valid());
+			const auto positions = mesh->get_vertex_positions();
+			for (int64_t i = 0; i < original.size(); i++) {
+				const int64_t expected_dimension = i == 0 ? target_dimension : MIN(original[i].size(), target_dimension);
+				CHECK(positions[i] == VectorND::with_dimension(original[i], expected_dimension));
+			}
+		}
+	}
+}
 } // namespace TestWireMeshND

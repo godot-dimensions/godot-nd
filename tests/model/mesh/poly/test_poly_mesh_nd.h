@@ -69,13 +69,13 @@ TEST_CASE("[PolyMeshND] Validate poly mesh data") {
 		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "An empty mesh has nothing invalid in it.");
 	}
 
-	SUBCASE("Mismatched vertex dimensions are invalid") {
+	SUBCASE("Vertex dimensions must not exceed the first vertex dimension") {
 		Ref<ArrayPolyMeshND> mesh;
 		mesh.instantiate();
 		mesh->append_vertex(VectorN{ 0.0, 0.0, 0.0, 0.0 });
-		mesh->append_vertex(VectorN{ 1.0, 0.0, 0.0 }, false);
+		mesh->append_vertex(VectorN{ 1.0, 0.0, 0.0, 0.0, 0.0 }, false);
 		ERR_PRINT_OFF;
-		CHECK_FALSE_MESSAGE(mesh->is_poly_mesh_data_valid(), "All vertices must have the same number of dimensions.");
+		CHECK_FALSE_MESSAGE(mesh->is_poly_mesh_data_valid(), "Trailing zero components may be omitted, but overlong vectors are invalid.");
 		ERR_PRINT_ON;
 	}
 

@@ -47,7 +47,7 @@ private:
 	Vector<PackedInt32Array> _get_member_to_cell_map() const;
 	int64_t _get_boundary_member_count() const;
 	PackedInt32Array _collect_cells_in_island_internal(const int64_t p_start_cell, const Vector<PackedInt32Array> &p_member_to_cell_map);
-	bool _validate_data_binding_shape_internal(const Vector2i p_key, const Vector<Vector<VectorN>> &p_binding, const String &p_binding_name) const;
+	bool _validate_data_binding_shape_internal(const Vector2i p_key, const Vector<Vector<VectorN>> &p_binding, const int p_value_dimension, const String &p_binding_name) const;
 	void _delete_data_binding_element_internal(const int32_t p_dimension, const int32_t p_index);
 	void _delete_edge_internal(const int32_t p_index);
 	void _delete_vertex_internal(const int32_t p_index);
