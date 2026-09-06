@@ -123,8 +123,14 @@ void BasisND::set_row(const int p_index, const VectorN &p_row) {
 	const int column_count = _columns.size();
 	for (int i = 0; i < column_count; i++) {
 		VectorN column = _columns[i];
-		if (p_index >= column.size()) {
+		const int64_t old_size = column.size();
+		if (p_index >= old_size) {
 			column.resize(p_index + 1);
+			// Vector::resize() leaves new elements uninitialized, so materialize
+			// the implicit identity values (1.0 on the diagonal) for the gap.
+			for (int64_t j = old_size; j < p_index; j++) {
+				column.set(j, i == j ? 1.0 : 0.0);
+			}
 		}
 		column.set(p_index, p_row[i]);
 		_columns.set(i, column);
@@ -149,8 +155,14 @@ void BasisND::set_element(const int p_column, const int p_row, const double p_va
 		_columns.resize(p_column + 1);
 	}
 	VectorN column = _columns[p_column];
-	if (p_row >= column.size()) {
+	const int64_t old_size = column.size();
+	if (p_row >= old_size) {
 		column.resize(p_row + 1);
+		// Vector::resize() leaves new elements uninitialized, so materialize
+		// the implicit identity values (1.0 on the diagonal) for the gap.
+		for (int64_t j = old_size; j < p_row; j++) {
+			column.set(j, j == p_column ? 1.0 : 0.0);
+		}
 	}
 	column.set(p_row, p_value);
 	_columns.set(p_column, column);
@@ -199,11 +211,12 @@ void BasisND::set_row_count(const int p_row_count) {
 	const int column_count = _columns.size();
 	for (int i = 0; i < column_count; i++) {
 		VectorN column = _columns[i];
-		if (column.size() < i + 1) {
-			column.resize(p_row_count);
-			column.set(i, 1.0);
-		} else {
-			column.resize(p_row_count);
+		const int64_t old_size = column.size();
+		column.resize(p_row_count);
+		// Vector::resize() leaves new elements uninitialized, so materialize
+		// the implicit identity values (1.0 on the diagonal) for any new rows.
+		for (int64_t j = old_size; j < p_row_count; j++) {
+			column.set(j, i == j ? 1.0 : 0.0);
 		}
 		_columns.set(i, column);
 	}

@@ -217,17 +217,15 @@ void ArrayCellMeshND::merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<
 	if (start_cell_normal_index_count > 0 || other_cell_normal_index_count > 0) {
 		_simplex_cell_normal_indices.resize(end_cell_vertex_index_count);
 		const bool fill_start_normals = start_cell_normal_index_count < start_cell_vertex_index_count;
-		const bool fill_other_normals = other_cell_normal_index_count == 0 && other_cell_vertex_index_count > 0;
+		const bool fill_other_normals = other_cell_normal_index_count < other_cell_vertex_index_count;
 		if (fill_start_normals || fill_other_normals) {
 			// At least one of the meshes is missing normal indices, so point the missing entries at an empty normal value.
 			const int32_t zero_normal_value_index = (int32_t)VectorND::array_append_deduplicate(_normal_values, VectorN());
 			for (int64_t i = start_cell_normal_index_count; i < start_cell_vertex_index_count; i++) {
 				_simplex_cell_normal_indices.set(i, zero_normal_value_index);
 			}
-			if (fill_other_normals) {
-				for (int64_t i = start_cell_vertex_index_count; i < end_cell_vertex_index_count; i++) {
-					_simplex_cell_normal_indices.set(i, zero_normal_value_index);
-				}
+			for (int64_t i = start_cell_vertex_index_count + other_cell_normal_index_count; i < end_cell_vertex_index_count; i++) {
+				_simplex_cell_normal_indices.set(i, zero_normal_value_index);
 			}
 		}
 		for (int64_t i = 0; i < other_cell_normal_index_count; i++) {
@@ -237,17 +235,15 @@ void ArrayCellMeshND::merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<
 	if (start_cell_texture_map_index_count > 0 || other_cell_texture_map_index_count > 0) {
 		_simplex_cell_texture_map_indices.resize(end_cell_vertex_index_count);
 		const bool fill_start_texture_maps = start_cell_texture_map_index_count < start_cell_vertex_index_count;
-		const bool fill_other_texture_maps = other_cell_texture_map_index_count == 0 && other_cell_vertex_index_count > 0;
+		const bool fill_other_texture_maps = other_cell_texture_map_index_count < other_cell_vertex_index_count;
 		if (fill_start_texture_maps || fill_other_texture_maps) {
 			// At least one of the meshes is missing texture map indices, so point the missing entries at an empty texture map value.
 			const int32_t zero_texture_map_value_index = (int32_t)VectorND::array_append_deduplicate(_texture_map_values, VectorM());
 			for (int64_t i = start_cell_texture_map_index_count; i < start_cell_vertex_index_count; i++) {
 				_simplex_cell_texture_map_indices.set(i, zero_texture_map_value_index);
 			}
-			if (fill_other_texture_maps) {
-				for (int64_t i = start_cell_vertex_index_count; i < end_cell_vertex_index_count; i++) {
-					_simplex_cell_texture_map_indices.set(i, zero_texture_map_value_index);
-				}
+			for (int64_t i = start_cell_vertex_index_count + other_cell_texture_map_index_count; i < end_cell_vertex_index_count; i++) {
+				_simplex_cell_texture_map_indices.set(i, zero_texture_map_value_index);
 			}
 		}
 		for (int64_t i = 0; i < other_cell_texture_map_index_count; i++) {

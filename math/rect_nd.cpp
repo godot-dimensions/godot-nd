@@ -65,8 +65,9 @@ int RectND::get_dimension() const {
 
 void RectND::set_dimension(const int p_dimension) {
 	ERR_FAIL_COND(p_dimension < 0);
-	_position.resize(p_dimension);
-	_size.resize(p_dimension);
+	// Vector::resize() leaves new elements uninitialized, so zero-fill any growth.
+	_position = VectorND::with_dimension(_position, p_dimension);
+	_size = VectorND::with_dimension(_size, p_dimension);
 }
 
 // Basic math functions.

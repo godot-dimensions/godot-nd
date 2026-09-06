@@ -136,8 +136,14 @@ void TransformND::set_basis_row(const int p_index, const VectorN &p_row) {
 	const int column_count = _columns.size();
 	for (int i = 0; i < column_count; i++) {
 		VectorN column = _columns[i];
-		if (p_index >= column.size()) {
+		const int64_t old_size = column.size();
+		if (p_index >= old_size) {
 			column.resize(p_index + 1);
+			// Vector::resize() leaves new elements uninitialized, so materialize
+			// the implicit identity values (1.0 on the diagonal) for the gap.
+			for (int64_t j = old_size; j < p_index; j++) {
+				column.set(j, i == j ? 1.0 : 0.0);
+			}
 		}
 		column.set(p_index, p_row[i]);
 		_columns.set(i, column);
@@ -162,8 +168,14 @@ void TransformND::set_basis_element(const int p_column, const int p_row, const d
 		_columns.resize(p_column + 1);
 	}
 	VectorN column = _columns[p_column];
-	if (p_row >= column.size()) {
+	const int64_t old_size = column.size();
+	if (p_row >= old_size) {
 		column.resize(p_row + 1);
+		// Vector::resize() leaves new elements uninitialized, so materialize
+		// the implicit identity values (1.0 on the diagonal) for the gap.
+		for (int64_t j = old_size; j < p_row; j++) {
+			column.set(j, j == p_column ? 1.0 : 0.0);
+		}
 	}
 	column.set(p_row, p_value);
 	_columns.set(p_column, column);
@@ -185,8 +197,13 @@ double TransformND::get_origin_element(const int p_index) const {
 }
 
 void TransformND::set_origin_element(const int p_index, const double p_value) {
-	if (p_index >= _origin.size()) {
+	const int64_t old_size = _origin.size();
+	if (p_index >= old_size) {
 		_origin.resize(p_index + 1);
+		// Vector::resize() leaves new elements uninitialized, so zero-fill the gap.
+		for (int64_t i = old_size; i < p_index; i++) {
+			_origin.set(i, 0.0);
+		}
 	}
 	_origin.set(p_index, p_value);
 }
@@ -234,11 +251,12 @@ void TransformND::set_basis_row_count(const int p_row_count) {
 	const int column_count = _columns.size();
 	for (int i = 0; i < column_count; i++) {
 		VectorN column = _columns[i];
-		if (column.size() < i + 1) {
-			column.resize(p_row_count);
-			column.set(i, 1.0);
-		} else {
-			column.resize(p_row_count);
+		const int64_t old_size = column.size();
+		column.resize(p_row_count);
+		// Vector::resize() leaves new elements uninitialized, so materialize
+		// the implicit identity values (1.0 on the diagonal) for any new rows.
+		for (int64_t j = old_size; j < p_row_count; j++) {
+			column.set(j, i == j ? 1.0 : 0.0);
 		}
 		_columns.set(i, column);
 	}
@@ -456,8 +474,13 @@ VectorN TransformND::xform(const VectorN &p_vector) const {
 	const int64_t column_count = _columns.size();
 	const int64_t stored_dimension = MIN(vector_dimension, column_count);
 	VectorN ret = VectorND::duplicate(_origin);
-	if (ret.size() < vector_dimension) {
+	const int64_t old_size = ret.size();
+	if (old_size < vector_dimension) {
 		ret.resize(vector_dimension);
+		// Vector::resize() leaves new elements of trivial types uninitialized.
+		for (int64_t i = old_size; i < vector_dimension; i++) {
+			ret.set(i, 0.0);
+		}
 	}
 	for (int64_t i = 0; i < stored_dimension; i++) {
 		ret = VectorND::add(ret, VectorND::multiply_scalar(_columns[i], p_vector[i]));
@@ -518,11 +541,14 @@ VectorN TransformND::xform_basis(const VectorN &p_vector) const {
 	// Basis columns beyond the stored ones act as identity, passing the component through,
 	// consistent with get_basis_column and xform_rect.
 	if (vector_dimension > column_count) {
-		if (ret.size() < vector_dimension) {
+		const int64_t old_size = ret.size();
+		if (old_size < vector_dimension) {
 			ret.resize(vector_dimension);
 		}
 		for (int64_t i = column_count; i < vector_dimension; i++) {
-			ret.set(i, ret[i] + p_vector[i]);
+			// Vector::resize() leaves new elements of trivial types uninitialized,
+			// so only read back the elements that existed before the resize.
+			ret.set(i, i < old_size ? ret[i] + p_vector[i] : p_vector[i]);
 		}
 	}
 	return ret;

@@ -61,14 +61,8 @@ Vector<VectorN> OrthoplexWireMeshND::get_vertex_positions() {
 		const VectorN he = get_half_extents();
 		_vertices_cache.resize(dimension * 2);
 		for (int i = 0; i < dimension; i++) {
-			VectorN positive;
-			positive.resize(dimension);
-			positive.set(i, he[i]);
-			_vertices_cache.set(i * 2, positive);
-			VectorN negative;
-			negative.resize(dimension);
-			negative.set(i, -he[i]);
-			_vertices_cache.set(i * 2 + 1, negative);
+			_vertices_cache.set(i * 2, VectorND::value_on_axis_with_dimension(he[i], i, dimension));
+			_vertices_cache.set(i * 2 + 1, VectorND::value_on_axis_with_dimension(-he[i], i, dimension));
 		}
 	}
 	return _vertices_cache;
