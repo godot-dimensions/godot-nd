@@ -6,6 +6,7 @@
 	<description>
 		MaterialND is the base class for all ND materials. It provides a way to color ND meshes with help from its derived classes such as [WireMaterialND].
 		MaterialND can be set on a [MeshND] resource to define how the mesh should be colored, and/or overridden on a specific [MeshInstanceND] node.
+		The texture map offset and scale properties ([member texture_map_offset], [member texture_map_scale], [member albedo_texture_map_offset], [member albedo_texture_map_scale]) are typed as [PackedFloat64Array] (aliased as [code]VectorM[/code] in the C++ source) instead of a fixed-size vector, since materials are not tied to any specific dimension. An empty offset array is equivalent to an all-zero offset, meaning no change to the texture map. A scale array with a single value applies that value uniformly to every component, which is the most useful default since the number of components isn't known ahead of time; a longer scale array can scale each texture map axis independently instead. A future rendering consumer is expected to interpret a shorter array by zero-extending missing offset components and one-extending missing scale components (or broadcasting the sole value of a length-1 scale array across all components), mirroring how the mesh's own texture map value pools are zero-extended when they have fewer components than the mesh dimension.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -42,6 +43,52 @@
 			<description>
 				Gets low-level flags that determine how the mesh is colored. This is meant to be used by the renderer to determine the appearance of colored objects.
 				[b]Note:[/b] When making materials, use the high-level properties from the derived classes instead, such as [member WireMaterialND.albedo_source] or [member CellMaterialND.albedo_source].
+			</description>
+		</method>
+		<method name="get_albedo_texture_map_offset" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Gets the offset of the texture map applied to the base color or albedo texture used for coloring the mesh. This is only used when a texture source flag is set in [member albedo_source_flags], and only when the texture transform mode is set to [constant TEXTURE_TRANSFORM_MODE_PER_CHANNEL].
+				This offset controls the texture map, not the texture itself. An offset value added to a texture coordinate of zero makes it start that fraction of the way into the texture, which visually shifts the texture in the opposite direction of the offset. This is conceptually equivalent to Godot's [member BaseMaterial3D.uv1_offset] property, but is specific to the albedo material channel. See the class description for how the array length is interpreted.
+			</description>
+		</method>
+		<method name="get_albedo_texture_map_scale" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Gets the scale of the texture map applied to the base color or albedo texture used for coloring the mesh. This is only used when a texture source flag is set in [member albedo_source_flags], and only when the texture transform mode is set to [constant TEXTURE_TRANSFORM_MODE_PER_CHANNEL].
+				This scale controls the texture map, not the texture itself. A scale of 2 on an axis will make the texture map cover the texture twice as many times on that axis, which has the effect of tiling the texture, making each visual copy of the texture appear half the size. This is conceptually equivalent to Godot's [member BaseMaterial3D.uv1_scale] property, but is specific to the albedo material channel. See the class description for how the array length is interpreted.
+			</description>
+		</method>
+		<method name="get_effective_albedo_texture_map_offset" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Returns the effective offset of the texture map applied to the base color or albedo texture used for coloring the mesh. This considers the texture transform mode (see [method get_texture_transform_mode]) and will read the appropriate offset value, or return an empty array (equivalent to no offset) if no offset is used. This value is only used when a texture source flag is set in [member albedo_source_flags].
+			</description>
+		</method>
+		<method name="get_effective_albedo_texture_map_scale" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Returns the effective scale of the texture map applied to the base color or albedo texture used for coloring the mesh. This considers the texture transform mode (see [method get_texture_transform_mode]) and will read the appropriate scale value, or return a single-component array of [code]1.0[/code] (equivalent to no scaling) if no scale is used. This value is only used when a texture source flag is set in [member albedo_source_flags].
+			</description>
+		</method>
+		<method name="get_texture_map_offset" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Gets the offset of the texture map applied to all material channels (albedo, emissive, normal, ORM, etc). This is only used when the texture transform mode is set to [constant TEXTURE_TRANSFORM_MODE_ALL_CHANNELS] and at least one channel uses a texture.
+				This offset controls the texture map, not the texture itself. An offset value added to a texture coordinate of zero makes it start that fraction of the way into the texture, which visually shifts the texture in the opposite direction of the offset. This is conceptually equivalent to Godot's [member BaseMaterial3D.uv1_offset] property. See the class description for how the array length is interpreted.
+			</description>
+		</method>
+		<method name="get_texture_map_scale" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<description>
+				Gets the scale of the texture map applied to all material channels (albedo, emissive, normal, ORM, etc). This is only used when the texture transform mode is set to [constant TEXTURE_TRANSFORM_MODE_ALL_CHANNELS] and at least one channel uses a texture.
+				This scale controls the texture map, not the texture itself. A scale of 2 on an axis will make the texture map cover the texture twice as many times on that axis, which has the effect of tiling the texture, making each visual copy of the texture appear half the size. This is conceptually equivalent to Godot's [member BaseMaterial3D.uv1_scale] property. See the class description for how the array length is interpreted.
+			</description>
+		</method>
+		<method name="get_texture_transform_mode" qualifiers="const">
+			<return type="int" enum="MaterialND.TextureTransformMode" />
+			<description>
+				Gets the texture transform mode, which determines how the texture transform is applied to the various material channels. Texture transforms are only useful when the material uses a texture, such as when a texture source flag is set in [member albedo_source_flags]. See [enum TextureTransformMode] for options.
 			</description>
 		</method>
 		<method name="is_default_material" qualifiers="const">
@@ -91,6 +138,41 @@
 				[b]Note:[/b] When making materials, use the high-level properties from the derived classes instead, such as [member WireMaterialND.albedo_source] or [member CellMaterialND.albedo_source].
 			</description>
 		</method>
+		<method name="set_albedo_texture_map_offset">
+			<return type="void" />
+			<param index="0" name="albedo_texture_map_offset" type="PackedFloat64Array" />
+			<description>
+				Sets the offset of the texture map applied to the base color or albedo texture used for coloring the mesh. This is only used when a texture source flag is set in [member albedo_source_flags], and only when the texture transform mode is set to [constant TEXTURE_TRANSFORM_MODE_PER_CHANNEL]. See the class description for how the array length is interpreted.
+			</description>
+		</method>
+		<method name="set_albedo_texture_map_scale">
+			<return type="void" />
+			<param index="0" name="albedo_texture_map_scale" type="PackedFloat64Array" />
+			<description>
+				Sets the scale of the texture map applied to the base color or albedo texture used for coloring the mesh. This is only used when a texture source flag is set in [member albedo_source_flags], and only when the texture transform mode is set to [constant TEXTURE_TRANSFORM_MODE_PER_CHANNEL]. See the class description for how the array length is interpreted.
+			</description>
+		</method>
+		<method name="set_texture_map_offset">
+			<return type="void" />
+			<param index="0" name="texture_map_offset" type="PackedFloat64Array" />
+			<description>
+				Sets the offset of the texture map applied to all material channels (albedo, emissive, normal, ORM, etc). This is only used when the texture transform mode is set to [constant TEXTURE_TRANSFORM_MODE_ALL_CHANNELS] and at least one channel uses a texture. See the class description for how the array length is interpreted.
+			</description>
+		</method>
+		<method name="set_texture_map_scale">
+			<return type="void" />
+			<param index="0" name="texture_map_scale" type="PackedFloat64Array" />
+			<description>
+				Sets the scale of the texture map applied to all material channels (albedo, emissive, normal, ORM, etc). This is only used when the texture transform mode is set to [constant TEXTURE_TRANSFORM_MODE_ALL_CHANNELS] and at least one channel uses a texture. See the class description for how the array length is interpreted.
+			</description>
+		</method>
+		<method name="set_texture_transform_mode">
+			<return type="void" />
+			<param index="0" name="texture_transform_mode" type="int" enum="MaterialND.TextureTransformMode" />
+			<description>
+				Sets the texture transform mode, which determines how the texture transform is applied to the various material channels. Texture transforms are only useful when the material uses a texture, such as when a texture source flag is set in [member albedo_source_flags]. See [enum TextureTransformMode] for options.
+			</description>
+		</method>
 	</methods>
 	<constants>
 		<constant name="COLOR_SOURCE_FLAG_SINGLE_COLOR" value="1" enum="ColorSourceFlagsND">
@@ -110,6 +192,16 @@
 		</constant>
 		<constant name="COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP" value="32" enum="ColorSourceFlagsND">
 			Flag to indicate that the mesh color should be sampled from an ND texture mapped to the mesh's ND local space.
+		</constant>
+		<constant name="TEXTURE_TRANSFORM_MODE_NONE" value="0" enum="TextureTransformMode">
+			Do not apply any texture transform to the texture coordinates. This is the default mode. Untransformed texture coordinates are useful for complex objects with dedicated materials and textures paired with the mesh, such as a character model whose face needs to remain on the head.
+		</constant>
+		<constant name="TEXTURE_TRANSFORM_MODE_ALL_CHANNELS" value="1" enum="TextureTransformMode">
+			Apply the same texture transform to all material channels (albedo, emissive, normal, ORM, etc). Texture transforms are useful when applying generic textures to meshes.
+		</constant>
+		<constant name="TEXTURE_TRANSFORM_MODE_PER_CHANNEL" value="2" enum="TextureTransformMode">
+			Apply a different texture transform to each material channel (albedo, emissive, normal, ORM, etc).
+			Per-channel texture transforms are useful when applying generic textures to meshes, and when the material channels do not need to align with each other, such as when scaling the albedo and normal textures for more detail while leaving the ORM texture unscaled to keep specific parts of the mesh shiny or rough. Prefer using [constant TEXTURE_TRANSFORM_MODE_ALL_CHANNELS] if the textures do not need to be transformed differently.
 		</constant>
 	</constants>
 </class>

@@ -107,6 +107,19 @@ void MaterialND::merge_with(const Ref<MaterialND> &p_material, const int p_first
 	}
 }
 
+void MaterialND::set_texture_transform_mode(const TextureTransformMode p_texture_transform_mode) {
+	_texture_transform_mode = p_texture_transform_mode;
+	notify_property_list_changed();
+}
+
+void MaterialND::set_texture_map_offset(const VectorM &p_texture_map_offset) {
+	_texture_map_offset = p_texture_map_offset;
+}
+
+void MaterialND::set_texture_map_scale(const VectorM &p_texture_map_scale) {
+	_texture_map_scale = p_texture_map_scale;
+}
+
 void MaterialND::set_albedo_color(const Color &p_albedo_color) {
 	_albedo_color = p_albedo_color;
 	_edge_albedo_color_cache.clear();
@@ -134,11 +147,60 @@ void MaterialND::resize_albedo_color_array(const int64_t p_size, const Color &p_
 	}
 }
 
+void MaterialND::set_albedo_texture_map_offset(const VectorM &p_albedo_texture_map_offset) {
+	_albedo_texture_map_offset = p_albedo_texture_map_offset;
+}
+
+void MaterialND::set_albedo_texture_map_scale(const VectorM &p_albedo_texture_map_scale) {
+	_albedo_texture_map_scale = p_albedo_texture_map_scale;
+}
+
+VectorM MaterialND::get_effective_albedo_texture_map_offset() const {
+	switch (_texture_transform_mode) {
+		case TEXTURE_TRANSFORM_MODE_ALL_CHANNELS:
+			return _texture_map_offset;
+		case TEXTURE_TRANSFORM_MODE_PER_CHANNEL:
+			return _albedo_texture_map_offset;
+		default:
+			return VectorM();
+	}
+}
+
+VectorM MaterialND::get_effective_albedo_texture_map_scale() const {
+	switch (_texture_transform_mode) {
+		case TEXTURE_TRANSFORM_MODE_ALL_CHANNELS: {
+			if (_texture_map_scale.is_empty()) {
+				return VectorM({ 1.0 });
+			}
+			return _texture_map_scale;
+		} break;
+		case TEXTURE_TRANSFORM_MODE_PER_CHANNEL: {
+			if (_albedo_texture_map_scale.is_empty()) {
+				return VectorM({ 1.0 });
+			}
+			return _albedo_texture_map_scale;
+		} break;
+		default:
+			return VectorM({ 1.0 });
+	}
+}
+
 void MaterialND::_bind_methods() {
+	// Common functions.
 	ClassDB::bind_method(D_METHOD("get_albedo_color_of_edge", "edge_index", "for_mesh"), &MaterialND::get_albedo_color_of_edge);
 	ClassDB::bind_method(D_METHOD("is_default_material"), &MaterialND::is_default_material);
 	ClassDB::bind_method(D_METHOD("merge_with", "material", "first_item_count", "second_item_count"), &MaterialND::merge_with);
 
+	// Shared properties.
+	ClassDB::bind_method(D_METHOD("get_texture_transform_mode"), &MaterialND::get_texture_transform_mode);
+	ClassDB::bind_method(D_METHOD("set_texture_transform_mode", "texture_transform_mode"), &MaterialND::set_texture_transform_mode);
+
+	ClassDB::bind_method(D_METHOD("get_texture_map_offset"), &MaterialND::get_texture_map_offset);
+	ClassDB::bind_method(D_METHOD("set_texture_map_offset", "texture_map_offset"), &MaterialND::set_texture_map_offset);
+	ClassDB::bind_method(D_METHOD("get_texture_map_scale"), &MaterialND::get_texture_map_scale);
+	ClassDB::bind_method(D_METHOD("set_texture_map_scale", "texture_map_scale"), &MaterialND::set_texture_map_scale);
+
+	// Albedo.
 	ClassDB::bind_method(D_METHOD("get_albedo_color"), &MaterialND::get_albedo_color);
 	ClassDB::bind_method(D_METHOD("set_albedo_color", "albedo_color"), &MaterialND::set_albedo_color);
 
@@ -150,10 +212,22 @@ void MaterialND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("append_albedo_color", "albedo_color"), &MaterialND::append_albedo_color);
 	ClassDB::bind_method(D_METHOD("resize_albedo_color_array", "size", "fill_color"), &MaterialND::resize_albedo_color_array, DEFVAL(Color(1, 1, 1, 1)));
 
+	ClassDB::bind_method(D_METHOD("get_albedo_texture_map_offset"), &MaterialND::get_albedo_texture_map_offset);
+	ClassDB::bind_method(D_METHOD("set_albedo_texture_map_offset", "albedo_texture_map_offset"), &MaterialND::set_albedo_texture_map_offset);
+	ClassDB::bind_method(D_METHOD("get_albedo_texture_map_scale"), &MaterialND::get_albedo_texture_map_scale);
+	ClassDB::bind_method(D_METHOD("set_albedo_texture_map_scale", "albedo_texture_map_scale"), &MaterialND::set_albedo_texture_map_scale);
+
+	ClassDB::bind_method(D_METHOD("get_effective_albedo_texture_map_offset"), &MaterialND::get_effective_albedo_texture_map_offset);
+	ClassDB::bind_method(D_METHOD("get_effective_albedo_texture_map_scale"), &MaterialND::get_effective_albedo_texture_map_scale);
+
 	BIND_ENUM_CONSTANT(COLOR_SOURCE_FLAG_SINGLE_COLOR);
 	BIND_ENUM_CONSTANT(COLOR_SOURCE_FLAG_PER_VERT);
 	BIND_ENUM_CONSTANT(COLOR_SOURCE_FLAG_PER_EDGE);
 	BIND_ENUM_CONSTANT(COLOR_SOURCE_FLAG_PER_CELL);
 	BIND_ENUM_CONSTANT(COLOR_SOURCE_FLAG_CELL_TEXTURE_MAP);
 	BIND_ENUM_CONSTANT(COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP);
+
+	BIND_ENUM_CONSTANT(TEXTURE_TRANSFORM_MODE_NONE);
+	BIND_ENUM_CONSTANT(TEXTURE_TRANSFORM_MODE_ALL_CHANNELS);
+	BIND_ENUM_CONSTANT(TEXTURE_TRANSFORM_MODE_PER_CHANNEL);
 }

@@ -19,5 +19,24 @@
 		<member name="albedo_source" type="int" setter="set_albedo_source_flags" getter="get_albedo_source_flags" enum="MaterialND.ColorSourceFlagsND" default="1">
 			The albedo source flags of the [CellMaterialND]. For cell materials, valid values are everything in [enum MaterialND.ColorSourceFlagsND] except for per-edge colors.
 		</member>
+		<member name="albedo_texture_map_offset" type="PackedFloat64Array" setter="set_albedo_texture_map_offset" getter="get_albedo_texture_map_offset">
+			The offset of the texture map applied to the base color or albedo texture used for coloring the mesh. This is only used when [member albedo_source] includes [constant MaterialND.COLOR_SOURCE_FLAG_CELL_TEXTURE_MAP] or [constant MaterialND.COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP], and only when [member texture_transform_mode] is set to [constant MaterialND.TEXTURE_TRANSFORM_MODE_PER_CHANNEL].
+			This offset controls the texture map, not the texture itself. This is equivalent to Godot's [member BaseMaterial3D.uv1_offset] property, but is specific to the albedo material channel. See [MaterialND] for how the array length is interpreted.
+		</member>
+		<member name="albedo_texture_map_scale" type="PackedFloat64Array" setter="set_albedo_texture_map_scale" getter="get_albedo_texture_map_scale">
+			The scale of the texture map applied to the base color or albedo texture used for coloring the mesh. This is only used when [member albedo_source] includes [constant MaterialND.COLOR_SOURCE_FLAG_CELL_TEXTURE_MAP] or [constant MaterialND.COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP], and only when [member texture_transform_mode] is set to [constant MaterialND.TEXTURE_TRANSFORM_MODE_PER_CHANNEL].
+			This scale controls the texture map, not the texture itself. This is equivalent to Godot's [member BaseMaterial3D.uv1_scale] property, but is specific to the albedo material channel. See [MaterialND] for how the array length is interpreted.
+		</member>
+		<member name="texture_map_offset" type="PackedFloat64Array" setter="set_texture_map_offset" getter="get_texture_map_offset">
+			The offset of the texture map applied to all material channels. This is only used when [member texture_transform_mode] is set to [constant MaterialND.TEXTURE_TRANSFORM_MODE_ALL_CHANNELS] and [member albedo_source] includes [constant MaterialND.COLOR_SOURCE_FLAG_CELL_TEXTURE_MAP] or [constant MaterialND.COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP].
+			This offset controls the texture map, not the texture itself. This is equivalent to Godot's [member BaseMaterial3D.uv1_offset] property. See [MaterialND] for how the array length is interpreted.
+		</member>
+		<member name="texture_map_scale" type="PackedFloat64Array" setter="set_texture_map_scale" getter="get_texture_map_scale">
+			The scale of the texture map applied to all material channels. This is only used when [member texture_transform_mode] is set to [constant MaterialND.TEXTURE_TRANSFORM_MODE_ALL_CHANNELS] and [member albedo_source] includes [constant MaterialND.COLOR_SOURCE_FLAG_CELL_TEXTURE_MAP] or [constant MaterialND.COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP].
+			This scale controls the texture map, not the texture itself. This is equivalent to Godot's [member BaseMaterial3D.uv1_scale] property. See [MaterialND] for how the array length is interpreted.
+		</member>
+		<member name="texture_transform_mode" type="int" setter="set_texture_transform_mode" getter="get_texture_transform_mode" enum="MaterialND.TextureTransformMode" default="0">
+			The texture transform mode, which determines how the texture transform is applied to the material's channels. Texture transforms are only useful when [member albedo_source] includes [constant MaterialND.COLOR_SOURCE_FLAG_CELL_TEXTURE_MAP] or [constant MaterialND.COLOR_SOURCE_FLAG_DIRECT_TEXTURE_MAP]. See [enum MaterialND.TextureTransformMode] for options.
+		</member>
 	</members>
 </class>

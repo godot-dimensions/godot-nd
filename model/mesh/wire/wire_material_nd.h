@@ -7,7 +7,7 @@ class WireMaterialND : public MaterialND {
 
 public:
 	// TODO: Switch to BitField in a future Godot version https://github.com/godotengine/godot/pull/95916
-	enum WireColorSourceND {
+	enum WireColorSourceND : uint8_t {
 		WIRE_COLOR_SOURCE_SINGLE_COLOR,
 		WIRE_COLOR_SOURCE_PER_EDGE_ONLY,
 		WIRE_COLOR_SOURCE_PER_EDGE_AND_SINGLE,
