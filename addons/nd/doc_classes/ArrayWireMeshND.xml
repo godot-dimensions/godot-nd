@@ -56,11 +56,11 @@
 				Merges this wireframe mesh with another wireframe mesh. The other mesh's vertices and edges are added to this mesh. [param transform] is used to transform the other mesh's vertices before adding them to this mesh. This is useful for combining meshes that are in different positions or orientations.
 			</description>
 		</method>
-		<method name="transform_vertices">
+		<method name="transform_mesh">
 			<return type="void" />
 			<param index="0" name="transform" type="TransformND" />
 			<description>
-				Applies a transformation to all vertices of the wireframe mesh, moving the mesh's geometry while keeping the wireframe structure intact.
+				Transforms all vertex positions in the wireframe mesh by applying the given [param transform].
 			</description>
 		</method>
 	</methods>

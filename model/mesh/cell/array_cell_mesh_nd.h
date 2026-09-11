@@ -28,6 +28,7 @@ public:
 	void compact_normal_values();
 	void compact_texture_map_values();
 
+	void transform_mesh(const Ref<TransformND> &p_transform);
 	void merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<TransformND> &p_transform);
 
 	virtual PackedInt32Array get_simplex_cell_vertex_indices() override;

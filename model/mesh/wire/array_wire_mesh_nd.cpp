@@ -133,7 +133,7 @@ void ArrayWireMeshND::deduplicate_all_elements() {
 	reset_mesh_data_validation();
 }
 
-void ArrayWireMeshND::transform_vertices(const Ref<TransformND> &p_transform) {
+void ArrayWireMeshND::transform_mesh(const Ref<TransformND> &p_transform) {
 	ERR_FAIL_COND(p_transform.is_null());
 	const int64_t vertex_pos_count = _vertex_positions.size();
 	for (int64_t vertex_index = 0; vertex_index < vertex_pos_count; vertex_index++) {
@@ -215,7 +215,7 @@ void ArrayWireMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("append_vertices", "vertices", "deduplicate"), &ArrayWireMeshND::append_vertices_bind, DEFVAL(true));
 
 	ClassDB::bind_method(D_METHOD("deduplicate_all_elements"), &ArrayWireMeshND::deduplicate_all_elements);
-	ClassDB::bind_method(D_METHOD("transform_vertices", "transform"), &ArrayWireMeshND::transform_vertices);
+	ClassDB::bind_method(D_METHOD("transform_mesh", "transform"), &ArrayWireMeshND::transform_mesh);
 	ClassDB::bind_method(D_METHOD("merge_with", "other", "transform"), &ArrayWireMeshND::merge_with);
 
 	// Only bind the setters here because the getters are already bound in WireMeshND.

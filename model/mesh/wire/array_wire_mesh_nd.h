@@ -21,7 +21,7 @@ public:
 	PackedInt32Array append_vertices_bind(const TypedArray<VectorN> &p_vertices, const bool p_deduplicate_vertices = true);
 
 	void deduplicate_all_elements();
-	void transform_vertices(const Ref<TransformND> &p_transform);
+	void transform_mesh(const Ref<TransformND> &p_transform);
 	void merge_with(const Ref<ArrayWireMeshND> &p_array_wire_mesh_nd, const Ref<TransformND> &p_transform);
 
 	virtual PackedInt32Array get_edge_indices() override;

@@ -39,6 +39,13 @@
 				Merges the current cell mesh with another cell mesh, copying the contents of [param other] into this cell mesh with a relative transform of [param transform]. If only one of the meshes has normals, the other normals will be initialized to zero.
 			</description>
 		</method>
+		<method name="transform_mesh">
+			<return type="void" />
+			<param index="0" name="transform" type="TransformND" />
+			<description>
+				Transforms the vertex positions and normal values of the simplex cell mesh by applying the given [param transform]. The normal values are transformed using the inverse-transpose of the basis to ensure correct orientation under non-uniform scaling.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="0">

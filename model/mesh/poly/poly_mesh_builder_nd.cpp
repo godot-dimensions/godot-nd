@@ -125,7 +125,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 	// Start by copying the input mesh's data into the output mesh twice,
 	// offset by the extrusion vector in both negative and positive directions.
 	ret = p_input_mesh->duplicate();
-	ret->transform_vertices(TransformND::from_position(VectorND::negate(extrusion_vector)));
+	ret->transform_mesh(TransformND::from_position(VectorND::negate(extrusion_vector)));
 	ret->merge_with(p_input_mesh, TransformND::from_position(extrusion_vector));
 	Vector<Vector<PackedInt32Array>> poly_cell_indices = ret->get_poly_cell_indices();
 	// The two copies aren't connected yet, so it's safe to blindly force their normals outward (if any).

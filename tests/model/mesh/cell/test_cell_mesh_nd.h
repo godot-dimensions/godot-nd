@@ -100,6 +100,24 @@ TEST_CASE("[ArrayCellMeshND] Indexed attribute validation") {
 	}
 }
 
+TEST_CASE("[ArrayCellMeshND] Transform mesh") {
+	Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(4, true);
+	mesh->set_simplex_cell_boundary_normals(Vector<VectorN>{ VectorN{ 0.0, 0.0, 0.0, 1.0 } });
+	REQUIRE(mesh->is_mesh_data_valid());
+	mesh->transform_mesh(TransformND::from_position_scale(VectorN{ 1.0, 0.0, 0.0, 0.0 }, VectorN{ 1.0, 1.0, 1.0, 2.0 }));
+	const Vector<VectorN> vertex_positions = mesh->get_vertex_positions();
+	REQUIRE(vertex_positions.size() == 4);
+	CHECK(VectorND::is_equal_approx(vertex_positions[0], VectorN{ 1.0, 0.0, 0.0, 0.0 }));
+	CHECK(VectorND::is_equal_approx(vertex_positions[1], VectorN{ 2.0, 0.0, 0.0, 0.0 }));
+	const Vector<VectorN> normal_values = mesh->get_normal_values();
+	REQUIRE(normal_values.size() == 1);
+	CHECK_MESSAGE(VectorND::is_equal_approx(normal_values[0], VectorN{ 0.0, 0.0, 0.0, 0.5 }), "Normal values must be transformed by the inverse-transpose of the basis.");
+	const Vector<VectorN> boundary_normals = mesh->get_simplex_cell_boundary_normals();
+	REQUIRE(boundary_normals.size() == 1);
+	CHECK_MESSAGE(VectorND::is_equal_approx(boundary_normals[0], VectorN{ 0.0, 0.0, 0.0, 0.5 }), "Boundary normals must also be transformed by the inverse-transpose of the basis.");
+	CHECK(mesh->is_mesh_data_valid());
+}
+
 TEST_CASE("[ArrayCellMeshND] Merge indexed attributes") {
 	SUBCASE("Indexed attributes are preserved and transformed") {
 		for (int dimension = 3; dimension <= 5; dimension++) {

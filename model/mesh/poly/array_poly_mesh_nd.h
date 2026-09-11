@@ -106,7 +106,7 @@ public:
 
 	// Misc functions.
 	void deduplicate_all_elements();
-	void transform_vertices(const Ref<TransformND> &p_transform);
+	void transform_mesh(const Ref<TransformND> &p_transform);
 	void merge_with(const Ref<PolyMeshND> &p_other, const Ref<TransformND> &p_transform = Ref<TransformND>());
 
 	// Getters and setters.

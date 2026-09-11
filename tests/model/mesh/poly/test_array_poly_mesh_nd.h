@@ -372,13 +372,27 @@ TEST_CASE("[ArrayPolyMeshND] Transform texture map and vertices") {
 		}
 	}
 
-	SUBCASE("Transforming vertices applies the transform") {
+	SUBCASE("Transforming mesh transforms the vertices with the transform") {
 		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_tetrahedron_cell_mesh();
-		mesh->transform_vertices(TransformND::from_position(VectorN{ 1.0, 2.0, 3.0, 4.0 }));
+		mesh->transform_mesh(TransformND::from_position(VectorN{ 1.0, 2.0, 3.0, 4.0 }));
 		const Vector<VectorN> vertex_positions = mesh->get_poly_cell_vertex_positions();
 		REQUIRE(vertex_positions.size() == 4);
 		CHECK(VectorND::is_equal_approx(vertex_positions[0], VectorN{ 1.0, 2.0, 3.0, 4.0 }));
 		CHECK(VectorND::is_equal_approx(vertex_positions[1], VectorN{ 2.0, 2.0, 3.0, 4.0 }));
+		CHECK(mesh->is_poly_mesh_data_valid());
+	}
+
+	SUBCASE("Transforming mesh applies the inverse-transpose to the normal values") {
+		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_tetrahedron_cell_mesh();
+		mesh->set_poly_cell_normal_values(Vector<VectorN>{ VectorN{ 1.0, 1.0, 0.0, 0.0 } });
+		mesh->transform_mesh(TransformND::from_position_scale(VectorN{ 1.0, 0.0, 0.0, 0.0 }, VectorN{ 2.0, 1.0, 1.0, 1.0 }));
+		const Vector<VectorN> vertex_positions = mesh->get_poly_cell_vertex_positions();
+		REQUIRE(vertex_positions.size() == 4);
+		CHECK(VectorND::is_equal_approx(vertex_positions[0], VectorN{ 1.0, 0.0, 0.0, 0.0 }));
+		CHECK(VectorND::is_equal_approx(vertex_positions[1], VectorN{ 3.0, 0.0, 0.0, 0.0 }));
+		const Vector<VectorN> normal_values = mesh->get_poly_cell_normal_values();
+		REQUIRE(normal_values.size() == 1);
+		CHECK_MESSAGE(VectorND::is_equal_approx(normal_values[0], VectorN{ 0.5, 1.0, 0.0, 0.0 }), "Non-uniform scaling must shrink the normal along the stretched axis.");
 		CHECK(mesh->is_poly_mesh_data_valid());
 	}
 }

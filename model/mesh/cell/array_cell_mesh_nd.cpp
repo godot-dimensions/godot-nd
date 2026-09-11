@@ -143,6 +143,26 @@ void ArrayCellMeshND::compact_texture_map_values() {
 	reset_mesh_data_validation();
 }
 
+void ArrayCellMeshND::transform_mesh(const Ref<TransformND> &p_transform) {
+	ERR_FAIL_COND(p_transform.is_null());
+	// Normal values need to be transformed with the inverse-transpose to support non-uniform scaling.
+	// TransformND::inverse_basis_transposed only transposes, so it must be applied to the inverted basis.
+	const Ref<TransformND> inverse_transpose = p_transform->inverse_basis()->inverse_basis_transposed();
+	const int64_t vertex_pos_count = _vertex_positions.size();
+	for (int64_t vertex_index = 0; vertex_index < vertex_pos_count; vertex_index++) {
+		_vertex_positions.set(vertex_index, p_transform->xform(_vertex_positions[vertex_index]));
+	}
+	const int64_t boundary_normal_count = _simplex_cell_boundary_normals.size();
+	for (int64_t i = 0; i < boundary_normal_count; i++) {
+		_simplex_cell_boundary_normals.set(i, inverse_transpose->xform_basis(_simplex_cell_boundary_normals[i]));
+	}
+	const int64_t normal_val_count = _normal_values.size();
+	for (int64_t normal_index = 0; normal_index < normal_val_count; normal_index++) {
+		_normal_values.set(normal_index, inverse_transpose->xform_basis(_normal_values[normal_index]));
+	}
+	cell_mesh_clear_cache();
+}
+
 void ArrayCellMeshND::merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<TransformND> &p_transform) {
 	ERR_FAIL_COND_MSG(p_other.is_null(), "ArrayCellMeshND: Cannot merge a null mesh.");
 	ERR_FAIL_COND_MSG(p_transform.is_null(), "ArrayCellMeshND: Cannot merge with a null transform.");
@@ -405,6 +425,7 @@ void ArrayCellMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("compact_normal_values"), &ArrayCellMeshND::compact_normal_values);
 	ClassDB::bind_method(D_METHOD("compact_texture_map_values"), &ArrayCellMeshND::compact_texture_map_values);
 
+	ClassDB::bind_method(D_METHOD("transform_mesh", "transform"), &ArrayCellMeshND::transform_mesh);
 	ClassDB::bind_method(D_METHOD("merge_with", "other", "transform"), &ArrayCellMeshND::merge_with);
 
 	// Only bind the setters here because the getters are already bound in CellMeshND.

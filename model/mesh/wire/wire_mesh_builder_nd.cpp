@@ -13,7 +13,7 @@ Ref<ArrayWireMeshND> WireMeshBuilderND::extrude_linear(const Ref<ArrayWireMeshND
 	Ref<TransformND> offset_transform;
 	offset_transform.instantiate();
 	offset_transform->set_origin(VectorND::negate(p_extrusion_vector));
-	ret->transform_vertices(offset_transform);
+	ret->transform_mesh(offset_transform);
 	offset_transform->set_origin(p_extrusion_vector);
 	ret->merge_with(p_input_mesh, offset_transform);
 	// Form new edges between the vertices of the two copies of the input mesh.

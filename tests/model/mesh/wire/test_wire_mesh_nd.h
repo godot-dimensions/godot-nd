@@ -52,11 +52,11 @@ TEST_CASE("[BoxWireMeshND] Edges and Vertices") {
 	CHECK(edge_indices == correct_edge_indices);
 }
 
-TEST_CASE("[ArrayWireMeshND] Transform vertices") {
+TEST_CASE("[ArrayWireMeshND] Transform mesh") {
 	Ref<ArrayWireMeshND> mesh;
 	mesh.instantiate();
 	mesh->append_edge_points(VectorN{ 0.0, 0.0, 0.0 }, VectorN{ 1.0, 0.0, 0.0 });
-	mesh->transform_vertices(TransformND::from_position(VectorN{ 1.0, 2.0, 3.0 }));
+	mesh->transform_mesh(TransformND::from_position(VectorN{ 1.0, 2.0, 3.0 }));
 	const Vector<VectorN> vertex_positions = mesh->get_vertex_positions();
 	REQUIRE(vertex_positions.size() == 2);
 	CHECK(VectorND::is_equal_approx(vertex_positions[0], VectorN{ 1.0, 2.0, 3.0 }));
