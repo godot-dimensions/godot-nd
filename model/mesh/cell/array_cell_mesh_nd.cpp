@@ -202,10 +202,12 @@ void ArrayCellMeshND::merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<
 	for (int64_t i = 0; i < other_vertex_pos_count; i++) {
 		_vertex_positions.set(start_vertex_pos_count + i, p_transform->xform(p_other->_vertex_positions[i]));
 	}
-	// Merge the value pools. The other mesh's normal values need to be transformed.
+	// Merge the value pools. The other mesh's normals need to be transformed with the inverse-transpose to support
+	// non-uniform scaling. TransformND::inverse_basis_transposed only transposes, so apply it to the inverted basis.
+	const Ref<TransformND> inverse_transpose = p_transform->inverse_basis()->inverse_basis_transposed();
 	_normal_values.resize(start_normal_value_count + other_normal_value_count);
 	for (int64_t i = 0; i < other_normal_value_count; i++) {
-		_normal_values.set(start_normal_value_count + i, p_transform->xform_basis(p_other->_normal_values[i]));
+		_normal_values.set(start_normal_value_count + i, inverse_transpose->xform_basis(p_other->_normal_values[i]));
 	}
 	_texture_map_values.resize(start_texture_map_value_count + other_texture_map_value_count);
 	for (int64_t i = 0; i < other_texture_map_value_count; i++) {
@@ -230,7 +232,7 @@ void ArrayCellMeshND::merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<
 		// Copy in the boundary normals from the other mesh.
 		if (other_cell_boundary_normal_count > 0) {
 			for (int64_t i = 0; i < other_cell_boundary_normal_count; i++) {
-				_simplex_cell_boundary_normals.set(start_boundary_normal_count + i, p_transform->xform_basis(p_other->_simplex_cell_boundary_normals[i]));
+				_simplex_cell_boundary_normals.set(start_boundary_normal_count + i, inverse_transpose->xform_basis(p_other->_simplex_cell_boundary_normals[i]));
 			}
 		}
 	}

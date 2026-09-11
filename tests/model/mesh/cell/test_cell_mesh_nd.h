@@ -119,6 +119,21 @@ TEST_CASE("[ArrayCellMeshND] Transform mesh") {
 }
 
 TEST_CASE("[ArrayCellMeshND] Merge indexed attributes") {
+	SUBCASE("Non-uniform scale transforms the incoming normals by the inverse-transpose") {
+		Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(4, true);
+		Ref<ArrayCellMeshND> other = make_single_simplex_cell_mesh(4, true);
+		other->set_simplex_cell_boundary_normals(Vector<VectorN>{ VectorN{ 0.0, 0.0, 0.0, 1.0 } });
+		mesh->merge_with(other, TransformND::from_position_scale(VectorN{ 10.0, 0.0, 0.0, 0.0 }, VectorN{ 1.0, 1.0, 1.0, 2.0 }));
+		const Vector<VectorN> normal_values = mesh->get_normal_values();
+		REQUIRE(normal_values.size() == 2);
+		CHECK(VectorND::is_equal_approx(normal_values[0], VectorN{ 0.0, 0.0, 0.0, 1.0 }));
+		CHECK_MESSAGE(VectorND::is_equal_approx(normal_values[1], VectorN{ 0.0, 0.0, 0.0, 0.5 }), "Stretching the last axis must shrink the merged normal value along it.");
+		const Vector<VectorN> boundary_normals = mesh->get_simplex_cell_boundary_normals();
+		REQUIRE(boundary_normals.size() == 2);
+		CHECK(VectorND::is_equal_approx(boundary_normals[1], VectorN{ 0.0, 0.0, 0.0, 0.5 }));
+		CHECK(mesh->is_mesh_data_valid());
+	}
+
 	SUBCASE("Indexed attributes are preserved and transformed") {
 		for (int dimension = 3; dimension <= 5; dimension++) {
 			Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, true);

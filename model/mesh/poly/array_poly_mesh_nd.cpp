@@ -1874,12 +1874,14 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 		other_array_mesh = p_other->to_array_poly_mesh();
 	}
 	// Merge the value pools first, remembering how the other mesh's value indices map into this
-	// mesh's pools. The other mesh's normal values need to be transformed by the merge transform.
+	// mesh's pools. The other mesh's normal values need to be transformed with the inverse-transpose
+	// of the merge basis to support non-uniform scaling (inverse_basis_transposed only transposes).
+	const Ref<TransformND> inverse_transpose = has_transform ? p_transform->inverse_basis()->inverse_basis_transposed() : Ref<TransformND>();
 	const Vector<VectorN> &other_normal_values = other_array_mesh->_poly_cell_normal_values;
 	PackedInt32Array other_normal_value_remap;
 	other_normal_value_remap.resize(other_normal_values.size());
 	for (int64_t i = 0; i < other_normal_values.size(); i++) {
-		const VectorN other_normal = has_transform ? p_transform->xform_basis(other_normal_values[i]) : other_normal_values[i];
+		const VectorN other_normal = has_transform ? inverse_transpose->xform_basis(other_normal_values[i]) : other_normal_values[i];
 		other_normal_value_remap.set(i, (int32_t)VectorND::array_append_deduplicate(_poly_cell_normal_values, other_normal));
 	}
 	const Vector<VectorM> &other_texture_map_values = other_array_mesh->_poly_cell_texture_map_values;

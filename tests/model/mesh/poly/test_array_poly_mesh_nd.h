@@ -398,6 +398,19 @@ TEST_CASE("[ArrayPolyMeshND] Transform texture map and vertices") {
 }
 
 TEST_CASE("[ArrayPolyMeshND] Merge meshes") {
+	SUBCASE("Merging with non-uniform scale transforms the other mesh's normals by the inverse-transpose") {
+		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_tetrahedron_cell_mesh();
+		Ref<ArrayPolyMeshND> other = TestPolyMeshND::make_tetrahedron_cell_mesh();
+		mesh->calculate_boundary_normals();
+		other->calculate_boundary_normals();
+		mesh->merge_with(other, TransformND::from_position_scale(VectorN{ 10.0, 0.0, 0.0, 0.0 }, VectorN{ 1.0, 1.0, 1.0, 2.0 }));
+		const Vector<VectorN> normals = mesh->get_poly_cell_boundary_normals();
+		REQUIRE(normals.size() == 2);
+		CHECK(VectorND::is_equal_approx(normals[0], VectorN{ 0.0, 0.0, 0.0, 1.0 }));
+		CHECK_MESSAGE(VectorND::is_equal_approx(normals[1], VectorN{ 0.0, 0.0, 0.0, 0.5 }), "Stretching the last axis must shrink the merged boundary normal along it.");
+		CHECK(mesh->is_poly_mesh_data_valid());
+	}
+
 	SUBCASE("Merging two tetrahedra with an offset adjusts all indices") {
 		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_tetrahedron_cell_mesh();
 		Ref<ArrayPolyMeshND> other = TestPolyMeshND::make_tetrahedron_cell_mesh();
@@ -910,7 +923,8 @@ TEST_CASE("[ArrayPolyMeshND] Self merge snapshots indexed attributes") {
 		REQUIRE(normals[cell].size() == 4);
 		REQUIRE(textures[cell].size() == 4);
 		for (int vertex = 0; vertex < 4; vertex++) {
-			CHECK(normals[cell][vertex] == VectorND::multiply_scalar(normal, cell + 1));
+			// The merged copy is scaled uniformly by 2, so its normals are scaled by the inverse-transpose, 0.5.
+			CHECK(normals[cell][vertex] == (cell == 0 ? normal : VectorND::multiply_scalar(normal, 0.5)));
 			CHECK(textures[cell][vertex] == texture);
 		}
 	}
@@ -1810,7 +1824,7 @@ TEST_CASE("[ArrayPolyMeshND] Dense merge bindings preserve prefixes and geometry
 								VectorN expected_normal;
 								VectorM expected_map;
 								if (i < input_count) {
-									expected_normal = half == 0 ? input_normals[0][i] : transform->xform_basis(input_normals[0][i]);
+									expected_normal = half == 0 ? input_normals[0][i] : transform->inverse_basis()->inverse_basis_transposed()->xform_basis(input_normals[0][i]);
 									expected_map = input_maps[0][i];
 								}
 								if (i < input_count || !boundary_normals) {
@@ -1825,7 +1839,7 @@ TEST_CASE("[ArrayPolyMeshND] Dense merge bindings preserve prefixes and geometry
 									expected_maps = input_maps[i];
 									if (half == 1) {
 										for (int64_t j = 0; j < expected_normals.size(); j++) {
-											expected_normals.set(j, transform->xform_basis(expected_normals[j]));
+											expected_normals.set(j, transform->inverse_basis()->inverse_basis_transposed()->xform_basis(expected_normals[j]));
 										}
 									}
 								}
@@ -1927,7 +1941,7 @@ TEST_CASE("[ArrayPolyMeshND] Self merge snapshots attributes and refreshes prime
 				REQUIRE(merged[0].size() == count * 2);
 				for (int64_t i = 0; i < count; i++) {
 					CHECK(merged[0][i] == binding.value[0][i]);
-					CHECK(merged[0][i + count] == transform->xform_basis(binding.value[0][i]));
+					CHECK(merged[0][i + count] == transform->inverse_basis()->inverse_basis_transposed()->xform_basis(binding.value[0][i]));
 				}
 			} else {
 				const int64_t count = binding.value.size();
@@ -1936,7 +1950,7 @@ TEST_CASE("[ArrayPolyMeshND] Self merge snapshots attributes and refreshes prime
 					CHECK(merged[i] == binding.value[i]);
 					REQUIRE(merged[i + count].size() == binding.value[i].size());
 					for (int64_t j = 0; j < binding.value[i].size(); j++) {
-						CHECK(merged[i + count][j] == transform->xform_basis(binding.value[i][j]));
+						CHECK(merged[i + count][j] == transform->inverse_basis()->inverse_basis_transposed()->xform_basis(binding.value[i][j]));
 					}
 				}
 			}
@@ -1966,7 +1980,7 @@ TEST_CASE("[ArrayPolyMeshND] Self merge snapshots attributes and refreshes prime
 			CHECK(merged_simplex_positions[i] == simplex_positions[i]);
 			CHECK(merged_simplex_positions[i + simplex_index_count] == transform->xform(simplex_positions[i]));
 			CHECK(merged_simplex_normals[i] == simplex_normals[i]);
-			CHECK(merged_simplex_normals[i + simplex_index_count] == transform->xform_basis(simplex_normals[i]));
+			CHECK(merged_simplex_normals[i + simplex_index_count] == transform->inverse_basis()->inverse_basis_transposed()->xform_basis(simplex_normals[i]));
 			CHECK(merged_simplex_maps[i] == simplex_maps[i]);
 			CHECK(merged_simplex_maps[i + simplex_index_count] == simplex_maps[i]);
 		}
