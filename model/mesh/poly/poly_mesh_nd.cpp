@@ -957,6 +957,57 @@ Vector<VectorN> PolyMeshND::_compute_boundary_normals_based_on_cell_orientation(
 	return poly_cell_normals;
 }
 
+HashMap<Vector2i, Vector<PackedInt32Array>> PolyMeshND::get_all_poly_cell_normal_indices() {
+	HashMap<Vector2i, Vector<PackedInt32Array>> ret;
+	const Vector<PackedInt32Array> vert_normal_indices = get_poly_cell_normal_indices();
+	if (!vert_normal_indices.is_empty()) {
+		ret.insert(_get_cell_to_vert_key(), vert_normal_indices);
+	}
+	// Note: Callers may wish to also append `get_poly_cell_boundary_normals` as (N-1, N-1), but this requires modifying the values array as well.
+	return ret;
+}
+
+HashMap<Vector2i, Vector<PackedInt32Array>> PolyMeshND::get_all_poly_cell_texture_map_indices() {
+	HashMap<Vector2i, Vector<PackedInt32Array>> ret;
+	const Vector<PackedInt32Array> vert_texture_map_indices = get_poly_cell_texture_map_indices();
+	if (!vert_texture_map_indices.is_empty()) {
+		ret.insert(_get_cell_to_vert_key(), vert_texture_map_indices);
+	}
+	return ret;
+}
+
+PolyMeshND::PolyDataDictionary PolyMeshND::get_all_poly_cell_normal_indices_bind() {
+	PolyDataDictionary result;
+	const HashMap<Vector2i, Vector<PackedInt32Array>> all_poly_cell_normal_indices = get_all_poly_cell_normal_indices();
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : all_poly_cell_normal_indices) {
+		const Vector2i &key = kv.key;
+		const Vector<PackedInt32Array> &normal_indices_data = kv.value;
+		Array normal_indices_array;
+		normal_indices_array.resize(normal_indices_data.size());
+		for (int64_t i = 0; i < normal_indices_data.size(); i++) {
+			normal_indices_array[i] = normal_indices_data[i];
+		}
+		result[key] = normal_indices_array;
+	}
+	return result;
+}
+
+PolyMeshND::PolyDataDictionary PolyMeshND::get_all_poly_cell_texture_map_indices_bind() {
+	PolyDataDictionary result;
+	const HashMap<Vector2i, Vector<PackedInt32Array>> all_poly_cell_texture_map_indices = get_all_poly_cell_texture_map_indices();
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : all_poly_cell_texture_map_indices) {
+		const Vector2i &key = kv.key;
+		const Vector<PackedInt32Array> &texture_map_indices_data = kv.value;
+		Array texture_map_indices_array;
+		texture_map_indices_array.resize(texture_map_indices_data.size());
+		for (int64_t i = 0; i < texture_map_indices_data.size(); i++) {
+			texture_map_indices_array[i] = texture_map_indices_data[i];
+		}
+		result[key] = texture_map_indices_array;
+	}
+	return result;
+}
+
 Vector<PackedInt32Array> PolyMeshND::get_all_face_vertex_indices() {
 	ERR_FAIL_COND_V(!is_mesh_data_valid(), Vector<PackedInt32Array>());
 	const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
@@ -1637,6 +1688,9 @@ Vector<VectorN> PolyMeshND::get_vertex_positions() {
 }
 
 void PolyMeshND::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("get_all_poly_cell_normal_indices"), &PolyMeshND::get_all_poly_cell_normal_indices_bind);
+	ClassDB::bind_method(D_METHOD("get_all_poly_cell_texture_map_indices"), &PolyMeshND::get_all_poly_cell_texture_map_indices_bind);
+
 	ClassDB::bind_method(D_METHOD("get_all_face_vertex_indices"), &PolyMeshND::get_all_face_vertex_indices_bind);
 	ClassDB::bind_method(D_METHOD("get_all_cell_vertex_indices", "start_with_canonical_span"), &PolyMeshND::get_all_boundary_cell_vertex_indices_bind);
 	ClassDB::bind_method(D_METHOD("get_all_poly_cell_vertex_indices", "cell_dimension", "start_with_canonical_span"), &PolyMeshND::get_all_poly_cell_vertex_indices_bind);

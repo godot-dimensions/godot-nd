@@ -2210,7 +2210,7 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 
 // Getters and setters.
 
-HashMap<Vector2i, Vector<PackedInt32Array>> ArrayPolyMeshND::get_all_poly_cell_normal_indices() const {
+HashMap<Vector2i, Vector<PackedInt32Array>> ArrayPolyMeshND::get_all_poly_cell_normal_indices() {
 	return HashMap<Vector2i, Vector<PackedInt32Array>>(_all_poly_cell_normal_indices);
 }
 
@@ -2219,7 +2219,7 @@ void ArrayPolyMeshND::set_all_poly_cell_normal_indices(const HashMap<Vector2i, V
 	poly_mesh_clear_cache(true);
 }
 
-HashMap<Vector2i, Vector<PackedInt32Array>> ArrayPolyMeshND::get_all_poly_cell_texture_map_indices() const {
+HashMap<Vector2i, Vector<PackedInt32Array>> ArrayPolyMeshND::get_all_poly_cell_texture_map_indices() {
 	return HashMap<Vector2i, Vector<PackedInt32Array>>(_all_poly_cell_texture_map_indices);
 }
 
@@ -2297,21 +2297,6 @@ void ArrayPolyMeshND::set_poly_cell_dense_texture_map(const Vector2i &p_key, con
 	poly_mesh_clear_cache(false);
 }
 
-ArrayPolyMeshND::PolyDataDictionary ArrayPolyMeshND::get_all_poly_cell_normal_indices_bind() const {
-	PolyDataDictionary result;
-	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : _all_poly_cell_normal_indices) {
-		const Vector2i &key = kv.key;
-		const Vector<PackedInt32Array> &normal_indices_data = kv.value;
-		Array normal_indices_array;
-		normal_indices_array.resize(normal_indices_data.size());
-		for (int64_t i = 0; i < normal_indices_data.size(); i++) {
-			normal_indices_array[i] = normal_indices_data[i];
-		}
-		result[key] = normal_indices_array;
-	}
-	return result;
-}
-
 void ArrayPolyMeshND::set_all_poly_cell_normal_indices_bind(const PolyDataDictionary &p_all_poly_cell_normal_indices) {
 	HashMap<Vector2i, Vector<PackedInt32Array>> normal_indices_hashmap;
 	const Array normal_indices_keys = p_all_poly_cell_normal_indices.keys();
@@ -2327,21 +2312,6 @@ void ArrayPolyMeshND::set_all_poly_cell_normal_indices_bind(const PolyDataDictio
 		normal_indices_hashmap.insert(key, normal_indices_data);
 	}
 	set_all_poly_cell_normal_indices(normal_indices_hashmap);
-}
-
-ArrayPolyMeshND::PolyDataDictionary ArrayPolyMeshND::get_all_poly_cell_texture_map_indices_bind() const {
-	PolyDataDictionary result;
-	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : _all_poly_cell_texture_map_indices) {
-		const Vector2i &key = kv.key;
-		const Vector<PackedInt32Array> &texture_map_indices_data = kv.value;
-		Array texture_map_indices_array;
-		texture_map_indices_array.resize(texture_map_indices_data.size());
-		for (int64_t i = 0; i < texture_map_indices_data.size(); i++) {
-			texture_map_indices_array[i] = texture_map_indices_data[i];
-		}
-		result[key] = texture_map_indices_array;
-	}
-	return result;
 }
 
 void ArrayPolyMeshND::set_all_poly_cell_texture_map_indices_bind(const PolyDataDictionary &p_all_poly_cell_texture_map_indices) {
@@ -2624,10 +2594,8 @@ void ArrayPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_edge_indices", "edge_indices"), &ArrayPolyMeshND::set_edge_vertex_indices);
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "edge_indices"), "set_edge_indices", "get_edge_indices");
 
-	// Normals and texture maps. The "all" ones need the getters bound here.
-	ClassDB::bind_method(D_METHOD("get_all_poly_cell_normal_indices"), &ArrayPolyMeshND::get_all_poly_cell_normal_indices_bind);
+	// Normals and texture maps.
 	ClassDB::bind_method(D_METHOD("set_all_poly_cell_normal_indices", "all_poly_cell_normal_indices"), &ArrayPolyMeshND::set_all_poly_cell_normal_indices_bind);
-	ClassDB::bind_method(D_METHOD("get_all_poly_cell_texture_map_indices"), &ArrayPolyMeshND::get_all_poly_cell_texture_map_indices_bind);
 	ClassDB::bind_method(D_METHOD("set_all_poly_cell_texture_map_indices", "all_poly_cell_texture_map_indices"), &ArrayPolyMeshND::set_all_poly_cell_texture_map_indices_bind);
 #if GODOT_HAS_TYPED_DICTIONARY
 	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "all_poly_cell_normal_indices", PROPERTY_HINT_TYPE_STRING, "Vector2i:Array"), "set_all_poly_cell_normal_indices", "get_all_poly_cell_normal_indices");

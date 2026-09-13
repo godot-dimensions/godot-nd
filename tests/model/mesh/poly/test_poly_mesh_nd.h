@@ -1296,6 +1296,16 @@ TEST_CASE("[PolyMeshND] Indexed generated attributes across dimensions") {
 		Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
 		CHECK(mesh->get_poly_cell_normal_indices() == box->get_poly_cell_normal_indices());
 		CHECK(mesh->get_poly_cell_texture_map_indices() == box->get_poly_cell_texture_map_indices());
+		// The base class exposes the per-vertex bindings under the (N-1, 0) key.
+		const HashMap<Vector2i, Vector<PackedInt32Array>> box_all_normal_indices = box->get_all_poly_cell_normal_indices();
+		const HashMap<Vector2i, Vector<PackedInt32Array>> box_all_texture_map_indices = box->get_all_poly_cell_texture_map_indices();
+		const Vector2i cell_to_vert_key = Vector2i(dimension - 1, 0);
+		REQUIRE(box_all_normal_indices.size() == 1);
+		REQUIRE(box_all_texture_map_indices.size() == 1);
+		REQUIRE(box_all_normal_indices.has(cell_to_vert_key));
+		REQUIRE(box_all_texture_map_indices.has(cell_to_vert_key));
+		CHECK(box_all_normal_indices[cell_to_vert_key] == box->get_poly_cell_normal_indices());
+		CHECK(box_all_texture_map_indices[cell_to_vert_key] == box->get_poly_cell_texture_map_indices());
 		CHECK(mesh->get_poly_cell_normal_values() == box->get_poly_cell_normal_values());
 		CHECK(mesh->get_poly_cell_texture_map_values() == box->get_poly_cell_texture_map_values());
 		mesh->set_flat_shading_normals();

@@ -251,7 +251,8 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 		// This function works with dense normal and texture map data, sampled from
 		// the indexed data on read and converted back to indexed data when written.
 		HashMap<Vector2i, Vector<Vector<VectorN>>> all_poly_cell_normals;
-		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &normal_kv : ret->get_all_poly_cell_normal_indices()) {
+		const HashMap<Vector2i, Vector<PackedInt32Array>> all_poly_cell_normal_indices = ret->get_all_poly_cell_normal_indices();
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &normal_kv : all_poly_cell_normal_indices) {
 			all_poly_cell_normals.insert(normal_kv.key, ret->get_poly_cell_dense_normals(normal_kv.key));
 		}
 		if (has_boundary_to_extruded_cell && all_poly_cell_normals.has(input_per_cell_key) && all_poly_cell_normals[input_per_cell_key].size() == 1) {
@@ -390,7 +391,8 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 		}
 		// Copy over the vertex texture maps from the original boundary cells, if that data is present.
 		HashMap<Vector2i, Vector<Vector<VectorM>>> all_poly_cell_texture_maps;
-		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &tex_map_kv : ret->get_all_poly_cell_texture_map_indices()) {
+		const HashMap<Vector2i, Vector<PackedInt32Array>> ret_all_poly_cell_texture_map_indices = ret->get_all_poly_cell_texture_map_indices();
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &tex_map_kv : ret_all_poly_cell_texture_map_indices) {
 			all_poly_cell_texture_maps.insert(tex_map_kv.key, ret->get_poly_cell_dense_texture_map(tex_map_kv.key));
 		}
 		if (has_boundary_to_extruded_cell && all_poly_cell_texture_maps.has(input_cell_to_vert_key)) {
@@ -1244,11 +1246,13 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 	// Subdivision works with dense normal and texture map data, sampled from
 	// the indexed data at the start and converted back to indexed at the end.
 	HashMap<Vector2i, Vector<Vector<VectorN>>> old_all_normals;
-	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &old_normal_kv : p_input_mesh->get_all_poly_cell_normal_indices()) {
+	const HashMap<Vector2i, Vector<PackedInt32Array>> input_all_poly_cell_normal_indices = p_input_mesh->get_all_poly_cell_normal_indices();
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &old_normal_kv : input_all_poly_cell_normal_indices) {
 		old_all_normals.insert(old_normal_kv.key, p_input_mesh->get_poly_cell_dense_normals(old_normal_kv.key));
 	}
 	HashMap<Vector2i, Vector<Vector<VectorM>>> old_all_texture_maps;
-	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &old_tex_map_kv : p_input_mesh->get_all_poly_cell_texture_map_indices()) {
+	const HashMap<Vector2i, Vector<PackedInt32Array>> input_all_poly_cell_texture_map_indices = p_input_mesh->get_all_poly_cell_texture_map_indices();
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &old_tex_map_kv : input_all_poly_cell_texture_map_indices) {
 		old_all_texture_maps.insert(old_tex_map_kv.key, p_input_mesh->get_poly_cell_dense_texture_map(old_tex_map_kv.key));
 	}
 	const HashSet<int32_t> old_seams = p_input_mesh->get_seam_indices();
