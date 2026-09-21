@@ -174,4 +174,19 @@ TEST_CASE("[VectorND] Perpendicular") {
 	ERR_PRINT_ON;
 	CHECK(empty_perpendicular.is_empty());
 }
+
+TEST_CASE("[VectorND] Array is equal approx") {
+	const Vector<VectorN> a = { VectorN{ 1.0, 2.0, 3.0 }, VectorN{ 0.0, -1.0, 0.5 } };
+	CHECK(VectorND::array_is_equal_approx(a, a));
+	CHECK(VectorND::array_is_equal_approx(Vector<VectorN>(), Vector<VectorN>()));
+	// Tiny differences within the floating point tolerance are considered equal, unlike the exact comparison.
+	const Vector<VectorN> nearly_a = { VectorN{ 1.0 + 1e-12, 2.0, 3.0 }, VectorN{ 0.0, -1.0, 0.5 - 1e-12 } };
+	CHECK(VectorND::array_is_equal_approx(a, nearly_a));
+	CHECK_FALSE(VectorND::array_is_equal_exact(a, nearly_a));
+	// A different vector count or a clearly different component is not equal.
+	CHECK_FALSE(VectorND::array_is_equal_approx(a, Vector<VectorN>{ a[0] }));
+	CHECK_FALSE(VectorND::array_is_equal_approx(a, Vector<VectorN>{ a[0], VectorN{ 0.0, -1.0, 0.6 } }));
+	// Missing trailing components are treated as zero, the same as the single vector comparison.
+	CHECK(VectorND::array_is_equal_approx(Vector<VectorN>{ VectorN{ 1.0, 0.0 } }, Vector<VectorN>{ VectorN{ 1.0 } }));
+}
 } // namespace TestVectorND

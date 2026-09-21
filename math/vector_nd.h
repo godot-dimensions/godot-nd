@@ -195,6 +195,7 @@ public:
 	static int64_t array_append_deduplicate(Vector<VectorN> &r_array, const VectorN &p_vector);
 	static Vector<VectorN> array_fill(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value);
 	static TypedArray<VectorN> array_fill_bind(const int64_t p_dimension, const int64_t p_vector_amount, const double p_value);
+	static bool array_is_equal_approx(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b);
 	static bool array_is_equal_exact(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b);
 
 	// Conversion.

@@ -168,6 +168,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(EditorImportPluginBaseND);
 		GDREGISTER_CLASS(EditorImportPluginOFFBaseND);
 		GDREGISTER_CLASS(EditorImportPluginOFFCellND);
+		GDREGISTER_CLASS(EditorImportPluginOFFPolyND);
 		GDREGISTER_CLASS(EditorImportPluginOFFSceneND);
 		GDREGISTER_CLASS(EditorImportPluginOFFWireND);
 		// Pieces of the editor viewport.

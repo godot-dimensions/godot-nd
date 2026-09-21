@@ -2,6 +2,7 @@
 
 #include "../../../model/mesh/cell/array_cell_mesh_nd.h"
 #include "../../../model/mesh/cell/cell_material_nd.h"
+#include "../../../model/mesh/poly/array_poly_mesh_nd.h"
 #include "../../../model/mesh/poly/box_poly_mesh_nd.h"
 #include "../../../model/mesh/poly/poly_material_nd.h"
 #include "../../../model/off/off_document_nd.h"
@@ -131,7 +132,10 @@ TEST_CASE("[OFFDocumentND] Export converts simplex cell meshes into the OFF hier
 		CHECK(faces[1] == PackedInt32Array{ 0, 2, 3 });
 		CHECK(faces[2] == PackedInt32Array{ 1, 0, 3 });
 		CHECK(faces[3] == PackedInt32Array{ 0, 1, 2 });
-		CHECK(off_document->get_cell_face_indices()[1][0] == PackedInt32Array{ 0, 1, 2, 3 });
+		// The first two facets may be swapped by the export to orient the cell, so compare the set of facets.
+		PackedInt32Array first_cell_facets = off_document->get_cell_face_indices()[1][0];
+		first_cell_facets.sort();
+		CHECK(first_cell_facets == PackedInt32Array{ 0, 1, 2, 3 });
 		CHECK_MESSAGE(off_document->get_cell_face_indices()[1][1].has(0), "The second tetrahedron must reuse the shared face instead of duplicating it.");
 		const PackedStringArray lines = export_off_to_string(off_document).split("\n", false);
 		REQUIRE(lines.size() > 2);
@@ -285,5 +289,199 @@ TEST_CASE("[OFFDocumentND] Export rejects meshes below 3 dimensions") {
 	Ref<OFFDocumentND> off_document = OFFDocumentND::export_convert_mesh_nd(mesh);
 	ERR_PRINT_ON;
 	CHECK(off_document.is_null());
+}
+
+TEST_CASE("[OFFDocumentND] Import generates poly meshes with determinable cell orientation") {
+	// A 4D 5-cell from raw OFF text.
+	{
+		Ref<OFFDocumentND> off_document = OFFDocumentND::import_load_from_byte_array(String(FIVE_CELL_OFF_TEXT).to_utf8_buffer());
+		REQUIRE(off_document.is_valid());
+		Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
+		REQUIRE(poly_mesh.is_valid());
+		CHECK(poly_mesh->is_poly_mesh_data_valid());
+		CHECK(poly_mesh->get_dimension() == 4);
+		CHECK(poly_mesh->get_poly_cell_vertex_positions().size() == 5);
+		CHECK_MESSAGE(poly_mesh->get_edge_indices().size() == 10 * 2, "A 5-cell has 10 unique edges.");
+		REQUIRE(poly_mesh->get_poly_cell_indices().size() == 2);
+		CHECK(poly_mesh->get_poly_cell_indices()[0].size() == 10);
+		CHECK(poly_mesh->get_poly_cell_indices()[1].size() == 5);
+		CHECK_MESSAGE(poly_mesh->get_all_face_vertex_indices() == off_document->get_cell_face_indices()[0], "Faces must keep the vertex winding of the OFF file.");
+		poly_mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+		const Vector<VectorN> normals = poly_mesh->get_poly_cell_boundary_normals();
+		REQUIRE(normals.size() == 5);
+		for (const VectorN &normal : normals) {
+			CHECK_MESSAGE(!VectorND::is_zero_approx(normal), "Every imported cell must have a determinable orientation.");
+		}
+	}
+	// A 3D cube, which only has faces, so the faces are the boundary cells.
+	{
+		Ref<BoxPolyMeshND> box;
+		box.instantiate();
+		box->set_size(VectorND::fill(3, 1.0));
+		Ref<OFFDocumentND> off_document = OFFDocumentND::export_convert_mesh_nd(box);
+		REQUIRE(off_document.is_valid());
+		Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
+		REQUIRE(poly_mesh.is_valid());
+		CHECK(poly_mesh->is_poly_mesh_data_valid());
+		CHECK(poly_mesh->get_dimension() == 3);
+		CHECK(poly_mesh->get_edge_indices().size() == 12 * 2);
+		REQUIRE(poly_mesh->get_poly_cell_indices().size() == 1);
+		CHECK(poly_mesh->get_poly_cell_indices()[0].size() == 6);
+		poly_mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+		CHECK(VectorND::array_is_equal_approx(poly_mesh->get_poly_cell_boundary_normals(), box->get_poly_cell_boundary_normals()));
+	}
+	// Cells whose first two faces do not share an edge must be reordered so that the orientation is determinable.
+	{
+		Ref<BoxPolyMeshND> box;
+		box.instantiate();
+		box->set_size(VectorND::fill(4, 1.0));
+		Ref<OFFDocumentND> off_document = OFFDocumentND::export_convert_mesh_nd(box);
+		REQUIRE(off_document.is_valid());
+		Vector<Vector<PackedInt32Array>> cell_face_indices = off_document->get_cell_face_indices();
+		REQUIRE(cell_face_indices.size() == 2);
+		// Box cells list their 3 negative-side faces and then their 3 positive-side faces, so
+		// members 0 and 3 are opposite faces of the cube, which share no edge.
+		const PackedInt32Array original_cell = cell_face_indices[1][0];
+		PackedInt32Array reordered_cell = original_cell;
+		reordered_cell.set(1, original_cell[3]);
+		reordered_cell.set(3, original_cell[1]);
+		Vector<PackedInt32Array> cells = cell_face_indices[1];
+		cells.set(0, reordered_cell);
+		cell_face_indices.set(1, cells);
+		off_document->set_cell_face_indices(cell_face_indices);
+		Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
+		REQUIRE(poly_mesh.is_valid());
+		CHECK(poly_mesh->is_poly_mesh_data_valid());
+		const PackedInt32Array first_cell = poly_mesh->get_poly_cell_indices()[1][0];
+		CHECK(first_cell[0] == original_cell[0]);
+		CHECK_MESSAGE(first_cell[1] != original_cell[3], "The opposite face must be moved out of the first two members.");
+		CHECK(first_cell.has(original_cell[3]));
+		CHECK(first_cell.size() == 6);
+	}
+}
+
+TEST_CASE("[OFFDocumentND] Poly mesh round trips preserve cell orientation") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		Ref<BoxPolyMeshND> box;
+		box.instantiate();
+		box->set_size(VectorND::fill(dimension, 1.0));
+		Ref<OFFDocumentND> off_document = OFFDocumentND::export_convert_mesh_nd(box);
+		REQUIRE(off_document.is_valid());
+		Ref<OFFDocumentND> reimported = OFFDocumentND::import_load_from_byte_array(off_document->export_save_to_byte_array());
+		REQUIRE(reimported.is_valid());
+		Ref<ArrayPolyMeshND> poly_mesh = reimported->import_generate_array_poly_mesh_nd();
+		REQUIRE(poly_mesh.is_valid());
+		REQUIRE(poly_mesh->is_poly_mesh_data_valid());
+		CHECK(poly_mesh->get_dimension() == dimension);
+		CHECK(poly_mesh->get_poly_cell_vertex_positions().size() == box->get_poly_cell_vertex_positions().size());
+		CHECK(poly_mesh->get_edge_indices().size() == box->get_edge_indices().size());
+		const Vector<Vector<PackedInt32Array>> box_cells = box->get_poly_cell_indices();
+		const Vector<Vector<PackedInt32Array>> imported_cells = poly_mesh->get_poly_cell_indices();
+		REQUIRE_MESSAGE(imported_cells.size() == dimension - 2, "OFF does not store the hypervolume, so the imported mesh has one less level than the box.");
+		for (int64_t dim_index = 1; dim_index < imported_cells.size(); dim_index++) {
+			CHECK_MESSAGE(imported_cells[dim_index] == box_cells[dim_index], "Cells above the faces must round-trip exactly, including the order of their members.");
+		}
+		poly_mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+		CHECK_MESSAGE(VectorND::array_is_equal_approx(poly_mesh->get_poly_cell_boundary_normals(), box->get_poly_cell_boundary_normals()), "The orientation-derived normals of the imported cells must match the box's outward normals.");
+	}
+}
+
+TEST_CASE("[OFFDocumentND] Export flips poly cells whose orientation disagrees with their normals") {
+	Ref<BoxPolyMeshND> box;
+	box.instantiate();
+	box->set_size(VectorND::fill(4, 1.0));
+	const Vector<Vector<PackedInt32Array>> box_cells = box->get_poly_cell_indices();
+	Ref<ArrayPolyMeshND> array_mesh = box->to_array_poly_mesh();
+	REQUIRE(VectorND::array_is_equal_exact(array_mesh->get_poly_cell_boundary_normals(), box->get_poly_cell_boundary_normals()));
+	// Flip the orientation of the first boundary cell, but keep its stored outward normal.
+	Vector<Vector<PackedInt32Array>> flipped_cells = box_cells;
+	Vector<PackedInt32Array> boundary_cells = flipped_cells[1];
+	PackedInt32Array first_cell = boundary_cells[0];
+	PolyMeshND::flip_poly_cell_orientation(first_cell, 1);
+	boundary_cells.set(0, first_cell);
+	flipped_cells.set(1, boundary_cells);
+	array_mesh->set_poly_cell_indices(flipped_cells);
+	REQUIRE(array_mesh->get_poly_cell_indices()[1][0] != box_cells[1][0]);
+	// The exported cell must be flipped back so that a reader derives the stored normal from it.
+	Ref<OFFDocumentND> off_document = OFFDocumentND::export_convert_mesh_nd(array_mesh);
+	REQUIRE(off_document.is_valid());
+	REQUIRE(off_document->get_cell_face_indices().size() == 2);
+	CHECK(off_document->get_cell_face_indices()[1][0] == box_cells[1][0]);
+	for (int64_t cell_number = 1; cell_number < 8; cell_number++) {
+		CHECK(off_document->get_cell_face_indices()[1][cell_number] == box_cells[1][cell_number]);
+	}
+	Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
+	REQUIRE(poly_mesh.is_valid());
+	poly_mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+	CHECK(VectorND::array_is_equal_approx(poly_mesh->get_poly_cell_boundary_normals(), box->get_poly_cell_boundary_normals()));
+}
+
+TEST_CASE("[OFFDocumentND] Exported simplex cells are oriented to match their boundary normals") {
+	// Two tetrahedra in 4D: the first lies in the W=0 hyperplane, and the second in the X+Y+Z+W=1 hyperplane.
+	const Vector<VectorN> normals = {
+		VectorN{ 0.0, 0.0, 0.0, 1.0 },
+		VectorN{ 0.5, 0.5, 0.5, 0.5 },
+	};
+	for (int sign = -1; sign <= 1; sign += 2) {
+		Ref<ArrayCellMeshND> mesh = make_two_simplex_cell_mesh(4);
+		Vector<VectorN> signed_normals;
+		for (const VectorN &normal : normals) {
+			signed_normals.append(VectorND::multiply_scalar(normal, (double)sign));
+		}
+		mesh->set_simplex_cell_boundary_normals(signed_normals);
+		REQUIRE(mesh->is_mesh_data_valid());
+		Ref<OFFDocumentND> off_document = OFFDocumentND::export_convert_mesh_nd(mesh);
+		REQUIRE(off_document.is_valid());
+		Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
+		REQUIRE(poly_mesh.is_valid());
+		REQUIRE(poly_mesh->is_poly_mesh_data_valid());
+		poly_mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+		const Vector<VectorN> derived_normals = poly_mesh->get_poly_cell_boundary_normals();
+		REQUIRE(derived_normals.size() == 2);
+		for (int64_t cell_number = 0; cell_number < 2; cell_number++) {
+			CHECK_MESSAGE(VectorND::is_equal_approx(derived_normals[cell_number], signed_normals[cell_number]), "The orientation derived from the exported faces must reproduce the explicit boundary normal, for either sign.");
+		}
+	}
+	// Without explicit normals, the orientation of each simplex's vertex order is used, so both round trips must agree.
+	{
+		Ref<ArrayCellMeshND> mesh = make_two_simplex_cell_mesh(4);
+		Ref<OFFDocumentND> off_document = OFFDocumentND::export_convert_mesh_nd(mesh);
+		REQUIRE(off_document.is_valid());
+		Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
+		REQUIRE(poly_mesh.is_valid());
+		poly_mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+		const Vector<VectorN> derived_normals = poly_mesh->get_poly_cell_boundary_normals();
+		REQUIRE(derived_normals.size() == 2);
+		const Vector<VectorN> vertex_positions = mesh->get_vertex_positions();
+		const PackedInt32Array cell_vertex_indices = mesh->get_simplex_cell_vertex_indices();
+		for (int64_t cell_number = 0; cell_number < 2; cell_number++) {
+			Vector<VectorN> directions;
+			for (int64_t i = 1; i < 4; i++) {
+				directions.append(VectorND::direction_to(vertex_positions[cell_vertex_indices[cell_number * 4]], vertex_positions[cell_vertex_indices[cell_number * 4 + i]]));
+			}
+			const VectorN expected = VectorND::normalized(VectorND::perpendicular(directions));
+			CHECK(VectorND::is_equal_approx(derived_normals[cell_number], expected));
+		}
+	}
+}
+
+TEST_CASE("[OFFDocumentND] Imported poly meshes get poly materials from cell colors") {
+	Ref<ArrayCellMeshND> mesh = make_two_simplex_cell_mesh(4);
+	Ref<CellMaterialND> material;
+	material.instantiate();
+	material->set_albedo_source_flags(MaterialND::COLOR_SOURCE_FLAG_PER_CELL);
+	material->set_albedo_color_array(PackedColorArray{ Color(1.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 1.0f) });
+	mesh->set_material(material);
+	Ref<OFFDocumentND> off_document = OFFDocumentND::import_load_from_byte_array(OFFDocumentND::export_convert_mesh_nd(mesh)->export_save_to_byte_array());
+	REQUIRE(off_document.is_valid());
+	Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
+	REQUIRE(poly_mesh.is_valid());
+	Ref<PolyMaterialND> poly_material = poly_mesh->get_material();
+	REQUIRE(poly_material.is_valid());
+	CHECK((poly_material->get_albedo_source_flags() & MaterialND::COLOR_SOURCE_FLAG_PER_CELL) != 0);
+	REQUIRE(poly_material->get_poly_albedo_color_array().size() == 2);
+	CHECK(poly_material->get_poly_albedo_color_array()[0].is_equal_approx(Color(1.0f, 0.0f, 0.0f)));
+	CHECK(poly_material->get_poly_albedo_color_array()[1].is_equal_approx(Color(0.0f, 0.0f, 1.0f)));
+	CHECK_MESSAGE(poly_material->get_albedo_color_array().size() == poly_mesh->get_simplex_cell_count(), "The per-simplex colors must be populated from the per-poly-cell colors.");
 }
 } // namespace TestOFFDocumentND

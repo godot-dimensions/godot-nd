@@ -1,5 +1,6 @@
 #include "off_document_nd.h"
 
+#include "../../math/math_nd.h"
 #include "../../math/vector_nd.h"
 #include "../mesh/cell/cell_material_nd.h"
 #include "../mesh/mesh_instance_nd.h"
@@ -140,6 +141,42 @@ void OFFDocumentND::_export_convert_cell_colors_nd(const Ref<CellMeshND> &p_mesh
 	_has_any_cell_colors = !boundary_cell_colors.is_empty();
 }
 
+void OFFDocumentND::_export_orient_boundary_cells_nd(const Vector<VectorN> &p_desired_normals) {
+	// PolyMeshND derives each boundary cell's normal from the order of the cell's first two members
+	// (or the winding of a face). Predict what a reader of this file would derive by importing it the
+	// same way, then flip any cell whose predicted normal is anti-aligned with the desired normal.
+	const int64_t boundary_dim_index = int64_t(_dimension) - 3;
+	if (boundary_dim_index < 0 || _cell_face_indices.size() != boundary_dim_index + 1) {
+		return;
+	}
+	Vector<PackedInt32Array> boundary_cells = _cell_face_indices[boundary_dim_index];
+	if (p_desired_normals.size() != boundary_cells.size()) {
+		return;
+	}
+	Ref<ArrayPolyMeshND> predicted_mesh = import_generate_array_poly_mesh_nd();
+	if (predicted_mesh.is_null() || !predicted_mesh->is_poly_mesh_data_valid()) {
+		return;
+	}
+	predicted_mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+	const Vector<VectorN> predicted_normals = predicted_mesh->get_poly_cell_boundary_normals();
+	if (predicted_normals.size() != boundary_cells.size()) {
+		return;
+	}
+	for (int64_t cell_number = 0; cell_number < boundary_cells.size(); cell_number++) {
+		const VectorN &desired_normal = p_desired_normals[cell_number];
+		const VectorN &predicted_normal = predicted_normals[cell_number];
+		if (VectorND::is_zero_approx(desired_normal) || VectorND::is_zero_approx(predicted_normal)) {
+			continue;
+		}
+		if (VectorND::dot(predicted_normal, desired_normal) < 0.0) {
+			PackedInt32Array cell = boundary_cells[cell_number];
+			PolyMeshND::flip_poly_cell_orientation(cell, boundary_dim_index);
+			boundary_cells.set(cell_number, cell);
+		}
+	}
+	_cell_face_indices.set(boundary_dim_index, boundary_cells);
+}
+
 Ref<OFFDocumentND> OFFDocumentND::export_convert_mesh_nd(const Ref<CellMeshND> &p_mesh, const bool p_deduplicate_faces) {
 	Ref<OFFDocumentND> off_document;
 	ERR_FAIL_COND_V(p_mesh.is_null(), off_document);
@@ -149,6 +186,8 @@ Ref<OFFDocumentND> OFFDocumentND::export_convert_mesh_nd(const Ref<CellMeshND> &
 	off_document->_dimension = dimension;
 	// OFF stores 2D faces at index 0, 3D cells at index 1, and so on, up to the (N-1)-dimensional boundary cells of an N-dimensional mesh.
 	const int64_t boundary_dim_index = dimension - 3;
+	// The normals that the boundary cells should have after a reader derives them from the exported cell orientations.
+	Vector<VectorN> desired_normals;
 	const Ref<PolyMeshND> poly_mesh = p_mesh;
 	if (poly_mesh.is_valid()) {
 		// PolyMeshND uses hierarchical geometry like OFF, but each face references edges instead of vertices.
@@ -162,6 +201,7 @@ Ref<OFFDocumentND> OFFDocumentND::export_convert_mesh_nd(const Ref<CellMeshND> &
 		for (int64_t i = 1; i < cell_dim_count; i++) {
 			off_document->_cell_face_indices.set(i, poly_cell_indices[i]);
 		}
+		desired_normals = poly_mesh->get_poly_cell_boundary_normals();
 	} else {
 		// CellMeshND references its simplex cells by vertex indices, but OFF files reference cells by their
 		// facets one dimension down, so build the whole hierarchy of faces, cells, etc. from each simplex.
@@ -173,14 +213,30 @@ Ref<OFFDocumentND> OFFDocumentND::export_convert_mesh_nd(const Ref<CellMeshND> &
 		off_document->_cell_face_indices.resize(boundary_dim_index + 1);
 		Vector<SortedIndicesMap> lookup_maps;
 		lookup_maps.resize(boundary_dim_index + 1);
+		// Cell meshes store explicit boundary normals. If there are none, use the orientation of each simplex's vertex order.
+		const int64_t simplex_count = simplex_vertex_indices.size() / indices_per_simplex;
+		desired_normals = p_mesh->get_simplex_cell_boundary_normals();
+		const bool has_explicit_normals = desired_normals.size() == simplex_count;
+		if (!has_explicit_normals) {
+			desired_normals.resize(simplex_count);
+		}
 		for (int64_t i = 0; i < simplex_vertex_indices.size(); i += indices_per_simplex) {
 			const PackedInt32Array cell_vertex_indices = simplex_vertex_indices.slice(i, i + indices_per_simplex);
 			// The boundary simplex cells themselves are never deduplicated, so that per-cell colors line up with the mesh.
 			const PackedInt32Array members = boundary_dim_index == 0 ? cell_vertex_indices : off_document->_insert_simplex_facets(cell_vertex_indices, p_deduplicate_faces, lookup_maps);
 			off_document->_cell_face_indices.write[boundary_dim_index].append(members);
+			if (!has_explicit_normals) {
+				Vector<VectorN> directions;
+				directions.resize(indices_per_simplex - 1);
+				for (int64_t j = 1; j < indices_per_simplex; j++) {
+					directions.set(j - 1, VectorND::direction_to(off_document->_vertex_positions[cell_vertex_indices[0]], off_document->_vertex_positions[cell_vertex_indices[j]]));
+				}
+				desired_normals.set(i / indices_per_simplex, VectorND::perpendicular(directions));
+			}
 		}
 	}
 	off_document->_export_convert_cell_colors_nd(p_mesh);
+	off_document->_export_orient_boundary_cells_nd(desired_normals);
 	off_document->_count_unique_edges_from_faces();
 	return off_document;
 }
@@ -341,6 +397,72 @@ Ref<ArrayCellMeshND> OFFDocumentND::import_generate_array_cell_mesh_nd() {
 	}
 	ERR_FAIL_COND_V_MSG(!cell_mesh->is_mesh_data_valid(), cell_mesh, "OFFDocumentND: Failed to import OFF as cell mesh, mesh data is not valid.");
 	return cell_mesh;
+}
+
+Ref<ArrayPolyMeshND> OFFDocumentND::import_generate_array_poly_mesh_nd() {
+	Ref<ArrayPolyMeshND> poly_mesh;
+	poly_mesh.instantiate();
+	poly_mesh->set_poly_cell_vertex_positions(_vertex_positions);
+	ERR_FAIL_COND_V_MSG(_cell_face_indices.is_empty(), poly_mesh, "OFFDocumentND: This OFF document does not contain any faces, so it cannot be converted to a poly mesh. Perhaps this is a vertex-only OFF file, or a 0D or 1D OFF file?");
+	// OFF faces reference vertices, but PolyMeshND faces reference edges, so gather the unique edges of every face.
+	// Edges are stored with ascending vertex indices, the same as ArrayPolyMeshND::append_edge_indices.
+	const Vector<PackedInt32Array> face_vertex_indices = _cell_face_indices[0];
+	PackedInt32Array edge_vertex_indices;
+	HashMap<Vector2i, int32_t> edge_lookup;
+	Vector<PackedInt32Array> face_edge_indices;
+	face_edge_indices.resize(face_vertex_indices.size());
+	for (int64_t face_number = 0; face_number < face_vertex_indices.size(); face_number++) {
+		const PackedInt32Array &this_face_vertices = face_vertex_indices[face_number];
+		const int64_t face_size = this_face_vertices.size();
+		PackedInt32Array this_face_edges;
+		this_face_edges.resize(face_size);
+		for (int64_t face_vert = 0; face_vert < face_size; face_vert++) {
+			const int32_t vertex_a = this_face_vertices[face_vert];
+			const int32_t vertex_b = this_face_vertices[(face_vert + 1) % face_size];
+			const Vector2i edge_key = Vector2i(MIN(vertex_a, vertex_b), MAX(vertex_a, vertex_b));
+			const int32_t *existing_edge = edge_lookup.getptr(edge_key);
+			if (existing_edge != nullptr) {
+				this_face_edges.set(face_vert, *existing_edge);
+				continue;
+			}
+			const int32_t new_edge = (int32_t)(edge_vertex_indices.size() / 2);
+			edge_vertex_indices.append(edge_key.x);
+			edge_vertex_indices.append(edge_key.y);
+			edge_lookup.insert(edge_key, new_edge);
+			this_face_edges.set(face_vert, new_edge);
+		}
+		face_edge_indices.set(face_number, this_face_edges);
+	}
+	poly_mesh->set_edge_vertex_indices(edge_vertex_indices);
+	// OFF cells reference faces, 4D cells reference 3D cells, and so on, the same as PolyMeshND. However,
+	// PolyMeshND defines each cell's orientation by its first two members, which must share a common ridge.
+	Vector<Vector<PackedInt32Array>> poly_cell_indices;
+	poly_cell_indices.resize(_cell_face_indices.size());
+	poly_cell_indices.set(0, face_edge_indices);
+	for (int64_t dim_index = 1; dim_index < _cell_face_indices.size(); dim_index++) {
+		Vector<PackedInt32Array> cells = _cell_face_indices[dim_index];
+		const Vector<PackedInt32Array> &members = poly_cell_indices[dim_index - 1];
+		for (int64_t cell_number = 0; cell_number < cells.size(); cell_number++) {
+			PackedInt32Array cell = cells[cell_number];
+			MathND::ensure_first_two_indices_share_common_int32(cell, members);
+			cells.set(cell_number, cell);
+		}
+		poly_cell_indices.set(dim_index, cells);
+	}
+	poly_mesh->set_poly_cell_indices(poly_cell_indices);
+	// Convert the colors of the boundary cells into a material. PolyMeshND does not support
+	// colors for lower-dimensional cells, so any colors on those are discarded.
+	const int64_t last_dim_index = _cell_face_indices.size() - 1;
+	if (_has_any_cell_colors && last_dim_index < _cell_colors.size() && last_dim_index == int64_t(poly_mesh->get_dimension()) - 3) {
+		Ref<PolyMaterialND> poly_material;
+		poly_material.instantiate();
+		poly_material->set_albedo_source_flags(MaterialND::COLOR_SOURCE_FLAG_PER_CELL);
+		poly_material->set_poly_albedo_color_array(_cell_colors[last_dim_index]);
+		poly_material->populate_albedo_color_array_for_poly_mesh(poly_mesh);
+		poly_mesh->set_material(poly_material);
+	}
+	ERR_FAIL_COND_V_MSG(!poly_mesh->is_mesh_data_valid(), poly_mesh, "OFFDocumentND: Failed to import OFF as poly mesh, mesh data is not valid.");
+	return poly_mesh;
 }
 
 Ref<ArrayWireMeshND> OFFDocumentND::import_generate_wire_mesh_nd(const bool p_deduplicate_edges) {
@@ -683,6 +805,7 @@ void OFFDocumentND::_bind_methods() {
 	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_load_from_byte_array", "data"), &OFFDocumentND::import_load_from_byte_array);
 	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_load_from_file", "path"), &OFFDocumentND::import_load_from_file);
 	ClassDB::bind_method(D_METHOD("import_generate_array_cell_mesh_nd"), &OFFDocumentND::import_generate_array_cell_mesh_nd);
+	ClassDB::bind_method(D_METHOD("import_generate_array_poly_mesh_nd"), &OFFDocumentND::import_generate_array_poly_mesh_nd);
 	ClassDB::bind_method(D_METHOD("import_generate_wire_mesh_nd", "deduplicate_edges"), &OFFDocumentND::import_generate_wire_mesh_nd, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("import_generate_node", "deduplicate_edges"), &OFFDocumentND::import_generate_node, DEFVAL(true));
 

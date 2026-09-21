@@ -2,6 +2,7 @@
 
 #include "../../godot_nd_defines.h"
 #include "../mesh/cell/array_cell_mesh_nd.h"
+#include "../mesh/poly/array_poly_mesh_nd.h"
 #include "../mesh/wire/array_wire_mesh_nd.h"
 
 #if GDEXTENSION
@@ -47,6 +48,7 @@ class OFFDocumentND : public Resource {
 	PackedInt32Array _insert_simplex_facets(const PackedInt32Array &p_simplex_vertex_indices, const bool p_deduplicate, Vector<SortedIndicesMap> &r_lookup_maps);
 	int32_t _find_or_insert_simplex_cell(const PackedInt32Array &p_simplex_vertex_indices, const bool p_deduplicate, Vector<SortedIndicesMap> &r_lookup_maps);
 	void _export_convert_cell_colors_nd(const Ref<CellMeshND> &p_mesh);
+	void _export_orient_boundary_cells_nd(const Vector<VectorN> &p_desired_normals);
 	Vector<Vector<PackedInt32Array>> _calculate_cell_vertex_indices();
 	Vector<Vector<PackedInt32Array>> _calculate_simplex_vertex_indices(const Vector<Vector<PackedInt32Array>> &p_cell_vertex_indices);
 
@@ -64,6 +66,7 @@ public:
 	static Ref<OFFDocumentND> import_load_from_byte_array(const PackedByteArray &p_data);
 	static Ref<OFFDocumentND> import_load_from_file(const String &p_path);
 	Ref<ArrayCellMeshND> import_generate_array_cell_mesh_nd();
+	Ref<ArrayPolyMeshND> import_generate_array_poly_mesh_nd();
 	Ref<ArrayWireMeshND> import_generate_wire_mesh_nd(const bool p_deduplicate_edges = true);
 	Node *import_generate_node(const bool p_deduplicate_edges = true);
 

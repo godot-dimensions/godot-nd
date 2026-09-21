@@ -180,9 +180,11 @@ void GodotNDEditorPlugin::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			_off_cell_nd_importer.instantiate();
+			_off_poly_nd_importer.instantiate();
 			_off_scene_nd_importer.instantiate();
 			_off_wire_nd_importer.instantiate();
 			add_import_plugin(_off_cell_nd_importer);
+			add_import_plugin(_off_poly_nd_importer);
 			add_import_plugin(_off_scene_nd_importer);
 			add_import_plugin(_off_wire_nd_importer);
 			_add_nd_main_screen();
@@ -195,9 +197,11 @@ void GodotNDEditorPlugin::_notification(int p_what) {
 			_remove_nd_main_screen();
 			remove_import_plugin(_off_wire_nd_importer);
 			remove_import_plugin(_off_scene_nd_importer);
+			remove_import_plugin(_off_poly_nd_importer);
 			remove_import_plugin(_off_cell_nd_importer);
 			_off_wire_nd_importer.unref();
 			_off_scene_nd_importer.unref();
+			_off_poly_nd_importer.unref();
 			_off_cell_nd_importer.unref();
 		} break;
 	}

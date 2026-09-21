@@ -1,6 +1,7 @@
 #pragma once
 
 #include "import/off/editor_import_plugin_off_cell_nd.h"
+#include "import/off/editor_import_plugin_off_poly_nd.h"
 #include "import/off/editor_import_plugin_off_scene_nd.h"
 #include "import/off/editor_import_plugin_off_wire_nd.h"
 #include "viewport/editor_main_screen_nd.h"
@@ -40,6 +41,7 @@ class GodotNDEditorPlugin : public EditorPlugin {
 	GDCLASS(GodotNDEditorPlugin, EditorPlugin);
 
 	Ref<EditorImportPluginOFFCellND> _off_cell_nd_importer;
+	Ref<EditorImportPluginOFFPolyND> _off_poly_nd_importer;
 	Ref<EditorImportPluginOFFSceneND> _off_scene_nd_importer;
 	Ref<EditorImportPluginOFFWireND> _off_wire_nd_importer;
 	EditorMainScreenND *_main_screen = nullptr;

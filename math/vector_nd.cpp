@@ -1189,6 +1189,19 @@ TypedArray<VectorN> VectorND::array_fill_bind(const int64_t p_dimension, const i
 	return filled_array;
 }
 
+bool VectorND::array_is_equal_approx(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b) {
+	const int64_t size = p_a.size();
+	if (size != p_b.size()) {
+		return false;
+	}
+	for (int64_t i = 0; i < size; i++) {
+		if (!is_equal_approx(p_a[i], p_b[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 bool VectorND::array_is_equal_exact(const Vector<VectorN> &p_a, const Vector<VectorN> &p_b) {
 	const int64_t size = p_a.size();
 	if (size != p_b.size()) {

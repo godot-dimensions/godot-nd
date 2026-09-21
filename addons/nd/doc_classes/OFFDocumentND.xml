@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		OFFDocumentND provides functions for working with the OFF file format, which is a simple text-based format for representing polygonal geometry in ND. There are functions for loading and saving OFF files, and for converting the OFF data to a ND [ArrayWireMeshND] resource.
-		In the editor, you can import OFF files as [ArrayWireMeshND] or a scene the mesh in a [MeshInstanceND] node. To change the type, select the file in the FileSystem dock, and change the "Import As" dropdown in the Import dock.
+		In the editor, you can import OFF files as [ArrayPolyMeshND], [ArrayCellMeshND], [ArrayWireMeshND], or a scene with the mesh in a [MeshInstanceND] node. To change the type, select the file in the FileSystem dock, and change the "Import As" dropdown in the Import dock.
 	</description>
 	<tutorials>
 		<link title="Wikipedia OFF file format">https://en.wikipedia.org/wiki/OFF_(file_format)</link>
@@ -19,6 +19,7 @@
 				Converts an existing ND [CellMeshND] resource to an OFFDocumentND, setting [member dimension] to the dimension of the mesh. The vertices will be the same as the ones in the mesh. This is the inverse of [method import_generate_array_cell_mesh_nd].
 				If the mesh is a [PolyMeshND], its hierarchical cell data is copied directly, since OFF stores faces, cells, and so on in the same hierarchical way. Only the cells up to the (N-1)-dimensional boundary cells are exported, so any N-dimensional hypervolume cells are discarded. Per-cell colors are taken from the [member PolyMaterialND.poly_albedo_color_array] if the mesh uses a [PolyMaterialND], or otherwise from the simplex cell colors of the boundary poly cell each simplex was decomposed from.
 				Otherwise, each (N-1)-dimensional simplex cell is decomposed into its faces, 3D cells, and so on, which OFF needs in order to reference cells by their faces. If [param deduplicate_faces] is [code]true[/code], faces and other intermediate cells shared between multiple simplex cells are only stored once, which results in a smaller file size. The simplex cells themselves are never deduplicated, so that any per-cell colors in the material line up with the mesh.
+				In both cases, the exported boundary cells are oriented so that [method import_generate_array_poly_mesh_nd] derives the same boundary normals as the mesh has. For a [PolyMeshND] these are its boundary normals, and for other cell meshes these are the simplex cell boundary normals, or the orientation of each simplex's vertex order if the mesh has no boundary normals.
 			</description>
 		</method>
 		<method name="export_save_to_byte_array">
@@ -38,6 +39,12 @@
 			<return type="ArrayCellMeshND" />
 			<description>
 				Generates an ND [ArrayCellMeshND] resource from the OFF data, for use with [MeshInstanceND]. If there are any per-cell colors in the highest dimension, they will be used as cell colors in a [CellMaterialND], and any lower dimension colors will be discarded.
+			</description>
+		</method>
+		<method name="import_generate_array_poly_mesh_nd">
+			<return type="ArrayPolyMeshND" />
+			<description>
+				Generates an ND [ArrayPolyMeshND] resource from the OFF data, for use with [MeshInstanceND]. OFF stores faces, cells, and so on in the same hierarchical way as [PolyMeshND], so the cell data is copied directly, except that faces are converted to reference edges instead of vertices. The first two members of each cell are arranged to share a common ridge, as required for [PolyMeshND] to determine the cell's orientation, so the orientation of each cell in the file is preserved. If there are any per-cell colors on the boundary cells, the mesh will have a [PolyMaterialND] with those colors, and any lower dimension colors will be discarded. This is the most general type of ND mesh, and can represent any valid OFF file, but may have worse performance than the more specialized mesh types. This is the inverse of [method export_convert_mesh_nd].
 			</description>
 		</method>
 		<method name="import_generate_node">
