@@ -16,4 +16,5 @@
 #include "model/mesh/test_mesh_nd.h"
 #include "model/mesh/wire/test_wire_mesh_builder_nd.h"
 #include "model/mesh/wire/test_wire_mesh_nd.h"
+#include "model/off/test_off_document_nd.h"
 #include "nodes/test_node_nd.h"

@@ -408,7 +408,7 @@ void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 	if (albedo_source & MaterialND::COLOR_SOURCE_FLAG_PER_CELL) {
 		const PackedInt32Array cell_vert_indices = get_simplex_cell_vertex_indices();
 		PackedColorArray color_array = p_material->get_albedo_color_array();
-		const int64_t vertices_per_cell = dimension + 1;
+		const int64_t vertices_per_cell = dimension;
 		const int64_t cell_count = cell_vert_indices.size() / vertices_per_cell;
 		if (color_array.size() < cell_count) {
 			p_material->resize_albedo_color_array(cell_count);

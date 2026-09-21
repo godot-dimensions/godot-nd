@@ -507,7 +507,7 @@ String OFFDocumentND::_export_save_to_string() {
 	}
 	String size_line = String::num_int64(_vertex_positions.size());
 	if (_cell_face_indices.size() > 0) {
-		size_line += " " + String::num_int64(_cell_face_indices.size()) + " " + String::num_int64(_edge_count);
+		size_line += " " + String::num_int64(_cell_face_indices[0].size()) + " " + String::num_int64(_edge_count);
 		for (int i = 1; i < _cell_face_indices.size(); i++) {
 			Vector<PackedInt32Array> dim_cell_face_indices = _cell_face_indices[i];
 			size_line += " " + String::num_int64(dim_cell_face_indices.size());

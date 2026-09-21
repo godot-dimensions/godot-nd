@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../../../model/mesh/cell/array_cell_mesh_nd.h"
+#include "../../../../model/mesh/cell/cell_material_nd.h"
 #include "../../../../model/mesh/poly/box_poly_mesh_nd.h"
 #include "../../../../model/mesh/poly/orthoplex_poly_mesh_nd.h"
 #include "../test_mesh_data_nd.h"
@@ -822,5 +823,24 @@ TEST_CASE("[ArrayCellMeshND] Explicit compaction removes unreferenced data") {
 	REQUIRE(mesh->get_normal_values().size() == 1);
 	CHECK(VectorND::is_equal_exact(mesh->get_normal_values()[0], normal));
 	CHECK(mesh->get_simplex_cell_normal_indices() == PackedInt32Array({ 0, 0, 0, 0 }));
+}
+
+TEST_CASE("[CellMeshND] Material validation allocates one per-cell color per simplex cell") {
+	for (int dimension = 3; dimension <= 5; dimension++) {
+		Ref<ArrayCellMeshND> mesh = make_single_simplex_cell_mesh(dimension, false);
+		// Append a second simplex cell that reuses the existing vertices in reverse order.
+		PackedInt32Array cell_vertex_indices = mesh->get_simplex_cell_vertex_indices();
+		for (int index = dimension - 1; index >= 0; index--) {
+			cell_vertex_indices.append(index);
+		}
+		mesh->set_simplex_cell_vertex_indices(cell_vertex_indices);
+		REQUIRE(mesh->get_simplex_cell_count() == 2);
+		Ref<CellMaterialND> material;
+		material.instantiate();
+		material->set_albedo_source_flags(MaterialND::COLOR_SOURCE_FLAG_PER_CELL);
+		CHECK(material->get_albedo_color_array().is_empty());
+		mesh->validate_material_for_mesh(material);
+		CHECK_MESSAGE(material->get_albedo_color_array().size() == 2, "Each (N-1)-simplex cell has N vertex indices, so the color array must be resized to the cell count.");
+	}
 }
 } // namespace TestCellMeshND

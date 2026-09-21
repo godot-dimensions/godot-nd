@@ -161,7 +161,7 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 								edge_color = edge_color.lerp(target_color, MIN(1.0, perp_magnitude));
 							}
 							if (camera_has_perp_fade_transparency) {
-								edge_color.a = 1.0 - MIN(1.0, perp_magnitude);
+								edge_color.a *= 1.0 - MIN(1.0, perp_magnitude);
 							}
 						} break;
 						default: {
@@ -177,7 +177,7 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 								edge_color = edge_color.lerp(target_color, MIN(1.0, perp_magnitude));
 							}
 							if (camera_has_perp_fade_transparency) {
-								edge_color.a = 1.0 - MIN(1.0, perp_magnitude);
+								edge_color.a *= 1.0 - MIN(1.0, perp_magnitude);
 							}
 						} break;
 					}

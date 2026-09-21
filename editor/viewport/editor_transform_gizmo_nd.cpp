@@ -119,12 +119,12 @@ Ref<ArrayWireMeshND> _make_rotation_ring_wire_mesh_nd() {
 Ref<ArrayWireMeshND> _make_plane_wire_mesh_nd() {
 	// Must match `constexpr int PLANE_EDGES_ND`.
 	Vector<VectorN> vertices = {
-		VectorN{ -PLANE_RADIUS_ND * 0.9, -PLANE_RADIUS_ND, 0.0, 0.0 }, // First triangle lower left.
-		VectorN{ PLANE_RADIUS_ND, -PLANE_RADIUS_ND, 0.0, 0.0 }, // First triangle lower right.
-		VectorN{ PLANE_RADIUS_ND, PLANE_RADIUS_ND * 0.9, 0.0, 0.0 }, // First triangle upper right.
-		VectorN{ -PLANE_RADIUS_ND, -PLANE_RADIUS_ND * 0.9, 0.0, 0.0 }, // Second triangle lower left.
-		VectorN{ PLANE_RADIUS_ND * 0.9, PLANE_RADIUS_ND, 0.0, 0.0 }, // Second triangle upper right.
-		VectorN{ -PLANE_RADIUS_ND, PLANE_RADIUS_ND, 0.0, 0.0 }, // Second triangle upper left.
+		VectorN{ -PLANE_RADIUS_ND * 0.9, -PLANE_RADIUS_ND }, // First triangle lower left.
+		VectorN{ PLANE_RADIUS_ND, -PLANE_RADIUS_ND }, // First triangle lower right.
+		VectorN{ PLANE_RADIUS_ND, PLANE_RADIUS_ND * 0.9 }, // First triangle upper right.
+		VectorN{ -PLANE_RADIUS_ND, -PLANE_RADIUS_ND * 0.9 }, // Second triangle lower left.
+		VectorN{ PLANE_RADIUS_ND * 0.9, PLANE_RADIUS_ND }, // Second triangle upper right.
+		VectorN{ -PLANE_RADIUS_ND, PLANE_RADIUS_ND }, // Second triangle upper left.
 	};
 	PackedInt32Array edge_indices = { 0, 1, 0, 2, 1, 2, 3, 4, 3, 5, 4, 5 };
 	Ref<ArrayWireMeshND> mesh;
