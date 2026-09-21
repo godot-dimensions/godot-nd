@@ -534,6 +534,15 @@ String OFFDocumentND::_export_save_to_string() {
 	return String("\n").join(lines) + String("\n");
 }
 
+void OFFDocumentND::set_dimension(const int p_dimension) {
+	ERR_FAIL_COND(p_dimension < 0);
+	_dimension = p_dimension;
+	// Resize all vectors to match the new dimension (using with_dimension to ensure correct initialization).
+	for (int64_t i = 0; i < _vertex_positions.size(); i++) {
+		_vertex_positions.set(i, VectorND::with_dimension(_vertex_positions[i], p_dimension));
+	}
+}
+
 void OFFDocumentND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("export_save_to_byte_array"), &OFFDocumentND::export_save_to_byte_array);
 	ClassDB::bind_method(D_METHOD("export_save_to_file", "path"), &OFFDocumentND::export_save_to_file);
@@ -543,6 +552,10 @@ void OFFDocumentND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("import_generate_array_cell_mesh_nd"), &OFFDocumentND::import_generate_array_cell_mesh_nd);
 	ClassDB::bind_method(D_METHOD("import_generate_wire_mesh_nd", "deduplicate_edges"), &OFFDocumentND::import_generate_wire_mesh_nd, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("import_generate_node", "deduplicate_edges"), &OFFDocumentND::import_generate_node, DEFVAL(true));
+
+	ClassDB::bind_method(D_METHOD("get_dimension"), &OFFDocumentND::get_dimension);
+	ClassDB::bind_method(D_METHOD("set_dimension", "dimension"), &OFFDocumentND::set_dimension);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "dimension"), "set_dimension", "get_dimension");
 
 	ClassDB::bind_method(D_METHOD("get_edge_count"), &OFFDocumentND::get_edge_count);
 	ClassDB::bind_method(D_METHOD("set_edge_count", "edge_count"), &OFFDocumentND::set_edge_count);

@@ -60,6 +60,9 @@
 		</method>
 	</methods>
 	<members>
+		<member name="dimension" type="int" setter="set_dimension" getter="get_dimension" default="3">
+			The dimension of the OFF data. For example, a 3-dimensional OFF file will have a dimension of 3, a 4-dimensional 4OFF file will have a dimension of 4, and so on. Setting will resize all vectors in the OFF data to match the new dimension. This will be set automatically when importing an OFF file, and will be set automatically when exporting a [CellMeshND] or [PolyMeshND] to OFF.
+		</member>
 		<member name="edge_count" type="int" setter="set_edge_count" getter="get_edge_count" default="0">
 			The number of edges in the mesh. This is not used in any of the generate functions, but is stored in the OFF data.
 		</member>

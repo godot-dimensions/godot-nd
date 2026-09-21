@@ -54,6 +54,9 @@ public:
 	Vector<Vector<PackedInt32Array>> get_cell_face_indices() const { return _cell_face_indices; }
 	void set_cell_face_indices(const Vector<Vector<PackedInt32Array>> &p_cell_face_indices) { _cell_face_indices = p_cell_face_indices; }
 
+	int get_dimension() const { return _dimension; }
+	void set_dimension(const int p_dimension);
+
 	int get_edge_count() const { return _edge_count; }
 	void set_edge_count(const int p_edge_count) { _edge_count = p_edge_count; }
 

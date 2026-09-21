@@ -17,6 +17,11 @@ String EditorImportPluginOFFWireND::GDEXTMOD_GET_VISIBLE_NAME() const {
 #if GDEXTENSION
 TypedArray<Dictionary> EditorImportPluginOFFWireND::_get_import_options(const String &p_path, int32_t p_preset_index) const {
 	TypedArray<Dictionary> options;
+	Dictionary force_dimension;
+	force_dimension["name"] = "force_dimension";
+	force_dimension["type"] = Variant::INT;
+	force_dimension["default_value"] = -1;
+	options.append(force_dimension);
 	Dictionary deduplicate_edges;
 	deduplicate_edges["name"] = "deduplicate_edges";
 	deduplicate_edges["type"] = Variant::BOOL;
@@ -25,17 +30,10 @@ TypedArray<Dictionary> EditorImportPluginOFFWireND::_get_import_options(const St
 	return options;
 }
 
-Error EditorImportPluginOFFWireND::_import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options, const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const {
-	Ref<OFFDocumentND> off_doc = OFFDocumentND::import_load_from_file(p_source_file);
-	ERR_FAIL_COND_V(off_doc.is_null(), ERR_FILE_CANT_OPEN);
-	Ref<ArrayWireMeshND> wire_mesh = off_doc->import_generate_wire_mesh_nd(p_options[StringName("deduplicate_edges")]);
-	ERR_FAIL_COND_V(wire_mesh.is_null(), ERR_FILE_CORRUPT);
-	wire_mesh->set_name(p_source_file.get_file());
-	Error err = ResourceSaver::get_singleton()->save(wire_mesh, p_save_path + String(".res"));
-	return err;
-}
+Error EditorImportPluginOFFWireND::_import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options, const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const
 #elif GODOT_MODULE
 void EditorImportPluginOFFWireND::get_import_options(const String &p_path, List<ImportOption> *r_options, int p_preset) const {
+	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "force_dimension"), -1));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "deduplicate_edges"), true));
 }
 
@@ -43,14 +41,23 @@ void EditorImportPluginOFFWireND::get_import_options(const String &p_path, List<
 Error EditorImportPluginOFFWireND::import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata)
 #else
 Error EditorImportPluginOFFWireND::import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata)
-#endif
+#endif // VERSION_HEX
+#endif // GDExtension or module.
 {
 	Ref<OFFDocumentND> off_doc = OFFDocumentND::import_load_from_file(p_source_file);
 	ERR_FAIL_COND_V(off_doc.is_null(), ERR_FILE_CANT_OPEN);
+	const int64_t force_dimension = p_options[StringName("force_dimension")];
+	if (force_dimension >= 0) {
+		off_doc->set_dimension(force_dimension);
+	}
 	Ref<ArrayWireMeshND> wire_mesh = off_doc->import_generate_wire_mesh_nd(p_options[StringName("deduplicate_edges")]);
 	ERR_FAIL_COND_V(wire_mesh.is_null(), ERR_FILE_CORRUPT);
 	wire_mesh->set_name(p_source_file.get_file());
-	Error err = ResourceSaver::save(wire_mesh, p_save_path + String(".res"));
+	const String save_path_with_ext = p_save_path + String(".res");
+#if GDEXTENSION
+	Error err = ResourceSaver::get_singleton()->save(wire_mesh, save_path_with_ext);
+#elif GODOT_MODULE
+	Error err = ResourceSaver::save(wire_mesh, save_path_with_ext);
+#endif
 	return err;
 }
-#endif
