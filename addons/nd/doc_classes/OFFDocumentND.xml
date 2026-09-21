@@ -11,6 +11,16 @@
 		<link title="Wikipedia OFF file format">https://en.wikipedia.org/wiki/OFF_(file_format)</link>
 	</tutorials>
 	<methods>
+		<method name="export_convert_mesh_nd" qualifiers="static">
+			<return type="OFFDocumentND" />
+			<param index="0" name="mesh" type="CellMeshND" />
+			<param index="1" name="deduplicate_faces" type="bool" default="true" />
+			<description>
+				Converts an existing ND [CellMeshND] resource to an OFFDocumentND, setting [member dimension] to the dimension of the mesh. The vertices will be the same as the ones in the mesh. This is the inverse of [method import_generate_array_cell_mesh_nd].
+				If the mesh is a [PolyMeshND], its hierarchical cell data is copied directly, since OFF stores faces, cells, and so on in the same hierarchical way. Only the cells up to the (N-1)-dimensional boundary cells are exported, so any N-dimensional hypervolume cells are discarded. Per-cell colors are taken from the [member PolyMaterialND.poly_albedo_color_array] if the mesh uses a [PolyMaterialND], or otherwise from the simplex cell colors of the boundary poly cell each simplex was decomposed from.
+				Otherwise, each (N-1)-dimensional simplex cell is decomposed into its faces, 3D cells, and so on, which OFF needs in order to reference cells by their faces. If [param deduplicate_faces] is [code]true[/code], faces and other intermediate cells shared between multiple simplex cells are only stored once, which results in a smaller file size. The simplex cells themselves are never deduplicated, so that any per-cell colors in the material line up with the mesh.
+			</description>
+		</method>
 		<method name="export_save_to_byte_array">
 			<return type="PackedByteArray" />
 			<description>

@@ -3,6 +3,7 @@
 #include "../../math/vector_nd.h"
 #include "../mesh/cell/cell_material_nd.h"
 #include "../mesh/mesh_instance_nd.h"
+#include "../mesh/poly/poly_material_nd.h"
 #include "../mesh/wire/wire_material_nd.h"
 
 #if GDEXTENSION
@@ -51,6 +52,137 @@ int64_t OFFDocumentND::_find_or_insert_vertex(const VectorN &p_vertex, const boo
 	}
 	_vertex_positions.append(p_vertex);
 	return vertex_count;
+}
+
+PackedInt32Array OFFDocumentND::_insert_simplex_facets(const PackedInt32Array &p_simplex_vertex_indices, const bool p_deduplicate, Vector<SortedIndicesMap> &r_lookup_maps) {
+	// The facets of a simplex are the simplexes made by omitting one vertex each. Swapping the first two
+	// vertices of every other facet keeps the facets consistently oriented as a closed boundary, which
+	// for tetrahedra produces the same triangle winding as the 4D module's OFF export.
+	const int64_t vertex_count = p_simplex_vertex_indices.size();
+	PackedInt32Array facet_indices;
+	facet_indices.resize(vertex_count);
+	for (int64_t omitted = 0; omitted < vertex_count; omitted++) {
+		PackedInt32Array facet_vertex_indices = p_simplex_vertex_indices;
+		facet_vertex_indices.remove_at(omitted);
+		if (omitted % 2 == 0) {
+			const int32_t swap_tmp = facet_vertex_indices[0];
+			facet_vertex_indices.set(0, facet_vertex_indices[1]);
+			facet_vertex_indices.set(1, swap_tmp);
+		}
+		facet_indices.set(omitted, _find_or_insert_simplex_cell(facet_vertex_indices, p_deduplicate, r_lookup_maps));
+	}
+	return facet_indices;
+}
+
+int32_t OFFDocumentND::_find_or_insert_simplex_cell(const PackedInt32Array &p_simplex_vertex_indices, const bool p_deduplicate, Vector<SortedIndicesMap> &r_lookup_maps) {
+	// OFF stores 2D faces at index 0 as vertex indices, 3D cells at index 1 as face indices, and so on.
+	const int64_t cell_dim_index = p_simplex_vertex_indices.size() - 3;
+	ERR_FAIL_INDEX_V(cell_dim_index, _cell_face_indices.size(), -1);
+	PackedInt32Array sorted_vertex_indices;
+	if (p_deduplicate) {
+		// A simplex is fully determined by its set of vertices, regardless of their order.
+		sorted_vertex_indices = p_simplex_vertex_indices;
+		sorted_vertex_indices.sort();
+		const int32_t *existing_index = r_lookup_maps[cell_dim_index].getptr(sorted_vertex_indices);
+		if (existing_index != nullptr) {
+			return *existing_index;
+		}
+	}
+	const PackedInt32Array members = cell_dim_index == 0 ? p_simplex_vertex_indices : _insert_simplex_facets(p_simplex_vertex_indices, p_deduplicate, r_lookup_maps);
+	const int32_t new_index = (int32_t)_cell_face_indices[cell_dim_index].size();
+	_cell_face_indices.write[cell_dim_index].append(members);
+	if (p_deduplicate) {
+		r_lookup_maps.write[cell_dim_index].insert(sorted_vertex_indices, new_index);
+	}
+	return new_index;
+}
+
+void OFFDocumentND::_export_convert_cell_colors_nd(const Ref<CellMeshND> &p_mesh) {
+	// Every cell dimension needs a color array, even if empty, so that they line up with the cell face indices.
+	_cell_colors.clear();
+	_cell_colors.resize(_cell_face_indices.size());
+	_has_any_cell_colors = false;
+	const int64_t last_dim_index = _cell_face_indices.size() - 1;
+	if (last_dim_index < 0) {
+		return;
+	}
+	const Ref<MaterialND> material = p_mesh->get_material();
+	if (material.is_null() || !(material->get_albedo_source_flags() & MaterialND::COLOR_SOURCE_FLAG_PER_CELL)) {
+		return;
+	}
+	PackedColorArray boundary_cell_colors;
+	const Ref<PolyMeshND> poly_mesh = p_mesh;
+	if (poly_mesh.is_valid()) {
+		const Ref<PolyMaterialND> poly_material = material;
+		if (poly_material.is_valid() && !poly_material->get_poly_albedo_color_array().is_empty()) {
+			// Poly materials store one color per poly boundary cell, which is exactly what OFF needs.
+			boundary_cell_colors = poly_material->get_poly_albedo_color_array();
+		} else if (last_dim_index == int64_t(p_mesh->get_dimension()) - 3) {
+			// Otherwise the colors are per simplex cell, so map each simplex back to the boundary poly cell it was decomposed from.
+			const PackedColorArray simplex_colors = material->get_albedo_color_array();
+			const int64_t simplex_count = poly_mesh->get_simplex_cell_count();
+			const int64_t boundary_cell_count = _cell_face_indices[last_dim_index].size();
+			boundary_cell_colors.resize(boundary_cell_count);
+			boundary_cell_colors.fill(Color(1.0f, 1.0f, 1.0f));
+			// Iterate backwards so that the first simplex of each poly cell provides the color.
+			for (int64_t simplex_index = MIN(simplex_count, simplex_colors.size()) - 1; simplex_index >= 0; simplex_index--) {
+				const int32_t source_cell = poly_mesh->get_source_poly_cell_for_simplex_cell(simplex_index);
+				if (source_cell >= 0 && source_cell < boundary_cell_count) {
+					boundary_cell_colors.set(source_cell, simplex_colors[simplex_index]);
+				}
+			}
+		}
+	} else {
+		// Simplex cells are exported one-to-one in order, so the colors line up as-is.
+		boundary_cell_colors = material->get_albedo_color_array();
+	}
+	_cell_colors.set(last_dim_index, boundary_cell_colors);
+	_has_any_cell_colors = !boundary_cell_colors.is_empty();
+}
+
+Ref<OFFDocumentND> OFFDocumentND::export_convert_mesh_nd(const Ref<CellMeshND> &p_mesh, const bool p_deduplicate_faces) {
+	Ref<OFFDocumentND> off_document;
+	ERR_FAIL_COND_V(p_mesh.is_null(), off_document);
+	const int dimension = p_mesh->get_dimension();
+	ERR_FAIL_COND_V_MSG(dimension < 3, off_document, "OFFDocumentND: Only meshes with 3 or more dimensions can be converted to OFF, because OFF needs 2D faces made of vertices.");
+	off_document.instantiate();
+	off_document->_dimension = dimension;
+	// OFF stores 2D faces at index 0, 3D cells at index 1, and so on, up to the (N-1)-dimensional boundary cells of an N-dimensional mesh.
+	const int64_t boundary_dim_index = dimension - 3;
+	const Ref<PolyMeshND> poly_mesh = p_mesh;
+	if (poly_mesh.is_valid()) {
+		// PolyMeshND uses hierarchical geometry like OFF, but each face references edges instead of vertices.
+		const Vector<Vector<PackedInt32Array>> poly_cell_indices = poly_mesh->get_poly_cell_indices();
+		ERR_FAIL_COND_V_MSG(poly_cell_indices.is_empty(), off_document, "OFFDocumentND: Cannot convert a poly mesh without any faces to OFF.");
+		off_document->_vertex_positions = poly_mesh->get_poly_cell_vertex_positions();
+		// Skip any N-dimensional hypervolume cells, OFF only stores the boundary cells and below.
+		const int64_t cell_dim_count = MIN(poly_cell_indices.size(), boundary_dim_index + 1);
+		off_document->_cell_face_indices.resize(cell_dim_count);
+		off_document->_cell_face_indices.set(0, poly_mesh->get_all_face_vertex_indices());
+		for (int64_t i = 1; i < cell_dim_count; i++) {
+			off_document->_cell_face_indices.set(i, poly_cell_indices[i]);
+		}
+	} else {
+		// CellMeshND references its simplex cells by vertex indices, but OFF files reference cells by their
+		// facets one dimension down, so build the whole hierarchy of faces, cells, etc. from each simplex.
+		off_document->_vertex_positions = p_mesh->get_vertex_positions();
+		const PackedInt32Array simplex_vertex_indices = p_mesh->get_simplex_cell_vertex_indices();
+		const int64_t indices_per_simplex = p_mesh->get_indices_per_simplex_cell();
+		ERR_FAIL_COND_V_MSG(indices_per_simplex != dimension, off_document, "OFFDocumentND: Cannot convert a mesh whose simplex cells are not (N-1)-simplexes with N vertex indices to OFF.");
+		ERR_FAIL_COND_V_MSG(simplex_vertex_indices.size() % indices_per_simplex != 0, off_document, "OFFDocumentND: Cannot convert a mesh whose simplex cell vertex indices are not a multiple of the dimension to OFF.");
+		off_document->_cell_face_indices.resize(boundary_dim_index + 1);
+		Vector<SortedIndicesMap> lookup_maps;
+		lookup_maps.resize(boundary_dim_index + 1);
+		for (int64_t i = 0; i < simplex_vertex_indices.size(); i += indices_per_simplex) {
+			const PackedInt32Array cell_vertex_indices = simplex_vertex_indices.slice(i, i + indices_per_simplex);
+			// The boundary simplex cells themselves are never deduplicated, so that per-cell colors line up with the mesh.
+			const PackedInt32Array members = boundary_dim_index == 0 ? cell_vertex_indices : off_document->_insert_simplex_facets(cell_vertex_indices, p_deduplicate_faces, lookup_maps);
+			off_document->_cell_face_indices.write[boundary_dim_index].append(members);
+		}
+	}
+	off_document->_export_convert_cell_colors_nd(p_mesh);
+	off_document->_count_unique_edges_from_faces();
+	return off_document;
 }
 
 // OFF stores cells with indices to faces, but this provides indices of vertices.
@@ -544,6 +676,7 @@ void OFFDocumentND::set_dimension(const int p_dimension) {
 }
 
 void OFFDocumentND::_bind_methods() {
+	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("export_convert_mesh_nd", "mesh", "deduplicate_faces"), &OFFDocumentND::export_convert_mesh_nd, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("export_save_to_byte_array"), &OFFDocumentND::export_save_to_byte_array);
 	ClassDB::bind_method(D_METHOD("export_save_to_file", "path"), &OFFDocumentND::export_save_to_file);
 
