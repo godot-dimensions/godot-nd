@@ -155,7 +155,8 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 							const double perp_magnitude = ABS(perp_w);
 							if (camera_has_perp_fade_hue_shift) {
 								const float value = edge_color.get_v();
-								const float half_value = edge_color.get_v();
+								const float half_value = value * 0.5f;
+								// For 4D (1 perpendicular dimension, fade positive to 30 degrees hue (orange) and negative to 210 degrees hue (cyanish-blue).
 								const Color target_color = perp_w > 0.0 ? Color(value, half_value, 0.0f) : Color(0.0f, half_value, value);
 								edge_color = edge_color.lerp(target_color, MIN(1.0, perp_magnitude));
 							}
@@ -168,7 +169,10 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 							if (camera_has_perp_fade_hue_shift) {
 								const double perp_w = perp_dimensions[0];
 								const double perp_v = perp_dimensions[1];
+								// For 5D and up (2+ perpendicular dimensions), fade with a hue based on the WV plane angle.
+								// +W is 30 degrees (orange), -W is 210 degrees (cyanish-blue), +V is 300 degrees (magenta), -V is 120 degrees (green).
 								const float target_hue = Math::atan2(-perp_v, perp_w) / Math_TAU + (13.0 / 12.0);
+								// Color::from_hsv handles hue above 1.0 automatically, but not below 0.0.
 								const Color target_color = Color::from_hsv(target_hue, 1.0, edge_color.get_v());
 								edge_color = edge_color.lerp(target_color, MIN(1.0, perp_magnitude));
 							}

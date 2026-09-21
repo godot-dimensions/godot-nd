@@ -29,14 +29,6 @@ void CameraND::_validate_property(PropertyInfo &p_property) const {
 		if (_projection_type != PROJECTION_ORTHOGRAPHIC) {
 			p_property.usage = PROPERTY_USAGE_NONE;
 		}
-	} else if (p_property.name == StringName("perp_fade_color_negative")) {
-		if (!(_perp_fade_mode & PERP_FADE_HUE_SHIFT)) {
-			p_property.usage = PROPERTY_USAGE_NONE;
-		}
-	} else if (p_property.name == StringName("perp_fade_color_positive")) {
-		if (!(_perp_fade_mode & PERP_FADE_HUE_SHIFT)) {
-			p_property.usage = PROPERTY_USAGE_NONE;
-		}
 	} else if (p_property.name == StringName("perp_fade_distance")) {
 		if (_perp_fade_mode == PERP_FADE_DISABLED) {
 			p_property.usage = PROPERTY_USAGE_NONE;
@@ -120,7 +112,7 @@ bool CameraND::is_position_behind(const VectorN &p_global_position) const {
 
 VectorN CameraND::viewport_to_world_ray_origin(const Vector2 &p_viewport_position) const {
 	Viewport *viewport = get_viewport();
-	ERR_FAIL_COND_V_MSG(viewport == nullptr, VectorN(), "Camera4D must be in the scene tree to convert viewport coordinates to world coordinates.");
+	ERR_FAIL_COND_V_MSG(viewport == nullptr, VectorN(), "CameraND must be in the scene tree to convert viewport coordinates to world coordinates.");
 	const Ref<TransformND> global_xform = get_global_transform();
 	const VectorN global_pos = global_xform->get_origin();
 	// Perspective cameras always have their ray origin at the camera's position.
@@ -138,7 +130,7 @@ VectorN CameraND::viewport_to_world_ray_origin(const Vector2 &p_viewport_positio
 
 VectorN CameraND::viewport_to_world_ray_direction(const Vector2 &p_viewport_position) const {
 	Viewport *viewport = get_viewport();
-	ERR_FAIL_COND_V_MSG(viewport == nullptr, VectorN(), "Camera4D must be in the scene tree to convert viewport coordinates to world coordinates.");
+	ERR_FAIL_COND_V_MSG(viewport == nullptr, VectorN(), "CameraND must be in the scene tree to convert viewport coordinates to world coordinates.");
 	const Ref<TransformND> global_xform = get_global_transform();
 	// 0D, 1D, or 2D camera transforms can just directly map viewport positions to world positions.
 	// As such, the camera does not really have a ray direction, so return an empty vector.
@@ -174,7 +166,7 @@ Vector2 CameraND::world_to_viewport_local_normal(const VectorN &p_local_position
 
 Vector2 CameraND::world_to_viewport(const VectorN &p_global_position) const {
 	Viewport *viewport = get_viewport();
-	ERR_FAIL_COND_V_MSG(viewport == nullptr, Vector2(), "Camera4D must be in the scene tree to convert world coordinates to viewport coordinates.");
+	ERR_FAIL_COND_V_MSG(viewport == nullptr, Vector2(), "CameraND must be in the scene tree to convert world coordinates to viewport coordinates.");
 	const Ref<TransformND> global_xform = get_global_transform();
 	const VectorN local_position = global_xform->xform_transposed(p_global_position);
 	const Vector2 viewport_size = viewport->call(StringName("get_size"));

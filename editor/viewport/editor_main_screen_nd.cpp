@@ -250,6 +250,7 @@ void EditorMainScreenND::_update_theme() {
 			_axis_colors.set(i, VectorND::axis_color(i));
 		}
 	}
+	// Hard-code the first four axis colors. XYZ are based on the editor theme, and the W axis is consistent with the 4D module.
 	_axis_colors.set(0, get_theme_color(StringName("axis_x_color"), StringName("Editor")));
 	_axis_colors.set(1, get_theme_color(StringName("axis_y_color"), StringName("Editor")));
 	_axis_colors.set(2, get_theme_color(StringName("axis_z_color"), StringName("Editor")));

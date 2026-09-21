@@ -150,14 +150,6 @@ void EditorCameraSettingsND::_validate_property(PropertyInfo &p_property) const 
 		if (_rendering_engine_name == "Wireframe Canvas") {
 			p_property.usage = PROPERTY_USAGE_NONE;
 		}
-	} else if (p_property.name == StringName("perp_fade_color_negative")) {
-		if (!(_perp_fade_mode & CameraND::PERP_FADE_HUE_SHIFT)) {
-			p_property.usage = PROPERTY_USAGE_NONE;
-		}
-	} else if (p_property.name == StringName("perp_fade_color_positive")) {
-		if (!(_perp_fade_mode & CameraND::PERP_FADE_HUE_SHIFT)) {
-			p_property.usage = PROPERTY_USAGE_NONE;
-		}
 	} else if (p_property.name == StringName("perp_fade_distance")) {
 		if (_perp_fade_mode == CameraND::PERP_FADE_DISABLED) {
 			p_property.usage = PROPERTY_USAGE_NONE;
