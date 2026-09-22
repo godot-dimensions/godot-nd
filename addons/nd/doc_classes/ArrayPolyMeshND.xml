@@ -108,8 +108,9 @@
 		</method>
 		<method name="deduplicate_all_elements">
 			<return type="void" />
+			<param index="0" name="max_dimension" type="int" default="1000000000" />
 			<description>
-				Deduplicates all elements of the polyhedral mesh: vertices in approximately the same position, edges with the same vertices in either order, and cells of every dimension made of the same elements in any order. All indices are remapped to the kept elements, including the seams, the boundary pivot overrides, and the data bindings for normals and texture maps. The boundary normals are preserved, by swapping the first two members of any cell whose orientation-derived normal was flipped by the reordering.
+				Deduplicates all elements of the polyhedral mesh up to and including the specified [param max_dimension], which refers to the topological dimension of the elements (or effectively endless if not specified): vertices in approximately the same position, edges with the same vertices in either order, and cells of every dimension made of the same elements in any order. For example, [code]0[/code] deduplicates only vertices, [code]1[/code] deduplicates vertices and edges, [code]2[/code] deduplicates vertices, edges, and faces, and so on. Elements above [param max_dimension] are not deduplicated, but their indices are still remapped to point to the deduplicated lower-dimensional elements. All indices are remapped to the kept elements, including the seams, the boundary pivot overrides, and the data bindings for normals and texture maps. The boundary normals are preserved, by swapping the first two members of any cell whose orientation-derived normal was flipped by the reordering.
 				This is useful after merging meshes with [method merge_with], such as when merging two adjacent volumetric meshes that share a boundary cell, so that the shared cell is unified and treated as an invisible internal cell.
 			</description>
 		</method>

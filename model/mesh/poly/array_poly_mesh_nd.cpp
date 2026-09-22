@@ -1416,8 +1416,9 @@ void ArrayPolyMeshND::transform_texture_map(const Ref<TransformND> &p_texture_tr
 
 // Misc functions.
 
-void ArrayPolyMeshND::deduplicate_all_elements() {
+void ArrayPolyMeshND::deduplicate_all_elements(const int64_t p_max_dimension) {
 	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot deduplicate elements of an invalid mesh.");
+	ERR_FAIL_COND_MSG(p_max_dimension < 0, "ArrayPolyMeshND: Maximum dimension to deduplicate must be at least 0.");
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	const Vector2i per_cell_key = _get_per_cell_key();
 	const bool has_boundary_cells = boundary_dim_index >= 0 && _poly_cell_indices.size() > boundary_dim_index;
@@ -1463,23 +1464,26 @@ void ArrayPolyMeshND::deduplicate_all_elements() {
 		const int64_t input_vertex_index = _edge_vertex_indices[edge_index];
 		_edge_vertex_indices.set(edge_index, vertex_index_remap[input_vertex_index]);
 	}
-	// Deduplicate edges.
+	// Deduplicate edges. Vertices (dimension 0) are always deduplicated above, edges are
+	// dimension 1, so they are only deduplicated if the requested maximum dimension is at least 1.
 	PackedInt32Array output_edge_vertex_indices;
 	HashMap<int32_t, int32_t> edge_index_remap;
 	for (int64_t input_edge_index = 0; input_edge_index < _edge_vertex_indices.size(); input_edge_index += 2) {
 		const int32_t vertex_index_a = _edge_vertex_indices[input_edge_index];
 		const int32_t vertex_index_b = _edge_vertex_indices[input_edge_index + 1];
 		bool found_duplicate = false;
-		for (int64_t output_edge_index = 0; output_edge_index < output_edge_vertex_indices.size(); output_edge_index += 2) {
-			const int32_t output_vertex_index_a = output_edge_vertex_indices[output_edge_index];
-			const int32_t output_vertex_index_b = output_edge_vertex_indices[output_edge_index + 1];
-			// Deduplicate edges in the same order and in the opposite order.
-			// Both orders should be considered the same edge in the PolyMeshND code.
-			if ((vertex_index_a == output_vertex_index_a && vertex_index_b == output_vertex_index_b) ||
-					(vertex_index_a == output_vertex_index_b && vertex_index_b == output_vertex_index_a)) {
-				edge_index_remap[input_edge_index / 2] = output_edge_index / 2;
-				found_duplicate = true;
-				break;
+		if (p_max_dimension > 0) {
+			for (int64_t output_edge_index = 0; output_edge_index < output_edge_vertex_indices.size(); output_edge_index += 2) {
+				const int32_t output_vertex_index_a = output_edge_vertex_indices[output_edge_index];
+				const int32_t output_vertex_index_b = output_edge_vertex_indices[output_edge_index + 1];
+				// Deduplicate edges in the same order and in the opposite order.
+				// Both orders should be considered the same edge in the PolyMeshND code.
+				if ((vertex_index_a == output_vertex_index_a && vertex_index_b == output_vertex_index_b) ||
+						(vertex_index_a == output_vertex_index_b && vertex_index_b == output_vertex_index_a)) {
+					edge_index_remap[input_edge_index / 2] = output_edge_index / 2;
+					found_duplicate = true;
+					break;
+				}
 			}
 		}
 		if (!found_duplicate) {
@@ -1488,7 +1492,12 @@ void ArrayPolyMeshND::deduplicate_all_elements() {
 			output_edge_vertex_indices.append(vertex_index_b);
 		}
 	}
-	// Deduplicate poly cell indices.
+	// Deduplicate poly cell indices. Note that `_poly_cell_indices` starts at faces, so `dim_index`
+	// is offset from the topological dimension by 2: `_poly_cell_indices[0]` holds 2D faces,
+	// `_poly_cell_indices[1]` holds 3D cells, etc. An element of topological dimension D should
+	// be deduplicated when D <= p_max_dimension, so the poly index (D - 2) should be deduplicated
+	// when (D - 2) <= (p_max_dimension - 2), or equivalently (D - 2) < (p_max_dimension - 1).
+	const int64_t max_poly_dim_index_to_deduplicate_exclusive = p_max_dimension - 1;
 	Vector<Vector<PackedInt32Array>> output_poly_cell_indices;
 	Vector<HashMap<int32_t, int32_t>> poly_cell_index_remaps;
 	for (int64_t dim_index = 0; dim_index < _poly_cell_indices.size(); dim_index++) {
@@ -1503,21 +1512,28 @@ void ArrayPolyMeshND::deduplicate_all_elements() {
 			for (int64_t i = 0; i < cell.size(); i++) {
 				cell.set(i, prev_index_remap[cell[i]]);
 			}
-			// Deduplicate cells regardless of the order of the indices in the cell.
-			PackedInt32Array cell_sorted = PackedInt32Array(cell); // Copy.
-			cell_sorted.sort();
-			bool found_duplicate = false;
-			for (int64_t output_cell_index = 0; output_cell_index < dim_output.size(); output_cell_index++) {
-				if (cell_sorted == dim_output_sorted[output_cell_index]) {
-					dim_index_remap[input_cell_index] = output_cell_index;
-					found_duplicate = true;
-					break;
+			if (dim_index < max_poly_dim_index_to_deduplicate_exclusive) {
+				// Deduplicate cells regardless of the order of the indices in the cell.
+				PackedInt32Array cell_sorted = PackedInt32Array(cell); // Copy.
+				cell_sorted.sort();
+				bool found_duplicate = false;
+				for (int64_t output_cell_index = 0; output_cell_index < dim_output.size(); output_cell_index++) {
+					if (cell_sorted == dim_output_sorted[output_cell_index]) {
+						dim_index_remap[input_cell_index] = output_cell_index;
+						found_duplicate = true;
+						break;
+					}
 				}
-			}
-			if (!found_duplicate) {
+				if (!found_duplicate) {
+					dim_index_remap[input_cell_index] = dim_output.size();
+					dim_output.append(cell);
+					dim_output_sorted.append(cell_sorted);
+				}
+			} else {
+				// Don't deduplicate beyond the requested maximum. The indices were still remapped above
+				// so that these cells reference the deduplicated lower-dimensional elements.
 				dim_index_remap[input_cell_index] = dim_output.size();
 				dim_output.append(cell);
-				dim_output_sorted.append(cell_sorted);
 			}
 		}
 		output_poly_cell_indices.append(dim_output);
@@ -2560,7 +2576,7 @@ void ArrayPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("transform_texture_map", "transform"), &ArrayPolyMeshND::transform_texture_map);
 
 	// Misc functions.
-	ClassDB::bind_method(D_METHOD("deduplicate_all_elements"), &ArrayPolyMeshND::deduplicate_all_elements);
+	ClassDB::bind_method(D_METHOD("deduplicate_all_elements", "max_dimension"), &ArrayPolyMeshND::deduplicate_all_elements, DEFVAL(1000000000));
 	ClassDB::bind_method(D_METHOD("transform_mesh", "transform"), &ArrayPolyMeshND::transform_mesh);
 	ClassDB::bind_method(D_METHOD("merge_with", "other", "transform"), &ArrayPolyMeshND::merge_with, DEFVAL(Ref<TransformND>()));
 

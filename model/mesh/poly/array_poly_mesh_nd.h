@@ -101,7 +101,7 @@ public:
 	void transform_texture_map(const Ref<TransformND> &p_texture_transform);
 
 	// Misc functions.
-	void deduplicate_all_elements();
+	void deduplicate_all_elements(const int64_t p_max_dimension = 1000000000);
 	void transform_mesh(const Ref<TransformND> &p_transform);
 	void merge_with(const Ref<PolyMeshND> &p_other, const Ref<TransformND> &p_transform = Ref<TransformND>());
 
