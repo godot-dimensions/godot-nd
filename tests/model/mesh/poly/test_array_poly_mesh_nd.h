@@ -2362,6 +2362,7 @@ TEST_CASE("[ArrayPolyMeshND] Double sided empty boundary levels are unchanged") 
 TEST_CASE("[ArrayPolyMeshND] Orient cells to boundary normals") {
 	constexpr int dimension = 4;
 	const Vector2i cell_to_vert_key = Vector2i(dimension - 1, 0);
+	const Vector2i per_cell_key = Vector2i(dimension - 1, dimension - 1);
 	const int64_t boundary_dim_index = dimension - 3;
 	Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_box_poly_mesh(dimension)->to_array_poly_mesh();
 	REQUIRE(mesh->is_mesh_data_valid());
@@ -2500,6 +2501,119 @@ TEST_CASE("[ArrayPolyMeshND] Orient cells to boundary normals") {
 		CHECK(reordered_cells > 0); // Otherwise this test would not be exercising the resampling.
 	}
 
+	SUBCASE("An empty per-cell texture map binding is treated as no texture map") {
+		HashMap<Vector2i, Vector<PackedInt32Array>> texture_map_indices;
+		texture_map_indices.insert(per_cell_key, Vector<PackedInt32Array>());
+		mesh->set_all_poly_cell_texture_map_indices(texture_map_indices);
+		REQUIRE(mesh->is_mesh_data_valid());
+		// Both calls must agree: the first one must not leave a half-built cache behind for the second to return.
+		CHECK(mesh->get_simplex_cell_texture_map_indices().is_empty());
+		CHECK(mesh->get_simplex_cell_texture_map_indices().is_empty());
+		CHECK(mesh->get_texture_map_values().is_empty());
+	}
+
+	SUBCASE("A per-cell texture map binding gives every simplex of a cell its texture coordinate") {
+		Vector<VectorM> values;
+		PackedInt32Array per_cell;
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			values.append(VectorM{ (double)cell, 0.5, 0.25 });
+			per_cell.append(cell);
+		}
+		mesh->set_poly_cell_texture_map_values(values);
+		HashMap<Vector2i, Vector<PackedInt32Array>> texture_map_indices;
+		texture_map_indices.insert(per_cell_key, Vector<PackedInt32Array>{ per_cell });
+		mesh->set_all_poly_cell_texture_map_indices(texture_map_indices);
+		REQUIRE(mesh->is_mesh_data_valid());
+		const PackedInt32Array simplex_texture_map = mesh->get_simplex_cell_texture_map_indices();
+		const int64_t simplex_count = mesh->get_simplex_cell_vertex_indices().size() / dimension;
+		REQUIRE(simplex_count > 0);
+		REQUIRE(simplex_texture_map.size() == simplex_count * dimension);
+		const Vector<VectorM> simplex_values = mesh->get_texture_map_values();
+		for (int64_t simplex = 0; simplex < simplex_count; simplex++) {
+			const int32_t source_cell = mesh->get_source_poly_cell_for_simplex_cell(simplex);
+			REQUIRE(source_cell >= 0);
+			for (int64_t corner = 0; corner < dimension; corner++) {
+				CHECK(simplex_values[simplex_texture_map[simplex * dimension + corner]] == values[source_cell]);
+			}
+		}
+		CHECK_MESSAGE(VectorND::array_is_equal_exact(simplex_values, values), "Per-cell texture maps need no derived values, so the pool should be unchanged.");
+	}
+
+	SUBCASE("A short per-cell texture map binding leaves the trailing cells unmapped") {
+		const int64_t mapped_cells = 5;
+		Vector<VectorM> values;
+		PackedInt32Array per_cell;
+		for (int64_t cell = 0; cell < mapped_cells; cell++) {
+			values.append(VectorM{ (double)cell, 0.5, 0.25 });
+			per_cell.append(cell);
+		}
+		mesh->set_poly_cell_texture_map_values(values);
+		HashMap<Vector2i, Vector<PackedInt32Array>> texture_map_indices;
+		texture_map_indices.insert(per_cell_key, Vector<PackedInt32Array>{ per_cell });
+		mesh->set_all_poly_cell_texture_map_indices(texture_map_indices);
+		REQUIRE(mesh->is_mesh_data_valid());
+		ERR_PRINT_OFF; // Mixing mapped and unmapped cells intentionally warns.
+		const PackedInt32Array simplex_texture_map = mesh->get_simplex_cell_texture_map_indices();
+		ERR_PRINT_ON;
+		const int64_t simplex_count = mesh->get_simplex_cell_vertex_indices().size() / dimension;
+		REQUIRE(simplex_texture_map.size() == simplex_count * dimension);
+		const Vector<VectorM> simplex_values = mesh->get_texture_map_values();
+		for (int64_t simplex = 0; simplex < simplex_count; simplex++) {
+			const int32_t source_cell = mesh->get_source_poly_cell_for_simplex_cell(simplex);
+			const VectorM expected = source_cell < mapped_cells ? values[source_cell] : VectorM();
+			for (int64_t corner = 0; corner < dimension; corner++) {
+				CHECK(simplex_values[simplex_texture_map[simplex * dimension + corner]] == expected);
+			}
+		}
+	}
+
+	SUBCASE("Per-vertex texture maps take precedence over per-cell ones") {
+		const Vector<PackedInt32Array> cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+		const Vector<VectorN> vertices = mesh->get_poly_cell_vertex_positions();
+		Vector<Vector<VectorM>> per_vertex;
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			Vector<VectorM> cell_texture_map;
+			for (const int32_t vertex_index : cell_vertices[cell]) {
+				VectorM texcoord = vertices[vertex_index];
+				texcoord.resize(dimension - 1);
+				cell_texture_map.append(texcoord);
+			}
+			per_vertex.push_back(cell_texture_map);
+		}
+		mesh->set_poly_cell_dense_texture_map(cell_to_vert_key, per_vertex);
+		REQUIRE(mesh->is_mesh_data_valid());
+		const PackedInt32Array per_vertex_only = mesh->get_simplex_cell_texture_map_indices();
+		REQUIRE(!per_vertex_only.is_empty());
+		// Add a per-cell binding on top, pointing every cell at the first value.
+		HashMap<Vector2i, Vector<PackedInt32Array>> texture_map_indices = mesh->get_all_poly_cell_texture_map_indices();
+		PackedInt32Array per_cell;
+		per_cell.resize(cell_count);
+		per_cell.fill(0);
+		texture_map_indices.insert(per_cell_key, Vector<PackedInt32Array>{ per_cell });
+		mesh->set_all_poly_cell_texture_map_indices(texture_map_indices);
+		REQUIRE(mesh->is_mesh_data_valid());
+		CHECK(mesh->get_simplex_cell_texture_map_indices() == per_vertex_only);
+	}
+
+	SUBCASE("Per-vertex bindings must cover every boundary cell") {
+		// Unlike auxiliary bindings such as the per-cell texture map, the boundary cell vertex bindings
+		// exposed by `poly_cell_normal_indices` and `poly_cell_texture_map_indices` may not be short.
+		const Vector<PackedInt32Array> cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+		const Vector<VectorN> vertices = mesh->get_poly_cell_vertex_positions();
+		Vector<Vector<VectorN>> vertex_normals;
+		for (int64_t cell = 0; cell < cell_count - 1; cell++) {
+			Vector<VectorN> cell_normals;
+			for (const int32_t vertex_index : cell_vertices[cell]) {
+				cell_normals.append(VectorND::normalized(vertices[vertex_index]));
+			}
+			vertex_normals.push_back(cell_normals);
+		}
+		mesh->set_poly_cell_dense_normals(cell_to_vert_key, vertex_normals);
+		ERR_PRINT_OFF; // The short binding intentionally fails validation.
+		CHECK_FALSE(mesh->is_mesh_data_valid());
+		ERR_PRINT_ON;
+	}
+
 	SUBCASE("Converting to an array mesh keeps every binding key, the seams, and the pivot overrides") {
 		const Vector<VectorN> vertices = mesh->get_poly_cell_vertex_positions();
 		Vector<VectorN> vertex_normals;
@@ -2533,6 +2647,28 @@ TEST_CASE("[ArrayPolyMeshND] Orient cells to boundary normals") {
 		CHECK(copy->get_poly_cell_normal_values().size() == normal_value_count);
 		CHECK(copy->get_seam_indices_bind() == mesh->get_seam_indices_bind());
 		CHECK(copy->get_poly_cell_boundary_pivot_overrides() == pivot_overrides);
+	}
+
+	SUBCASE("Appending an invalid poly hierarchy leaves the mesh untouched") {
+		const Vector<Vector<PackedInt32Array>> cells_before = mesh->get_poly_cell_indices();
+		const PackedInt32Array edges_before = mesh->get_edge_indices();
+		const Vector<Vector<PackedInt32Array>> tetrahedron = {
+			Vector<PackedInt32Array>{ PackedInt32Array{ 0, 1, 2 }, PackedInt32Array{ 0, 3, 4 }, PackedInt32Array{ 1, 3, 5 }, PackedInt32Array{ 2, 4, 5 } },
+			Vector<PackedInt32Array>{ PackedInt32Array{ 0, 1, 2, 3 } },
+		};
+		ERR_PRINT_OFF; // Both appends intentionally fail.
+		// An edge referencing a vertex the mesh does not have.
+		CHECK(mesh->append_poly_hierarchy(tetrahedron, { 0, 1, 0, 2, 1, 2, 0, 999, 1, 999, 2, 999 }) == -1);
+		// A face referencing an edge the hierarchy does not have.
+		const Vector<Vector<PackedInt32Array>> broken_hierarchy = {
+			Vector<PackedInt32Array>{ PackedInt32Array{ 0, 1, 99 }, PackedInt32Array{ 0, 3, 4 }, PackedInt32Array{ 1, 3, 5 }, PackedInt32Array{ 2, 4, 5 } },
+			Vector<PackedInt32Array>{ PackedInt32Array{ 0, 1, 2, 3 } },
+		};
+		CHECK(mesh->append_poly_hierarchy(broken_hierarchy, { 0, 1, 0, 2, 1, 2, 0, 3, 1, 3, 2, 3 }) == -1);
+		ERR_PRINT_ON;
+		CHECK(mesh->get_poly_cell_indices() == cells_before);
+		CHECK(mesh->get_edge_indices() == edges_before);
+		CHECK(mesh->is_mesh_data_valid());
 	}
 
 	SUBCASE("Cells without a desired normal keep their stored normal") {

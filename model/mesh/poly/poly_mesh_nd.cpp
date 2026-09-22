@@ -1543,9 +1543,9 @@ PackedInt32Array PolyMeshND::get_simplex_cell_normal_indices() {
 		bool missing_some_vertex_normals = false;
 		for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
 			const int32_t source_cell = _simplex_cell_source_poly_cells[simplex_index];
-			const PackedInt32Array &source_poly_normal_indices = poly_cell_normal_indices[source_cell];
 			const int64_t offset = simplex_index * dimension;
-			if (source_poly_normal_indices.is_empty()) {
+			// Validation requires one record per boundary cell, but guard against a short binding rather than reading out of bounds.
+			if (source_cell >= poly_cell_normal_indices.size() || poly_cell_normal_indices[source_cell].is_empty()) {
 				missing_some_vertex_normals = true;
 				// Point cells without vertex normals at a zero normal value.
 				if (zero_normal_value_index == -1) {
@@ -1557,6 +1557,7 @@ PackedInt32Array PolyMeshND::get_simplex_cell_normal_indices() {
 				continue;
 			}
 			has_some_vertex_normals = true;
+			const PackedInt32Array &source_poly_normal_indices = poly_cell_normal_indices[source_cell];
 			const PackedInt32Array &source_cell_vertices = cell_vert[source_cell];
 			CRASH_COND_MSG(source_poly_normal_indices.size() != source_cell_vertices.size(), "PolyMeshND: Source polytope cell vertex normals size does not match cell vertex count.");
 			for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
@@ -1604,12 +1605,19 @@ Vector<VectorN> PolyMeshND::get_normal_values() {
 
 PackedInt32Array PolyMeshND::get_simplex_cell_texture_map_indices() {
 	if (_simplex_cell_texture_map_indices_cache.is_empty()) {
-		const Vector<PackedInt32Array> poly_cell_texture_map_indices = get_poly_cell_texture_map_indices();
-		if (poly_cell_texture_map_indices.is_empty()) {
+		const HashMap<Vector2i, Vector<PackedInt32Array>> all_poly_cell_texture_map_indices = get_all_poly_cell_texture_map_indices();
+		if (all_poly_cell_texture_map_indices.is_empty()) {
 			return PackedInt32Array(); // No texture map data available.
 		}
 		const int64_t dimension = get_dimension();
 		ERR_FAIL_COND_V(dimension < 3, PackedInt32Array());
+		const Vector2i cell_to_vert_key = Vector2i(dimension - 1, 0);
+		const Vector2i per_cell_key = Vector2i(dimension - 1, dimension - 1);
+		const bool has_cell_to_vert = all_poly_cell_texture_map_indices.has(cell_to_vert_key);
+		const bool has_per_cell = all_poly_cell_texture_map_indices.has(per_cell_key);
+		if (!has_cell_to_vert && !has_per_cell) {
+			return PackedInt32Array(); // Only bindings on other geometry dimensions, which don't map onto the boundary simplexes.
+		}
 		int64_t simplex_count = _simplex_cell_source_poly_cells.size();
 		if (simplex_count == 0 || simplex_count * dimension != _simplex_cell_vertex_indices_cache.size()) {
 			_decompose_boundary_cells_into_simplexes();
@@ -1622,88 +1630,127 @@ PackedInt32Array PolyMeshND::get_simplex_cell_texture_map_indices() {
 		const int64_t boundary_dim_index = dimension - 3;
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
 		ERR_FAIL_COND_V_MSG(poly_cell_indices.size() <= boundary_dim_index, PackedInt32Array(), "PolyMeshND: No boundary cells available, cannot compute simplex texture map.");
-		const Vector<PackedInt32Array> &cell_vert = _get_boundary_cell_vertex_indices_cached(false);
 		// The simplex texture map values are a superset of the polytope cell texture map values, so
 		// the polytope cell texture map indices can be used directly as indices into the simplex values.
 		_simplex_cell_texture_map_values_cache = get_poly_cell_texture_map_values();
-		// Prepare a cache for inferred vertex texcoords for pivot overrides.
-		const PackedInt32Array poly_cell_boundary_pivot_overrides = get_poly_cell_boundary_pivot_overrides();
-		const int64_t cell_vert_count = cell_vert.size();
-		Vector<int8_t> cached_inference_state;
-		cached_inference_state.resize_initialized(cell_vert_count);
-		Vector<VectorM> cached_inferred_texcoord;
-		cached_inferred_texcoord.resize(cell_vert_count);
-		for (int64_t cell_vert_index = 0; cell_vert_index < cell_vert_count; cell_vert_index++) {
-			cached_inference_state.set(cell_vert_index, (int8_t)0);
-			cached_inferred_texcoord.set(cell_vert_index, VectorM());
-		}
 		// Fill the texture map cache for each simplex cell using data from the corresponding source polytope cell.
 		_simplex_cell_texture_map_indices_cache.resize(simplex_count * dimension);
 		int32_t zero_texture_map_value_index = -1;
 		bool has_some_texture_map = false;
 		bool missing_some_texture_map = false;
-		for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
-			const int32_t source_cell = _simplex_cell_source_poly_cells[simplex_index];
-			const PackedInt32Array &source_poly_texture_map_indices = poly_cell_texture_map_indices[source_cell];
-			const int64_t offset = simplex_index * dimension;
-			if (source_poly_texture_map_indices.is_empty()) {
-				missing_some_texture_map = true;
-				// Point unmapped cells at a zero texture map value, making them degenerate.
-				if (zero_texture_map_value_index == -1) {
-					zero_texture_map_value_index = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_texture_map_values_cache, VectorM());
-				}
-				for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
-					_simplex_cell_texture_map_indices_cache.set(offset + vertex_in_simplex, zero_texture_map_value_index);
-				}
-				continue;
+		// Per-vertex data is more detailed than per-cell data, so it takes precedence when both are present.
+		if (has_cell_to_vert) { // Boundary cells decomposed into vertices.
+			const Vector<PackedInt32Array> &poly_cell_texture_map_indices = all_poly_cell_texture_map_indices[cell_to_vert_key];
+			// Only this branch needs to know which vertices each cell has, and it is not cheap, so only fetch it here.
+			const Vector<PackedInt32Array> &cell_vert = _get_boundary_cell_vertex_indices_cached(false);
+			// Prepare a cache for inferred vertex texcoords for pivot overrides.
+			const PackedInt32Array poly_cell_boundary_pivot_overrides = get_poly_cell_boundary_pivot_overrides();
+			const int64_t cell_vert_count = cell_vert.size();
+			Vector<int8_t> cached_inference_state;
+			cached_inference_state.resize_initialized(cell_vert_count);
+			Vector<VectorM> cached_inferred_texcoord;
+			cached_inferred_texcoord.resize(cell_vert_count);
+			for (int64_t cell_vert_index = 0; cell_vert_index < cell_vert_count; cell_vert_index++) {
+				cached_inference_state.set(cell_vert_index, (int8_t)0);
+				cached_inferred_texcoord.set(cell_vert_index, VectorM());
 			}
-			has_some_texture_map = true;
-			const PackedInt32Array &source_cell_vertices = cell_vert[source_cell];
-			CRASH_COND_MSG(source_poly_texture_map_indices.size() != source_cell_vertices.size(), "PolyMeshND: Source polytope cell texture map size does not match cell vertex count.");
-			for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
-				const int32_t vertex_index = _simplex_cell_vertex_indices_cache[offset + vertex_in_simplex];
-				const int64_t vertex_in_source_poly = source_cell_vertices.find(vertex_index);
-				int32_t texture_map_value_index;
-				if (vertex_in_source_poly == -1) {
-					// If the simplexes contain a vertex that is not on the original polytope cell surface,
-					// then it is either a pivot override, or a computed centroid. Check for overrides first.
-					// Sample the source cell's texture map values densely for inference and averaging.
-					Vector<VectorM> source_poly_texture_map;
-					source_poly_texture_map.resize(source_poly_texture_map_indices.size());
-					for (int64_t i = 0; i < source_poly_texture_map_indices.size(); i++) {
-						source_poly_texture_map.set(i, _simplex_cell_texture_map_values_cache[source_poly_texture_map_indices[i]]);
+			for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
+				const int32_t source_cell = _simplex_cell_source_poly_cells[simplex_index];
+				const int64_t offset = simplex_index * dimension;
+				// Validation requires one record per boundary cell, but guard against a short binding rather than reading out of bounds.
+				if (source_cell >= poly_cell_texture_map_indices.size() || poly_cell_texture_map_indices[source_cell].is_empty()) {
+					missing_some_texture_map = true;
+					// Point unmapped cells at a zero texture map value, making them degenerate.
+					if (zero_texture_map_value_index == -1) {
+						zero_texture_map_value_index = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_texture_map_values_cache, VectorM());
 					}
-					VectorM texcoord;
-					bool used_pivot_override = false;
-					if (poly_cell_boundary_pivot_overrides.size() > source_cell) {
-						const int32_t pivot_override_vertex = poly_cell_boundary_pivot_overrides[source_cell];
-						if (pivot_override_vertex >= 0 && vertex_index == pivot_override_vertex) {
-							//  0: Not inferred yet (should try to attempt inference, then leads to 1 or -1).
-							//  1: Inferred successfully (use the cached value).
-							// -1: Inference attempted but failed (use average as fallback).
-							const int8_t inference_state = cached_inference_state[source_cell];
-							if (inference_state == 1) {
-								texcoord = cached_inferred_texcoord[source_cell];
-								used_pivot_override = true;
-							} else if (inference_state == 0) {
-								used_pivot_override = _infer_vertex_texcoord_from_cell_pivot_override(source_cell_vertices, source_poly_texture_map, pivot_override_vertex, texcoord);
-								cached_inference_state.set(source_cell, used_pivot_override ? (int8_t)1 : (int8_t)-1);
-								if (used_pivot_override) {
-									cached_inferred_texcoord.set(source_cell, texcoord);
+					for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
+						_simplex_cell_texture_map_indices_cache.set(offset + vertex_in_simplex, zero_texture_map_value_index);
+					}
+					continue;
+				}
+				has_some_texture_map = true;
+				const PackedInt32Array &source_poly_texture_map_indices = poly_cell_texture_map_indices[source_cell];
+				const PackedInt32Array &source_cell_vertices = cell_vert[source_cell];
+				CRASH_COND_MSG(source_poly_texture_map_indices.size() != source_cell_vertices.size(), "PolyMeshND: Source polytope cell texture map size does not match cell vertex count.");
+				for (int64_t vertex_in_simplex = 0; vertex_in_simplex < dimension; vertex_in_simplex++) {
+					const int32_t vertex_index = _simplex_cell_vertex_indices_cache[offset + vertex_in_simplex];
+					const int64_t vertex_in_source_poly = source_cell_vertices.find(vertex_index);
+					int32_t texture_map_value_index;
+					if (vertex_in_source_poly == -1) {
+						// If the simplexes contain a vertex that is not on the original polytope cell surface,
+						// then it is either a pivot override, or a computed centroid. Check for overrides first.
+						// Sample the source cell's texture map values densely for inference and averaging.
+						Vector<VectorM> source_poly_texture_map;
+						source_poly_texture_map.resize(source_poly_texture_map_indices.size());
+						for (int64_t i = 0; i < source_poly_texture_map_indices.size(); i++) {
+							source_poly_texture_map.set(i, _simplex_cell_texture_map_values_cache[source_poly_texture_map_indices[i]]);
+						}
+						VectorM texcoord;
+						bool used_pivot_override = false;
+						if (poly_cell_boundary_pivot_overrides.size() > source_cell) {
+							const int32_t pivot_override_vertex = poly_cell_boundary_pivot_overrides[source_cell];
+							if (pivot_override_vertex >= 0 && vertex_index == pivot_override_vertex) {
+								//  0: Not inferred yet (should try to attempt inference, then leads to 1 or -1).
+								//  1: Inferred successfully (use the cached value).
+								// -1: Inference attempted but failed (use average as fallback).
+								const int8_t inference_state = cached_inference_state[source_cell];
+								if (inference_state == 1) {
+									texcoord = cached_inferred_texcoord[source_cell];
+									used_pivot_override = true;
+								} else if (inference_state == 0) {
+									used_pivot_override = _infer_vertex_texcoord_from_cell_pivot_override(source_cell_vertices, source_poly_texture_map, pivot_override_vertex, texcoord);
+									cached_inference_state.set(source_cell, used_pivot_override ? (int8_t)1 : (int8_t)-1);
+									if (used_pivot_override) {
+										cached_inferred_texcoord.set(source_cell, texcoord);
+									}
 								}
 							}
 						}
+						// If this vertex is not a pivot override, or if it is but we couldn't infer a texcoord for it,
+						// then just average the existing texcoords for this cell as a fallback.
+						if (!used_pivot_override) {
+							texcoord = _average_vector_m(source_poly_texture_map);
+						}
+						texture_map_value_index = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_texture_map_values_cache, texcoord);
+					} else {
+						texture_map_value_index = source_poly_texture_map_indices[vertex_in_source_poly];
 					}
-					// If this vertex is not a pivot override, or if it is but we couldn't infer a texcoord for it,
-					// then just average the existing texcoords for this cell as a fallback.
-					if (!used_pivot_override) {
-						texcoord = _average_vector_m(source_poly_texture_map);
-					}
-					texture_map_value_index = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_texture_map_values_cache, texcoord);
-				} else {
-					texture_map_value_index = source_poly_texture_map_indices[vertex_in_source_poly];
+					_simplex_cell_texture_map_indices_cache.set(offset + vertex_in_simplex, texture_map_value_index);
 				}
-				_simplex_cell_texture_map_indices_cache.set(offset + vertex_in_simplex, texture_map_value_index);
+			}
+		} else { // One value for each cell (flat array at index 0).
+			const Vector<PackedInt32Array> &wrapper = all_poly_cell_texture_map_indices[per_cell_key];
+			if (wrapper.size() != 1) {
+				// The cache was already resized above, so it must not be left half-built, or later calls would return garbage.
+				_simplex_cell_texture_map_indices_cache.clear();
+				_simplex_cell_texture_map_values_cache.clear();
+				if (wrapper.is_empty()) {
+					return PackedInt32Array(); // A present but empty binding means there is no texture map data.
+				}
+				ERR_FAIL_V_MSG(PackedInt32Array(), "PolyMeshND: The per-cell texture map binding must contain exactly one array of indices, but it contains " + itos(wrapper.size()) + ".");
+			}
+			const PackedInt32Array &poly_cell_texture_map_indices = wrapper[0];
+			for (int64_t simplex_index = 0; simplex_index < simplex_count; simplex_index++) {
+				const int32_t source_cell = _simplex_cell_source_poly_cells[simplex_index];
+				const int64_t simplex_start = simplex_index * dimension;
+				// Auxiliary bindings may omit trailing geometry elements, in which case those cells have no texture map.
+				if (source_cell >= poly_cell_texture_map_indices.size()) {
+					missing_some_texture_map = true;
+					// Point unmapped cells at a zero texture map value, making them degenerate.
+					if (zero_texture_map_value_index == -1) {
+						zero_texture_map_value_index = (int32_t)VectorND::array_append_deduplicate(_simplex_cell_texture_map_values_cache, VectorM());
+					}
+					for (int64_t vert_in_simplex = 0; vert_in_simplex < dimension; vert_in_simplex++) {
+						_simplex_cell_texture_map_indices_cache.set(simplex_start + vert_in_simplex, zero_texture_map_value_index);
+					}
+					continue;
+				}
+				has_some_texture_map = true;
+				const int32_t tex_coord_ind = poly_cell_texture_map_indices[source_cell];
+				for (int64_t vert_in_simplex = 0; vert_in_simplex < dimension; vert_in_simplex++) {
+					_simplex_cell_texture_map_indices_cache.set(simplex_start + vert_in_simplex, tex_coord_ind);
+				}
 			}
 		}
 		if (missing_some_texture_map) {
