@@ -38,7 +38,6 @@ def get_doc_classes():
 		"MaterialND",
 		"MeshInstanceND",
 		"MeshND",
-		"OFFDocumentND",
 		"OrthoplexPolyMeshND",
 		"OrthoplexWireMeshND",
 		"PolyMaterialND",
@@ -50,6 +49,7 @@ def get_doc_classes():
 		"WireMeshND",
 		# Depends on mesh.
 		"MarkerND",
+		"OFFDocumentND",
 	]
 
 

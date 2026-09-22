@@ -1,4 +1,4 @@
-# ND Mesh Type Comparison
+# Godot ND Mesh Type Comparison
 
 Godot ND provides 3 main mesh types for representing visible ND geometry:
 
