@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../mesh_nd.h"
+#include "../single_surface_mesh_nd.h"
 
-class WireMeshND : public MeshND {
-	GDCLASS(WireMeshND, MeshND);
+class WireMeshND : public SingleSurfaceMeshND {
+	GDCLASS(WireMeshND, SingleSurfaceMeshND);
 
 protected:
 	static void _bind_methods();

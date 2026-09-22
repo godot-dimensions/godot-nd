@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../nodes/node_nd.h"
+#include "material_nd.h"
 #include "mesh_nd.h"
 
 class MeshInstanceND : public NodeND {

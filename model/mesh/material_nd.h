@@ -10,7 +10,7 @@
 #include "core/io/resource.h"
 #endif
 
-class MeshND;
+class SingleSurfaceMeshND;
 
 class MaterialND : public Resource {
 	GDCLASS(MaterialND, Resource);
@@ -55,7 +55,7 @@ protected:
 
 public:
 	// Common functions.
-	virtual Color get_albedo_color_of_edge(const int64_t p_edge_index, const Ref<MeshND> &p_for_mesh);
+	virtual Color get_albedo_color_of_edge(const int64_t p_edge_index, const Ref<SingleSurfaceMeshND> &p_for_mesh);
 	bool is_default_material() const;
 	virtual void merge_with(const Ref<MaterialND> &p_material, const int p_first_item_count, const int p_second_item_count);
 

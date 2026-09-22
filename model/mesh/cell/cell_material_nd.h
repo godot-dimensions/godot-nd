@@ -10,7 +10,7 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
-	virtual Color get_albedo_color_of_edge(const int64_t p_edge_index, const Ref<MeshND> &p_for_mesh) override;
+	virtual Color get_albedo_color_of_edge(const int64_t p_edge_index, const Ref<SingleSurfaceMeshND> &p_for_mesh) override;
 
 	CellMaterialND();
 };

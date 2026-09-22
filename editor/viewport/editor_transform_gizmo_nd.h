@@ -5,6 +5,7 @@
 #include "editor_transform_snap_settings_nd.h"
 #include "editor_viewport_nd_defines.h"
 
+class ArrayWireMeshND;
 class CameraND;
 class RenderingEngineND;
 class WireMaterialND;

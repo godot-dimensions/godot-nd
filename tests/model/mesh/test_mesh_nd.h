@@ -116,12 +116,12 @@ TEST_CASE("[MeshND] Array mesh validators share the first-vertex dimension contr
 		wire.instantiate();
 		Ref<ArrayPolyMeshND> poly;
 		poly.instantiate();
-		const Vector<Ref<MeshND>> meshes = { cell, wire, poly };
+		const Vector<Ref<SingleSurfaceMeshND>> meshes = { cell, wire, poly };
 		const Vector<VectorN> positions = { VectorND::fill(dimension, 1.0), VectorN(), dimension == 0 ? VectorN() : VectorN{ 2.0 } };
 		cell->set_vertex_positions(positions);
 		wire->set_vertex_positions(positions);
 		poly->set_poly_cell_vertex_positions(positions);
-		for (const Ref<MeshND> &mesh : meshes) {
+		for (const Ref<SingleSurfaceMeshND> &mesh : meshes) {
 			CHECK(mesh->get_dimension() == dimension);
 			CHECK(mesh->is_mesh_data_valid());
 			CHECK(mesh->get_vertex_positions() == positions);
@@ -131,7 +131,7 @@ TEST_CASE("[MeshND] Array mesh validators share the first-vertex dimension contr
 		cell->set_vertex_positions(invalid);
 		wire->set_vertex_positions(invalid);
 		poly->set_poly_cell_vertex_positions(invalid);
-		for (const Ref<MeshND> &mesh : meshes) {
+		for (const Ref<SingleSurfaceMeshND> &mesh : meshes) {
 			CHECK(mesh->get_dimension() == dimension);
 			ERR_PRINT_OFF;
 			CHECK_FALSE(mesh->is_mesh_data_valid());

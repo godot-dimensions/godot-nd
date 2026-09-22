@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../mesh_nd.h"
+#include "../single_surface_mesh_nd.h"
 
 class ArrayCellMeshND;
 
-class CellMeshND : public MeshND {
-	GDCLASS(CellMeshND, MeshND);
+class CellMeshND : public SingleSurfaceMeshND {
+	GDCLASS(CellMeshND, SingleSurfaceMeshND);
 
 	Vector<VectorN> _cell_positions_cache;
 	PackedFloat64Array _nearest_simplex_inverse_metric_cache;

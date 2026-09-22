@@ -414,7 +414,7 @@ void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 			p_material->resize_albedo_color_array(cell_count);
 		}
 	}
-	MeshND::validate_material_for_mesh(p_material);
+	SingleSurfaceMeshND::validate_material_for_mesh(p_material);
 }
 
 Ref<ArrayCellMeshND> CellMeshND::to_array_cell_mesh() {

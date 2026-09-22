@@ -1,8 +1,8 @@
 #include "material_nd.h"
 
-#include "mesh_nd.h"
+#include "single_surface_mesh_nd.h"
 
-Color MaterialND::get_albedo_color_of_edge(const int64_t p_edge_index, const Ref<MeshND> &p_for_mesh) {
+Color MaterialND::get_albedo_color_of_edge(const int64_t p_edge_index, const Ref<SingleSurfaceMeshND> &p_for_mesh) {
 	if (!(_albedo_source_flags & COLOR_SOURCE_FLAG_USES_COLOR_ARRAY)) {
 		// No need to allocate any memory for _edge_albedo_color_cache if the color array is not used.
 		if (likely(_albedo_source_flags & COLOR_SOURCE_FLAG_SINGLE_COLOR)) {

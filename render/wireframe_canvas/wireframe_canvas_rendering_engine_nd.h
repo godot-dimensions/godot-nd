@@ -2,6 +2,8 @@
 
 #include "../rendering_engine_nd.h"
 
+class MaterialND;
+class SingleSurfaceMeshND;
 class WireframeRenderCanvasND;
 
 // Trivial CPU-based renderer that draws wireframes to a Control-based canvas.
@@ -10,7 +12,7 @@ class WireframeRenderCanvasND;
 class WireframeCanvasRenderingEngineND : public RenderingEngineND {
 	GDCLASS(WireframeCanvasRenderingEngineND, RenderingEngineND);
 
-	static Color _get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<MeshND> &p_mesh, int p_edge_index);
+	static Color _get_material_edge_color(const Ref<MaterialND> &p_material, const Ref<SingleSurfaceMeshND> &p_mesh, int p_edge_index);
 	static WireframeRenderCanvasND *_get_valid_render_canvas(const Viewport *p_viewport);
 
 protected:

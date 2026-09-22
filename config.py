@@ -44,6 +44,7 @@ def get_doc_classes():
 		"PolyMaterialND",
 		"PolyMeshBuilderND",
 		"PolyMeshND",
+		"SingleSurfaceMeshND",
 		"WireMaterialND",
 		"WireMeshBuilderND",
 		"WireMeshND",

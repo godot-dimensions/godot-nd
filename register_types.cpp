@@ -33,6 +33,7 @@
 #include "model/mesh/material_nd.h"
 #include "model/mesh/mesh_nd.h"
 #include "model/mesh/poly/poly_mesh_nd.h"
+#include "model/mesh/single_surface_mesh_nd.h"
 #include "model/mesh/wire/wire_mesh_nd.h"
 
 // Model.
@@ -125,7 +126,8 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(CameraND);
 		// Virtual classes.
 		GDREGISTER_VIRTUAL_CLASS(MaterialND);
-		GDREGISTER_VIRTUAL_CLASS(MeshND);
+		GDREGISTER_ABSTRACT_CLASS(MeshND);
+		GDREGISTER_VIRTUAL_CLASS(SingleSurfaceMeshND);
 		GDREGISTER_VIRTUAL_CLASS(CellMeshND);
 		GDREGISTER_VIRTUAL_CLASS(PolyMeshND);
 		GDREGISTER_VIRTUAL_CLASS(WireMeshND);
