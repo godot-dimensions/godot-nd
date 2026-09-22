@@ -38,6 +38,7 @@ def get_doc_classes():
 		"MaterialND",
 		"MeshInstanceND",
 		"MeshND",
+		"MultiSurfaceMeshND",
 		"OrthoplexPolyMeshND",
 		"OrthoplexWireMeshND",
 		"PolyMaterialND",

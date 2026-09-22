@@ -13,14 +13,20 @@
 	<methods>
 		<method name="get_active_material" qualifiers="const">
 			<return type="MaterialND" />
+			<param index="0" name="surface_index" type="int" default="0" />
 			<description>
-				Returns the currently active [MaterialND] for this mesh instance. If [member material_override] is set, this will return that material. Otherwise, if [member mesh] is set to a valid [MeshND], this will return the material set on that mesh. If neither of these are set, this will return null.
+				Returns the currently active [MaterialND] for the surface of [member mesh] at [param surface_index]. The index only matters for a [MultiSurfaceMeshND], since a [SingleSurfaceMeshND] only has surface [code]0[/code]. This is the material that rendering engines use to draw that surface.
+				If [member material_overrides] has a single element, it is returned for every surface. Otherwise, the element at [param surface_index] is returned if there is one and it is not null. Otherwise, the surface's own [member SingleSurfaceMeshND.material] is returned, which may be null if the surface has no material. Materials found through the overrides or the surface are validated against the surface before being returned.
+				If [member mesh] is not set, or [param surface_index] does not refer to a surface of the mesh, only the overrides are consulted, so this returns the override for that index or null.
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="material_override" type="MaterialND" setter="set_material_override" getter="get_material_override">
-			The [MaterialND] used to render the mesh. This material defines the appearance of the mesh, including its color, texture, and lighting properties. The [WireMaterialND] type is intended for wireframe meshes. This property overrides the per-mesh material set on the [MeshND] resource in the [member MeshND.material] property.
+			The [MaterialND] override used to render the mesh. This material defines the appearance of the mesh, including its color, texture, and lighting properties. The [WireMaterialND] type is intended for wireframe meshes. This property overrides the per-mesh material set on the [MeshND] resource in the [member SingleSurfaceMeshND.material] property.
+		</member>
+		<member name="material_overrides" type="MaterialND[]" setter="set_material_overrides" getter="get_material_overrides">
+			The [MaterialND] overrides used to render the multiple surfaces of the mesh. If this array has a single element, it applies to all surfaces. If it has multiple elements, each element corresponds to a specific surface of the mesh. See also [member material_override].
 		</member>
 		<member name="mesh" type="MeshND" setter="set_mesh" getter="get_mesh">
 			The [MeshND] resource that defines the geometry of the mesh. This may be set to any [MeshND] derived class. [WireMeshND] allows for wireframe meshes, which draw using lines.

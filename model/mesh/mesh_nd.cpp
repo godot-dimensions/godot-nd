@@ -92,6 +92,14 @@ void MeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 	GDVIRTUAL_CALL(_validate_material_for_mesh, p_material);
 }
 
+int MeshND::get_proxy_surface_index_3d(const int p_surface_index_nd) const {
+	// A base MeshND has a single surface. It maps to the first 3D surface, if any 3D surface was generated.
+	if (p_surface_index_nd != 0 || _proxy_mesh_3d.is_null() || _proxy_mesh_3d->get_surface_count() == 0) {
+		return -1;
+	}
+	return 0;
+}
+
 void MeshND::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("mesh_data_validation_reset"));
 	ADD_SIGNAL(MethodInfo("proxy_mesh_3d_marked_dirty"));
@@ -101,6 +109,7 @@ void MeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_dimension"), &MeshND::get_dimension);
 
 	ClassDB::bind_method(D_METHOD("get_proxy_mesh_3d"), &MeshND::get_proxy_mesh_3d);
+	ClassDB::bind_method(D_METHOD("get_proxy_surface_index_3d", "surface_index_nd"), &MeshND::get_proxy_surface_index_3d);
 	ClassDB::bind_method(D_METHOD("append_proxy_mesh_surfaces_3d", "proxy_mesh_3d"), &MeshND::append_proxy_mesh_surfaces_3d);
 	ClassDB::bind_method(D_METHOD("mark_proxy_mesh_3d_dirty"), &MeshND::mark_proxy_mesh_3d_dirty);
 	ClassDB::bind_method(D_METHOD("mark_mesh_bounds_and_proxy_mesh_3d_dirty"), &MeshND::mark_mesh_bounds_and_proxy_mesh_3d_dirty);

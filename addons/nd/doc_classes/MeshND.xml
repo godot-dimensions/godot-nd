@@ -58,6 +58,13 @@
 				[b]Note:[/b] The ND module does not have a renderer that uses this proxy mesh yet, so the base implementation leaves it empty unless a derived class overrides [method _append_proxy_mesh_surfaces_3d] to fill it in.
 			</description>
 		</method>
+		<method name="get_proxy_surface_index_3d" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="surface_index_nd" type="int" />
+			<description>
+				Returns the index of the surface in the proxy 3D mesh (see [method get_proxy_mesh_3d]) that corresponds to the surface of this MeshND at [param surface_index_nd], or [code]-1[/code] if that surface did not produce any 3D geometry. Null and empty surfaces do not add a surface to the proxy mesh, so for a [MultiSurfaceMeshND] the 3D surface indices do not line up with the ND surface indices in general. Rendering engines should use this when assigning per-surface materials to the proxy mesh. The returned value is only meaningful after [method get_proxy_mesh_3d] has been called for the current state of the mesh.
+			</description>
+		</method>
 		<method name="get_rect_bounds">
 			<return type="RectND" />
 			<description>

@@ -14,6 +14,7 @@
 #include "model/mesh/poly/test_poly_mesh_nd.h"
 #include "model/mesh/test_mesh_instance_nd.h"
 #include "model/mesh/test_mesh_nd.h"
+#include "model/mesh/test_multi_surface_mesh_nd.h"
 #include "model/mesh/wire/test_wire_mesh_builder_nd.h"
 #include "model/mesh/wire/test_wire_mesh_nd.h"
 #include "model/off/test_off_document_nd.h"

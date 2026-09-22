@@ -2,6 +2,7 @@
 
 #include "../../math/vector_nd.h"
 #include "../../model/mesh/mesh_instance_nd.h"
+#include "../../model/mesh/multi_surface_mesh_nd.h"
 #include "../../model/mesh/single_surface_mesh_nd.h"
 #include "../../model/mesh/wire/wire_material_nd.h"
 #include "../environment/sky/plain_sky_material_nd.h"
@@ -87,14 +88,25 @@ void WireframeCanvasRenderingEngineND::render_frame() {
 		const Ref<MeshND> mesh_nd = mesh_inst->get_mesh();
 		ERR_CONTINUE(mesh_nd.is_null());
 		const Ref<TransformND> mesh_relative_transform = mesh_relative_transforms[mesh_index];
-		{
-			const Ref<SingleSurfaceMeshND> surface_mesh_nd = mesh_nd;
-			ERR_CONTINUE(surface_mesh_nd.is_null());
+		// Figure out if this is a single surface mesh or a multi-surface mesh.
+		Vector<Ref<SingleSurfaceMeshND>> surface_meshes;
+		Ref<MultiSurfaceMeshND> multi_surface_mesh_nd = mesh_nd;
+		if (multi_surface_mesh_nd.is_valid()) {
+			surface_meshes = multi_surface_mesh_nd->get_surface_meshes();
+		} else {
+			surface_meshes.append(mesh_nd);
+		}
+		// Iterate over each surface of this mesh (an array of one for single-surface meshes).
+		for (int surface_mesh_index = 0; surface_mesh_index < surface_meshes.size(); surface_mesh_index++) {
+			const Ref<SingleSurfaceMeshND> surface_mesh_nd = surface_meshes[surface_mesh_index];
+			if (surface_mesh_nd.is_null()) {
+				continue; // Don't error: MultiSurfaceMeshND may have null entries, leading to null here, so this is expected behavior.
+			}
 			const Vector<VectorN> camera_relative_vertices = mesh_relative_transform->xform_many(surface_mesh_nd->get_vertex_positions());
 			if (camera_relative_vertices.is_empty()) {
 				continue;
 			}
-			const Ref<MaterialND> material_nd = mesh_inst->get_active_material();
+			const Ref<MaterialND> material_nd = mesh_inst->get_active_material(surface_mesh_index);
 			const PackedInt32Array edge_indices = surface_mesh_nd->get_edge_indices();
 			const bool direct_project = camera_relative_vertices[0].size() < 3;
 			PackedVector2Array projected_vertices;

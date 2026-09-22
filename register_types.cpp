@@ -32,6 +32,7 @@
 #include "model/mesh/cell/cell_mesh_nd.h"
 #include "model/mesh/material_nd.h"
 #include "model/mesh/mesh_nd.h"
+#include "model/mesh/multi_surface_mesh_nd.h"
 #include "model/mesh/poly/poly_mesh_nd.h"
 #include "model/mesh/single_surface_mesh_nd.h"
 #include "model/mesh/wire/wire_mesh_nd.h"
@@ -146,6 +147,7 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(BoxPolyMeshND);
 		GDREGISTER_CLASS(BoxWireMeshND);
 		GDREGISTER_CLASS(MeshInstanceND);
+		GDREGISTER_CLASS(MultiSurfaceMeshND);
 		GDREGISTER_CLASS(OrthoplexPolyMeshND);
 		GDREGISTER_CLASS(OrthoplexWireMeshND);
 		// Depends on mesh.

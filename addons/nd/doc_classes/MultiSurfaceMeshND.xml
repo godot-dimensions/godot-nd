@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="MultiSurfaceMeshND" inherits="MeshND" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A mesh composed of multiple surface meshes.
+	</brief_description>
+	<description>
+		MultiSurfaceMeshND is a type of MeshND that is composed of multiple surface meshes, allowing for a mesh with multiple materials or different mesh types in one mesh. The surfaces are represented by [SingleSurfaceMeshND] instances. The dimension of the whole mesh is the highest dimension of any of its surfaces, and surfaces of a lower dimension are treated as embedded in it with zero for the missing components.
+		Once a surface mesh is added to the MultiSurfaceMeshND, it becomes conceptually owned by the MultiSurfaceMeshND, and it should no longer be treated as a completely independent mesh. Editing operations done on the MultiSurfaceMeshND will affect the individual surface meshes. Meshes used as a surface inside of a MultiSurfaceMeshND may only be shared externally if it is considered acceptable for those meshes to be potentially modified at the whims of the MultiSurfaceMeshND.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="merge_compatible_surfaces">
+			<return type="void" />
+			<description>
+				Merges surfaces in [member surface_meshes] that are compatible with each other. Surfaces are considered compatible for merging if they are not null, have the same name, share the same [MaterialND] instance, are of the same type, and are writable ([ArrayPolyMeshND], [ArrayCellMeshND], or [ArrayWireMeshND]). Any of these conditions not being met will prevent the surfaces from being merged. Materials are compared by instance on purpose: two materials with equal values that are separate objects indicate separate surfaces, so those surfaces are kept apart.
+				Surfaces with invalid mesh data are kept separated and are not merged into or from.
+				Merging keeps the first of each kind of surface and merges subsequent compatible surfaces into it. This modifies the existing surface meshes, it does not create new mesh objects. The per-item color arrays of the merged surfaces are combined into the merged surface's material (see [method MaterialND.merge_with]), and surfaces sharing the original material keep merging into the same surface.
+			</description>
+		</method>
+		<method name="merge_with">
+			<return type="void" />
+			<param index="0" name="mesh" type="MeshND" />
+			<param index="1" name="transform" type="TransformND" default="null" />
+			<description>
+				Merges the given mesh into this MultiSurfaceMeshND. A [SingleSurfaceMeshND] is copied into a new [ArrayPolyMeshND], [ArrayCellMeshND], or [ArrayWireMeshND] surface with the given [param transform] applied, and a [MultiSurfaceMeshND] adds one such surface per surface it has, skipping null entries. A null [param transform] means the identity. The given mesh is not modified unless it is this mesh itself, in which case copies of its original non-null surfaces are appended once. If you wish to merge the data into existing compatible surfaces, you should call [method merge_compatible_surfaces] after merging in all the desired meshes.
+			</description>
+		</method>
+		<method name="transform_mesh">
+			<return type="void" />
+			<param index="0" name="transform" type="TransformND" />
+			<description>
+				Transforms the vertex positions and normal values of all surfaces of the mesh by applying the given [TransformND].
+				Only [ArrayPolyMeshND], [ArrayCellMeshND], and [ArrayWireMeshND] surfaces can be transformed, so any other surface, such as a primitive like [BoxPolyMeshND], is first replaced in [member surface_meshes] by an equivalent array mesh copy that keeps its name and material. Surfaces with invalid mesh data are left untouched with an error.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="surface_meshes" type="SingleSurfaceMeshND[]" setter="set_surface_meshes" getter="get_surface_meshes" default="[]">
+			The array of meshes that serve as the multiple surfaces of this multi-surface mesh. Each element should be a valid [SingleSurfaceMeshND] instance. Duplicate entries of the same surface mesh are not allowed, and will cause an error when setting the surface meshes.
+		</member>
+	</members>
+</class>
