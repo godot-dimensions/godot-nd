@@ -64,8 +64,8 @@ bool MeshND::validate_mesh_data() {
 	return ret;
 }
 
-void MeshND::update_proxy_mesh_3d() {
-	GDVIRTUAL_CALL(_update_proxy_mesh_3d);
+void MeshND::append_proxy_mesh_surfaces_3d(const Ref<ArrayMesh> &p_proxy_mesh_3d) {
+	GDVIRTUAL_CALL(_append_proxy_mesh_surfaces_3d, p_proxy_mesh_3d);
 }
 
 Ref<ArrayMesh> MeshND::get_proxy_mesh_3d() {
@@ -76,7 +76,8 @@ Ref<ArrayMesh> MeshND::get_proxy_mesh_3d() {
 		const String mesh_path_or_name = get_path().is_empty() ? get_name() : get_path();
 		const String proxy_mesh_hint = mesh_path_or_name + String(" Proxy Mesh 3D");
 		_proxy_mesh_3d->set_name(proxy_mesh_hint);
-		update_proxy_mesh_3d();
+		_proxy_mesh_3d->clear_surfaces();
+		append_proxy_mesh_surfaces_3d(_proxy_mesh_3d);
 		_is_proxy_mesh_3d_dirty = false;
 #if GODOT_MODULE
 		if (RenderingServer::get_singleton() != nullptr && _proxy_mesh_3d->get_rid().is_valid()) {
@@ -100,7 +101,7 @@ void MeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_dimension"), &MeshND::get_dimension);
 
 	ClassDB::bind_method(D_METHOD("get_proxy_mesh_3d"), &MeshND::get_proxy_mesh_3d);
-	ClassDB::bind_method(D_METHOD("update_proxy_mesh_3d"), &MeshND::update_proxy_mesh_3d);
+	ClassDB::bind_method(D_METHOD("append_proxy_mesh_surfaces_3d", "proxy_mesh_3d"), &MeshND::append_proxy_mesh_surfaces_3d);
 	ClassDB::bind_method(D_METHOD("mark_proxy_mesh_3d_dirty"), &MeshND::mark_proxy_mesh_3d_dirty);
 	ClassDB::bind_method(D_METHOD("mark_mesh_bounds_and_proxy_mesh_3d_dirty"), &MeshND::mark_mesh_bounds_and_proxy_mesh_3d_dirty);
 
@@ -108,7 +109,7 @@ void MeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("reset_mesh_data_validation"), &MeshND::reset_mesh_data_validation);
 	ClassDB::bind_method(D_METHOD("validate_material_for_mesh", "material"), &MeshND::validate_material_for_mesh);
 
-	GDVIRTUAL_BIND(_update_proxy_mesh_3d);
+	GDVIRTUAL_BIND(_append_proxy_mesh_surfaces_3d, "proxy_mesh_3d");
 	GDVIRTUAL_BIND(_validate_mesh_data);
 	GDVIRTUAL_BIND(_validate_material_for_mesh, "material");
 }
