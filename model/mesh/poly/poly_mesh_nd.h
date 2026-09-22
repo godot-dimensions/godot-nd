@@ -26,6 +26,10 @@ class PolyMeshND : public CellMeshND {
 	Vector<VectorN> _simplex_cell_boundary_normals_cache;
 	Vector<VectorN> _simplex_cell_normal_values_cache; // Superset of the polytope cell normals.
 	Vector<VectorM> _simplex_cell_texture_map_values_cache; // Superset of the polytope cell texture maps.
+	// The vertex indices of every boundary cell, in both traversal orders. Validation, simplex decomposition,
+	// and the normal and texture map derivations all need these, so they are computed once and cached here.
+	Vector<PackedInt32Array> _boundary_cell_vertex_indices_cache;
+	Vector<PackedInt32Array> _boundary_cell_vertex_indices_canonical_cache;
 	bool _is_poly_mesh_data_valid = false;
 
 	static VectorM _average_vector_m(const Vector<VectorM> &p_vector_m_array);
@@ -51,6 +55,10 @@ protected:
 	static void _bind_methods();
 	virtual bool validate_mesh_data() override;
 	virtual bool _validate_poly_mesh_data_only();
+	// Clears the caches derived from the simplex decomposition. The boundary cell vertex indices only depend on the
+	// topology, so they survive this, which lets the decomposition itself clear its old output without losing them.
+	void _poly_mesh_clear_simplex_cache_internal(const bool p_normals_only);
+	// Clears every cache, including the boundary cell vertex indices. Call this whenever the topology changes.
 	void _poly_mesh_clear_cache_internal(const bool p_normals_only);
 
 	// Protected helper functions used by both PolyMeshND and ArrayPolyMeshND, and the shape generators.
@@ -68,6 +76,7 @@ protected:
 		return Vector2i(dim - 1, 0);
 	}
 	Vector<PackedInt32Array> _get_vertex_indices_of_boundary_cells(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const int64_t p_boundary_dim_index, const bool p_start_with_canonical_span);
+	const Vector<PackedInt32Array> &_get_boundary_cell_vertex_indices_cached(const bool p_start_with_canonical_span);
 	Vector<VectorN> _compute_boundary_normals_based_on_cell_orientation(const Vector<PackedInt32Array> &p_boundary_cell_vertex_indices, const bool p_keep_existing);
 	// Solves for the coefficients that express the target vector as a linear combination of the
 	// given linearly independent span vectors, ignoring any component outside of the span.

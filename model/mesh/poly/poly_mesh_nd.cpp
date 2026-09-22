@@ -155,7 +155,7 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 		const Vector<PackedInt32Array> &boundary_cells = poly_cell_indices[boundary_dim_index];
 		ERR_FAIL_COND_V_MSG(boundary_cells.size() != poly_cell_normal_indices_count, false, "PolyMeshND: Vertex normals count (" + itos(poly_cell_normal_indices_count) + ") does not match boundary cells count (" + itos(boundary_cells.size()) + ").");
 		const int64_t normal_value_count = get_poly_cell_normal_values().size();
-		const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(poly_cell_indices, edge_indices, boundary_dim_index, false);
+		const Vector<PackedInt32Array> &cell_vert = _get_boundary_cell_vertex_indices_cached(false);
 		for (int64_t i = 0; i < poly_cell_normal_indices_count; i++) {
 			if (poly_cell_normal_indices[i].is_empty()) {
 				continue; // Allow cells without vertex normals.
@@ -173,7 +173,7 @@ bool PolyMeshND::_validate_poly_mesh_data_only() {
 		const Vector<PackedInt32Array> &boundary_cells = poly_cell_indices[boundary_dim_index];
 		ERR_FAIL_COND_V_MSG(boundary_cells.size() != poly_cell_texture_map_indices_count, false, "PolyMeshND: Texture maps count (" + itos(poly_cell_texture_map_indices_count) + ") does not match boundary cells count (" + itos(boundary_cells.size()) + ").");
 		const int64_t texture_map_value_count = get_poly_cell_texture_map_values().size();
-		const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(poly_cell_indices, edge_indices, boundary_dim_index, false);
+		const Vector<PackedInt32Array> &cell_vert = _get_boundary_cell_vertex_indices_cached(false);
 		for (int64_t i = 0; i < poly_cell_texture_map_indices_count; i++) {
 			if (poly_cell_texture_map_indices[i].is_empty()) {
 				continue; // Allow unmapped boundary cells.
@@ -603,8 +603,9 @@ void PolyMeshND::_decompose_boundary_cells_into_simplexes() {
 	if (!is_poly_mesh_data_valid()) {
 		return;
 	}
-	// This fills a cache rather than changing the mesh, so only clear the old caches without marking anything dirty.
-	_poly_mesh_clear_cache_internal(false);
+	// This fills the simplex caches rather than changing the mesh, so clear only the old simplex caches without
+	// marking anything dirty. The boundary cell vertex indices depend on the topology alone, so keep those.
+	_poly_mesh_clear_simplex_cache_internal(false);
 	const int64_t dimension = get_dimension();
 	ERR_FAIL_COND_MSG(dimension < 3, "PolyMeshND: Cannot decompose boundary cells into simplexes because the mesh has fewer than 3 dimensions.");
 	const int64_t boundary_dim_index = dimension - 3;
@@ -618,7 +619,7 @@ void PolyMeshND::_decompose_boundary_cells_into_simplexes() {
 	const PackedInt32Array poly_cell_boundary_pivot_overrides = get_poly_cell_boundary_pivot_overrides();
 	// Step 2: Drill down into each boundary cell's components to get the vertex indices and normals.
 	// The `true` argument makes the first N vertices form the "canonical span" of the cell.
-	Vector<PackedInt32Array> boundary_cell_vertex_indices = _get_vertex_indices_of_boundary_cells(poly_cell_indices, all_edge_indices, boundary_dim_index, true);
+	Vector<PackedInt32Array> boundary_cell_vertex_indices = _get_boundary_cell_vertex_indices_cached(true);
 	Vector<VectorN> poly_cell_boundary_normals = get_poly_cell_boundary_normals();
 	if (poly_cell_boundary_normals.size() != boundary_cell_count) {
 		poly_cell_boundary_normals = _compute_boundary_normals_based_on_cell_orientation(boundary_cell_vertex_indices, false);
@@ -931,6 +932,22 @@ Vector<PackedInt32Array> PolyMeshND::_get_vertex_indices_of_boundary_cells(const
 	return cell_vertex_indices;
 }
 
+const Vector<PackedInt32Array> &PolyMeshND::_get_boundary_cell_vertex_indices_cached(const bool p_start_with_canonical_span) {
+	// Only for the mesh's own current geometry. Callers traversing modified copies must use the uncached version.
+	// An empty cache means it has not been computed yet. A mesh with no boundary cells has an empty traversal
+	// anyway, so it recomputes that trivially cheap result every time rather than needing a separate flag.
+	Vector<PackedInt32Array> &cache = p_start_with_canonical_span ? _boundary_cell_vertex_indices_canonical_cache : _boundary_cell_vertex_indices_cache;
+	if (cache.is_empty()) {
+		const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
+		const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
+		if (boundary_dim_index < 0 || poly_cell_indices.size() <= boundary_dim_index) {
+			return cache; // No boundary cells, so there is nothing to cache.
+		}
+		cache = _get_vertex_indices_of_boundary_cells(poly_cell_indices, get_edge_indices(), boundary_dim_index, p_start_with_canonical_span);
+	}
+	return cache;
+}
+
 Vector<VectorN> PolyMeshND::_compute_boundary_normals_based_on_cell_orientation(const Vector<PackedInt32Array> &p_boundary_cell_vertex_indices, const bool p_keep_existing) {
 	const Vector<VectorN> poly_cell_vertices = get_poly_cell_vertex_positions();
 	ERR_FAIL_COND_V_MSG(poly_cell_vertices.is_empty(), Vector<VectorN>(), "PolyMeshND: Poly cell vertex positions are required to compute boundary normals.");
@@ -1036,12 +1053,8 @@ TypedArray<PackedInt32Array> PolyMeshND::get_all_face_vertex_indices_bind() {
 
 Vector<PackedInt32Array> PolyMeshND::get_all_boundary_cell_vertex_indices(const bool p_start_with_canonical_span) {
 	ERR_FAIL_COND_V(!is_mesh_data_valid(), Vector<PackedInt32Array>());
-	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
-	const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
-	ERR_FAIL_COND_V(boundary_dim_index < 0 || poly_cell_indices.size() <= boundary_dim_index, Vector<PackedInt32Array>());
-	const PackedInt32Array all_edge_indices = get_edge_indices();
-	ERR_FAIL_COND_V(all_edge_indices.is_empty(), Vector<PackedInt32Array>());
-	return _get_vertex_indices_of_boundary_cells(poly_cell_indices, all_edge_indices, boundary_dim_index, p_start_with_canonical_span);
+	// Returns a copy of the cache (cheap, copy-on-write), so callers may keep it across later edits to the mesh.
+	return _get_boundary_cell_vertex_indices_cached(p_start_with_canonical_span);
 }
 
 TypedArray<PackedInt32Array> PolyMeshND::get_all_boundary_cell_vertex_indices_bind(const bool p_start_with_canonical_span) {
@@ -1078,6 +1091,10 @@ Vector<PackedInt32Array> PolyMeshND::get_all_poly_cell_vertex_indices(const int 
 		return ret;
 	}
 	ERR_FAIL_COND_V(all_edge_indices.is_empty(), ret);
+	if (p_cell_dimension - 2 == _get_boundary_poly_dim_index()) {
+		// The (N-1)-dimensional cells are the boundary cells, whose traversal is cached.
+		return _get_boundary_cell_vertex_indices_cached(p_start_with_canonical_span);
+	}
 	const Vector<PackedInt32Array> &cells = poly_cell_indices[p_cell_dimension - 2];
 	ret.resize(cells.size());
 	for (int64_t cell_index = 0; cell_index < cells.size(); cell_index++) {
@@ -1157,7 +1174,7 @@ TypedArray<PackedInt32Array> PolyMeshND::get_all_poly_cell_poly_indices_bind(con
 	return ret;
 }
 
-void PolyMeshND::_poly_mesh_clear_cache_internal(const bool p_normals_only) {
+void PolyMeshND::_poly_mesh_clear_simplex_cache_internal(const bool p_normals_only) {
 	_simplex_cell_boundary_normals_cache.clear();
 	_simplex_cell_normal_indices_cache.clear();
 	_simplex_cell_normal_values_cache.clear();
@@ -1171,6 +1188,15 @@ void PolyMeshND::_poly_mesh_clear_cache_internal(const bool p_normals_only) {
 	_simplex_cell_vertex_positions_cache.clear();
 	_simplex_cell_texture_map_values_cache.clear();
 	_cell_mesh_clear_cache_internal();
+}
+
+void PolyMeshND::_poly_mesh_clear_cache_internal(const bool p_normals_only) {
+	_poly_mesh_clear_simplex_cache_internal(p_normals_only);
+	if (p_normals_only) {
+		return; // Normals do not affect the topology, so the boundary cell vertex indices are still correct.
+	}
+	_boundary_cell_vertex_indices_cache.clear();
+	_boundary_cell_vertex_indices_canonical_cache.clear();
 }
 
 void PolyMeshND::poly_mesh_clear_cache(const bool p_reset_validation, const bool p_normals_only) {
@@ -1479,8 +1505,7 @@ PackedInt32Array PolyMeshND::get_simplex_cell_normal_indices() {
 		const int64_t boundary_dim_index = dimension - 3;
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
 		ERR_FAIL_COND_V_MSG(poly_cell_indices.size() <= boundary_dim_index, PackedInt32Array(), "PolyMeshND: No boundary cells available, cannot compute simplex vertex normals.");
-		const PackedInt32Array all_edge_indices = get_edge_indices();
-		const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(poly_cell_indices, all_edge_indices, boundary_dim_index, false);
+		const Vector<PackedInt32Array> &cell_vert = _get_boundary_cell_vertex_indices_cached(false);
 		// The simplex normal values are a superset of the polytope cell normal values, so the
 		// polytope cell normal indices can be used directly as indices into the simplex values.
 		_simplex_cell_normal_values_cache = get_poly_cell_normal_values();
@@ -1575,8 +1600,7 @@ PackedInt32Array PolyMeshND::get_simplex_cell_texture_map_indices() {
 		const int64_t boundary_dim_index = dimension - 3;
 		const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
 		ERR_FAIL_COND_V_MSG(poly_cell_indices.size() <= boundary_dim_index, PackedInt32Array(), "PolyMeshND: No boundary cells available, cannot compute simplex texture map.");
-		const PackedInt32Array all_edge_indices = get_edge_indices();
-		const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(poly_cell_indices, all_edge_indices, boundary_dim_index, false);
+		const Vector<PackedInt32Array> &cell_vert = _get_boundary_cell_vertex_indices_cached(false);
 		// The simplex texture map values are a superset of the polytope cell texture map values, so
 		// the polytope cell texture map indices can be used directly as indices into the simplex values.
 		_simplex_cell_texture_map_values_cache = get_poly_cell_texture_map_values();

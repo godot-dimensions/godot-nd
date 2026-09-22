@@ -637,7 +637,7 @@ void ArrayPolyMeshND::calculate_boundary_normals(const ComputeNormalsMode p_mode
 	ERR_FAIL_COND_MSG(boundary_dim_index < 0 || _poly_cell_indices.size() <= boundary_dim_index, "ArrayPolyMeshND: Cannot calculate boundary normals because there are no boundary cells.");
 	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot calculate boundary normals for invalid poly mesh data.");
 	ERR_FAIL_COND_MSG(_poly_cell_vertex_positions.is_empty(), "ArrayPolyMeshND: Cannot calculate boundary normals because there are no vertices.");
-	const Vector<PackedInt32Array> cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, true);
+	const Vector<PackedInt32Array> cell_vertex_indices = _get_boundary_cell_vertex_indices_cached(true);
 	if (cell_vertex_indices.is_empty()) {
 		return;
 	}
@@ -685,7 +685,7 @@ void ArrayPolyMeshND::orient_cells_to_boundary_normals(const Vector<VectorN> &p_
 	const int64_t cell_count = boundary_cell_indices.size();
 	ERR_FAIL_COND_MSG(p_desired_boundary_normals.size() > cell_count, "ArrayPolyMeshND: Cannot orient cells because there are more desired normals (" + itos(p_desired_boundary_normals.size()) + ") than boundary cells (" + itos(cell_count) + ").");
 	// Find the cells whose orientation implies a normal facing away from the desired one.
-	Vector<PackedInt32Array> cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, true);
+	Vector<PackedInt32Array> cell_vertex_indices = _get_boundary_cell_vertex_indices_cached(true);
 	ERR_FAIL_COND(cell_vertex_indices.size() != cell_count);
 	Vector<VectorN> oriented_normals = _compute_boundary_normals_based_on_cell_orientation(cell_vertex_indices, false);
 	ERR_FAIL_COND(oriented_normals.size() != cell_count);
@@ -759,7 +759,7 @@ void ArrayPolyMeshND::orient_cells_to_boundary_normals(const Vector<VectorN> &p_
 				data_binding_map->insert(key, data_bindings);
 			}
 		}
-		cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, true);
+		cell_vertex_indices = _get_boundary_cell_vertex_indices_cached(true); // The clear above dropped the pre-flip traversal.
 		oriented_normals = _compute_boundary_normals_based_on_cell_orientation(cell_vertex_indices, false);
 		ERR_FAIL_COND(oriented_normals.size() != cell_count);
 		for (int64_t cell_index = 0; cell_index < p_desired_boundary_normals.size(); cell_index++) {
@@ -802,7 +802,7 @@ void ArrayPolyMeshND::set_flat_shading_normals(const ComputeNormalsMode p_mode, 
 	if (p_recalculate_boundary_normals || !_all_poly_cell_normal_indices.has(per_cell_key) || _all_poly_cell_normal_indices[per_cell_key].is_empty() || _all_poly_cell_normal_indices[per_cell_key][0].size() != _poly_cell_indices[boundary_dim_index].size()) {
 		calculate_boundary_normals(p_mode);
 	}
-	const Vector<PackedInt32Array> cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, false);
+	const Vector<PackedInt32Array> &cell_vertex_indices = _get_boundary_cell_vertex_indices_cached(false);
 	const int64_t cell_count = cell_vertex_indices.size();
 	const PackedInt32Array &per_cell_normal_indices = _all_poly_cell_normal_indices[per_cell_key][0];
 	CRASH_COND(per_cell_normal_indices.size() != cell_count);
@@ -835,7 +835,7 @@ void ArrayPolyMeshND::set_smooth_shading_normals(const ComputeNormalsMode p_mode
 	if (p_recalculate_boundary_normals || !_all_poly_cell_normal_indices.has(per_cell_key) || _all_poly_cell_normal_indices[per_cell_key].is_empty() || _all_poly_cell_normal_indices[per_cell_key][0].size() != _poly_cell_indices[boundary_dim_index].size()) {
 		calculate_boundary_normals(p_mode);
 	}
-	const Vector<PackedInt32Array> cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, false);
+	const Vector<PackedInt32Array> &cell_vertex_indices = _get_boundary_cell_vertex_indices_cached(false);
 	const Vector<VectorN> poly_cell_boundary_normals = _sample_normal_values_internal(_all_poly_cell_normal_indices[per_cell_key][0]);
 	CRASH_COND(poly_cell_boundary_normals.size() != cell_vertex_indices.size());
 	Vector<PackedInt32Array> poly_cell_normal_indices;
@@ -908,7 +908,7 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 	const bool has_texture_map = _all_poly_cell_texture_map_indices.has(cell_to_vert_key) && !_all_poly_cell_texture_map_indices[cell_to_vert_key].is_empty();
 	Vector<PackedInt32Array> original_cell_vertex_indices;
 	if (has_vertex_normals || has_texture_map) {
-		original_cell_vertex_indices = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, false);
+		original_cell_vertex_indices = _get_boundary_cell_vertex_indices_cached(false);
 	}
 	PackedInt32Array flipped_cell_index_for_original;
 	flipped_cell_index_for_original.resize(original_cell_count);
@@ -944,6 +944,7 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 			const PackedInt32Array &original_cell_vertices = original_cell_vertex_indices[cell_index];
 			Vector<Vector<PackedInt32Array>> flipped_poly_cell_indices = _poly_cell_indices;
 			flipped_poly_cell_indices.set(boundary_dim_index, Vector<PackedInt32Array>{ flipped_cell_members });
+			// This traverses a modified copy of the geometry, so it cannot use the cached traversal.
 			const PackedInt32Array flipped_cell_vertices = _get_vertex_indices_of_boundary_cells(flipped_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, false)[0];
 			flipped_vertex_order_remap.resize(flipped_cell_vertices.size());
 			for (int64_t vertex_in_cell = 0; vertex_in_cell < flipped_cell_vertices.size(); vertex_in_cell++) {
@@ -1413,7 +1414,7 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 void ArrayPolyMeshND::_unwrap_texture_map_island_internal(const PackedInt32Array &p_cells_in_island, const bool p_keep_existing, Vector<Vector<VectorM>> &r_poly_cell_texture_map) {
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	CRASH_COND(r_poly_cell_texture_map.size() != _poly_cell_indices[boundary_dim_index].size());
-	const Vector<PackedInt32Array> cell_vert = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, false);
+	const Vector<PackedInt32Array> &cell_vert = _get_boundary_cell_vertex_indices_cached(false);
 	for (int64_t cell_index_index = 0; cell_index_index < p_cells_in_island.size(); cell_index_index++) {
 		if (p_keep_existing && !r_poly_cell_texture_map[p_cells_in_island[cell_index_index]].is_empty()) {
 			continue;
@@ -1733,6 +1734,9 @@ void ArrayPolyMeshND::deduplicate_all_elements(const int64_t p_max_dimension) {
 	_poly_cell_vertex_positions = output_vertices;
 	_edge_vertex_indices = output_edge_vertex_indices;
 	_poly_cell_indices = output_poly_cell_indices;
+	// The traversals below must see the deduplicated geometry, not the cached pre-deduplication traversal.
+	// Validation is reset once at the end of this function, so only clear the caches here.
+	_poly_mesh_clear_cache_internal(false);
 	// Snapshot the sub-element traversal order for all decomposed bindings AFTER deduplication.
 	HashMap<Vector2i, Vector<PackedInt32Array>> post_dedup_poly;
 	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &post_kv : pre_dedup_poly) {
@@ -1878,6 +1882,7 @@ void ArrayPolyMeshND::deduplicate_all_elements(const int64_t p_max_dimension) {
 		}
 		output_poly_cell_indices.set(boundary_dim_index, all_cell_member_indices);
 		_poly_cell_indices = output_poly_cell_indices;
+		_poly_mesh_clear_cache_internal(false); // The flipped cells change the traversal order of those cells.
 		calculate_boundary_normals();
 		// Resample the bindings of any decomposed elements that were affected by the swap.
 		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : remapped_poly_poly) {
@@ -2003,6 +2008,8 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 	// which is required later when filling in missing boundary normals.
 	Vector<PackedInt32Array> cell_vertex_instances_span_first;
 	if (boundary_dim_index >= 0 && boundary_dim_index < _poly_cell_indices.size()) {
+		// The edges were already merged above, and the merged cells are traversed below before the caches are
+		// cleared at the end, so this function cannot use the cached traversal for the mid-merge geometry.
 		cell_vertex_instances_span_first = _get_vertex_indices_of_boundary_cells(_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, true);
 	}
 	// Merge poly cell indices.
