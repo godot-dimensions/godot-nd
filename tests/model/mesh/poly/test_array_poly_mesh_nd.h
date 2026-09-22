@@ -2500,6 +2500,41 @@ TEST_CASE("[ArrayPolyMeshND] Orient cells to boundary normals") {
 		CHECK(reordered_cells > 0); // Otherwise this test would not be exercising the resampling.
 	}
 
+	SUBCASE("Converting to an array mesh keeps every binding key, the seams, and the pivot overrides") {
+		const Vector<VectorN> vertices = mesh->get_poly_cell_vertex_positions();
+		Vector<VectorN> vertex_normals;
+		for (const VectorN &vertex : vertices) {
+			vertex_normals.append(VectorND::normalized(vertex));
+		}
+		mesh->set_poly_cell_dense_normals(Vector2i(0, 0), Vector<Vector<VectorN>>{ vertex_normals });
+		const PackedInt32Array edge_indices = mesh->get_edge_indices();
+		Vector<Vector<VectorM>> edge_vertex_texture;
+		for (int64_t edge = 0; edge < edge_indices.size() / 2; edge++) {
+			edge_vertex_texture.push_back({ VectorM{ (double)edge, 0.0, 0.0 }, VectorM{ (double)edge, 1.0, 0.0 } });
+		}
+		mesh->set_poly_cell_dense_texture_map(Vector2i(1, 0), edge_vertex_texture);
+		mesh->set_seam_indices_bind(PackedInt32Array{ 0, 1 });
+		PackedInt32Array pivot_overrides;
+		pivot_overrides.resize(cell_count);
+		pivot_overrides.fill(-1);
+		pivot_overrides.set(2, 0);
+		mesh->set_poly_cell_boundary_pivot_overrides(pivot_overrides);
+		REQUIRE(mesh->is_mesh_data_valid());
+		const int64_t normal_value_count = mesh->get_poly_cell_normal_values().size();
+
+		const Ref<ArrayPolyMeshND> copy = mesh->to_array_poly_mesh();
+		REQUIRE(copy.is_valid());
+		CHECK(copy->is_mesh_data_valid());
+		CHECK(copy->get_poly_cell_dense_normals(Vector2i(0, 0)) == mesh->get_poly_cell_dense_normals(Vector2i(0, 0)));
+		CHECK(copy->get_poly_cell_dense_texture_map(Vector2i(1, 0)) == mesh->get_poly_cell_dense_texture_map(Vector2i(1, 0)));
+		CHECK(copy->get_poly_cell_dense_normals(cell_to_vert_key) == mesh->get_poly_cell_dense_normals(cell_to_vert_key));
+		CHECK(VectorND::array_is_equal_exact(copy->get_poly_cell_boundary_normals(), mesh->get_poly_cell_boundary_normals()));
+		// The boundary normals came across inside the bindings, so they were not appended to the pool a second time.
+		CHECK(copy->get_poly_cell_normal_values().size() == normal_value_count);
+		CHECK(copy->get_seam_indices_bind() == mesh->get_seam_indices_bind());
+		CHECK(copy->get_poly_cell_boundary_pivot_overrides() == pivot_overrides);
+	}
+
 	SUBCASE("Cells without a desired normal keep their stored normal") {
 		Vector<VectorN> custom_normals = original_normals;
 		const VectorN tilted = VectorND::normalized(VectorND::add(original_normals[3], VectorND::fill(dimension, 0.1)));

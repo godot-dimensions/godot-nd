@@ -368,4 +368,29 @@ TEST_CASE("[MeshND] Primitive size changes mark bounds and proxy dirty without r
 		_unwatch_signals(mesh.ptr());
 	}
 }
+TEST_CASE("[SingleSurfaceMeshND] Array conversions keep the name and metadata") {
+	Ref<BoxPolyMeshND> box_poly;
+	box_poly.instantiate();
+	box_poly->set_size(VectorND::fill(4, 1.0));
+	box_poly->set_name("PolyNamed");
+	box_poly->set_meta("source_file", "box.off");
+	const Ref<ArrayPolyMeshND> array_poly = box_poly->to_array_poly_mesh();
+	CHECK(array_poly->get_name() == "PolyNamed");
+	CHECK(array_poly->get_meta("source_file") == Variant("box.off"));
+	const Ref<ArrayCellMeshND> cell_from_poly = box_poly->to_array_cell_mesh();
+	CHECK(cell_from_poly->get_name() == "PolyNamed");
+	CHECK(cell_from_poly->get_meta("source_file") == Variant("box.off"));
+	const Ref<ArrayWireMeshND> wire_from_cell = cell_from_poly->to_array_wire_mesh();
+	CHECK(wire_from_cell->get_name() == "PolyNamed");
+	CHECK(wire_from_cell->get_meta("source_file") == Variant("box.off"));
+
+	Ref<BoxWireMeshND> box_wire;
+	box_wire.instantiate();
+	box_wire->set_size(VectorND::fill(4, 1.0));
+	box_wire->set_name("WireNamed");
+	box_wire->set_meta("source_file", "box_wire.off");
+	const Ref<ArrayWireMeshND> array_wire = box_wire->to_array_wire_mesh();
+	CHECK(array_wire->get_name() == "WireNamed");
+	CHECK(array_wire->get_meta("source_file") == Variant("box_wire.off"));
+}
 } // namespace TestMeshND
