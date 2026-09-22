@@ -87,6 +87,8 @@ public:
 
 	// Normal calculation functions.
 	void calculate_boundary_normals(const ComputeNormalsMode p_mode = COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY, const bool p_keep_existing = false);
+	void orient_cells_to_boundary_normals(const Vector<VectorN> &p_desired_boundary_normals);
+	void orient_cells_to_boundary_normals_bind(const TypedArray<VectorN> &p_desired_boundary_normals);
 	void set_flat_shading_normals(const ComputeNormalsMode p_mode = COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY, const bool p_recalculate_boundary_normals = true);
 	void set_smooth_shading_normals(const ComputeNormalsMode p_mode = COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY, const bool p_recalculate_boundary_normals = true);
 	void make_double_sided(const bool p_idempotent = true);

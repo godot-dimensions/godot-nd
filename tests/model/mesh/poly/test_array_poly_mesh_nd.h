@@ -2359,4 +2359,166 @@ TEST_CASE("[ArrayPolyMeshND] Double sided empty boundary levels are unchanged") 
 	}
 }
 
+TEST_CASE("[ArrayPolyMeshND] Orient cells to boundary normals") {
+	constexpr int dimension = 4;
+	const Vector2i cell_to_vert_key = Vector2i(dimension - 1, 0);
+	const int64_t boundary_dim_index = dimension - 3;
+	Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_box_poly_mesh(dimension)->to_array_poly_mesh();
+	REQUIRE(mesh->is_mesh_data_valid());
+	mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+	const Vector<VectorN> original_normals = mesh->get_poly_cell_boundary_normals();
+	const int64_t cell_count = original_normals.size();
+	REQUIRE(cell_count == dimension * 2);
+	const Vector<Vector<PackedInt32Array>> original_cells = mesh->get_poly_cell_indices();
+	// The box is centered on the origin, so an outward simplex's perpendicular points along its centroid.
+	auto count_simplexes_facing_outward = [&](int64_t &r_outward, int64_t &r_inward) {
+		r_outward = 0;
+		r_inward = 0;
+		const Vector<VectorN> positions = mesh->get_simplex_cell_positions();
+		for (int64_t simplex = 0; simplex < positions.size() / dimension; simplex++) {
+			const VectorN &first = positions[simplex * dimension];
+			VectorN centroid = first;
+			Vector<VectorN> directions;
+			directions.resize(dimension - 1);
+			for (int64_t i = 1; i < dimension; i++) {
+				const VectorN &vertex = positions[simplex * dimension + i];
+				centroid = VectorND::add(centroid, vertex);
+				directions.set(i - 1, VectorND::subtract(vertex, first));
+			}
+			centroid = VectorND::divide_scalar(centroid, (double)dimension);
+			const VectorN perp = VectorND::perpendicular(directions);
+			if (VectorND::dot(perp, centroid) > 0.0) {
+				r_outward++;
+			} else {
+				r_inward++;
+			}
+		}
+	};
+	int64_t outward = 0;
+	int64_t inward = 0;
+	count_simplexes_facing_outward(outward, inward);
+	REQUIRE(outward > 0);
+	REQUIRE(inward == 0);
+
+	SUBCASE("Matching or zero normals leave the cells untouched") {
+		mesh->orient_cells_to_boundary_normals(original_normals);
+		CHECK(mesh->get_poly_cell_indices() == original_cells);
+		CHECK(VectorND::array_is_equal_exact(mesh->get_poly_cell_boundary_normals(), original_normals));
+		Vector<VectorN> zeros;
+		zeros.resize(cell_count);
+		zeros.fill(VectorN());
+		mesh->orient_cells_to_boundary_normals(zeros);
+		CHECK(mesh->get_poly_cell_indices() == original_cells);
+		CHECK(VectorND::array_is_equal_exact(mesh->get_poly_cell_boundary_normals(), original_normals));
+	}
+
+	SUBCASE("Opposite normals reverse the orientation of every cell") {
+		Vector<VectorN> desired;
+		for (const VectorN &normal : original_normals) {
+			desired.append(VectorND::multiply_scalar(normal, -0.5)); // Only the side matters, not the length.
+		}
+		mesh->orient_cells_to_boundary_normals(desired);
+		CHECK(mesh->is_mesh_data_valid());
+		const Vector<VectorN> normals = mesh->get_poly_cell_boundary_normals();
+		REQUIRE(normals.size() == cell_count);
+		const Vector<Vector<PackedInt32Array>> cells = mesh->get_poly_cell_indices();
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			CHECK(VectorND::is_equal_approx(normals[cell], VectorND::negate(original_normals[cell])));
+			// The first two members were swapped, so the cell structure itself now encodes the new orientation.
+			CHECK(cells[boundary_dim_index][cell][0] == original_cells[boundary_dim_index][cell][1]);
+			CHECK(cells[boundary_dim_index][cell][1] == original_cells[boundary_dim_index][cell][0]);
+		}
+		mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			CHECK(VectorND::is_equal_approx(mesh->get_poly_cell_boundary_normals()[cell], VectorND::negate(original_normals[cell])));
+		}
+		count_simplexes_facing_outward(outward, inward);
+		CHECK(outward == 0);
+		CHECK(inward > 0);
+	}
+
+	SUBCASE("A shorter array only affects the cells it covers") {
+		const Vector<VectorN> desired = { VectorND::negate(original_normals[0]), VectorND::negate(original_normals[1]) };
+		mesh->orient_cells_to_boundary_normals(desired);
+		const Vector<VectorN> normals = mesh->get_poly_cell_boundary_normals();
+		const Vector<Vector<PackedInt32Array>> cells = mesh->get_poly_cell_indices();
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			if (cell < 2) {
+				CHECK(VectorND::is_equal_approx(normals[cell], VectorND::negate(original_normals[cell])));
+				CHECK(cells[boundary_dim_index][cell] != original_cells[boundary_dim_index][cell]);
+			} else {
+				CHECK(VectorND::is_equal_approx(normals[cell], original_normals[cell]));
+				CHECK(cells[boundary_dim_index][cell] == original_cells[boundary_dim_index][cell]);
+			}
+		}
+	}
+
+	SUBCASE("Per-cell-vertex bindings stay attached to their vertices when cells are flipped") {
+		// Give every cell corner a distinct normal and texture coordinate, positioned by the current traversal order.
+		const Vector<PackedInt32Array> cells_before = mesh->get_all_boundary_cell_vertex_indices(false);
+		Vector<Vector<VectorN>> corner_normals;
+		Vector<Vector<VectorM>> corner_texture;
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			Vector<VectorN> cell_normals;
+			Vector<VectorM> cell_texture;
+			for (int64_t corner = 0; corner < cells_before[cell].size(); corner++) {
+				cell_normals.append(VectorND::normalized(VectorN{ 0.125 * cell, 0.0625 * corner, 0.5, 0.25 }));
+				cell_texture.append(VectorM{ 0.125 * cell, 0.0625 * corner, 0.5 });
+			}
+			corner_normals.push_back(cell_normals);
+			corner_texture.push_back(cell_texture);
+		}
+		mesh->set_poly_cell_dense_normals(cell_to_vert_key, corner_normals);
+		mesh->set_poly_cell_dense_texture_map(cell_to_vert_key, corner_texture);
+		REQUIRE(mesh->is_mesh_data_valid());
+		Vector<VectorN> desired;
+		for (const VectorN &normal : original_normals) {
+			desired.append(VectorND::negate(normal));
+		}
+		mesh->orient_cells_to_boundary_normals(desired);
+		REQUIRE(mesh->is_mesh_data_valid());
+		// The traversal order of every flipped cell changed, but each corner's data must still belong to the same vertex.
+		const Vector<PackedInt32Array> cells_after = mesh->get_all_boundary_cell_vertex_indices(false);
+		const Vector<Vector<VectorN>> normals_after = mesh->get_poly_cell_dense_normals(cell_to_vert_key);
+		const Vector<Vector<VectorM>> texture_after = mesh->get_poly_cell_dense_texture_map(cell_to_vert_key);
+		REQUIRE(cells_after.size() == cell_count);
+		REQUIRE(normals_after.size() == cell_count);
+		REQUIRE(texture_after.size() == cell_count);
+		int64_t reordered_cells = 0;
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			REQUIRE(cells_after[cell].size() == cells_before[cell].size());
+			if (cells_after[cell] != cells_before[cell]) {
+				reordered_cells++;
+			}
+			for (int64_t corner_after = 0; corner_after < cells_after[cell].size(); corner_after++) {
+				const int64_t corner_before = cells_before[cell].find(cells_after[cell][corner_after]);
+				REQUIRE(corner_before >= 0);
+				CHECK(VectorND::is_equal_approx(normals_after[cell][corner_after], corner_normals[cell][corner_before]));
+				CHECK(VectorND::is_equal_approx(texture_after[cell][corner_after], corner_texture[cell][corner_before]));
+			}
+		}
+		CHECK(reordered_cells > 0); // Otherwise this test would not be exercising the resampling.
+	}
+
+	SUBCASE("Cells without a desired normal keep their stored normal") {
+		Vector<VectorN> custom_normals = original_normals;
+		const VectorN tilted = VectorND::normalized(VectorND::add(original_normals[3], VectorND::fill(dimension, 0.1)));
+		custom_normals.set(3, tilted);
+		mesh->set_poly_cell_boundary_normals(custom_normals);
+		Vector<VectorN> desired;
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			desired.append(cell == 3 ? VectorN() : VectorND::negate(original_normals[cell]));
+		}
+		mesh->orient_cells_to_boundary_normals(desired);
+		const Vector<VectorN> normals = mesh->get_poly_cell_boundary_normals();
+		REQUIRE(normals.size() == cell_count);
+		for (int64_t cell = 0; cell < cell_count; cell++) {
+			if (cell == 3) {
+				CHECK(VectorND::is_equal_approx(normals[cell], tilted));
+			} else {
+				CHECK(VectorND::is_equal_approx(normals[cell], VectorND::negate(original_normals[cell])));
+			}
+		}
+	}
+}
 } // namespace TestArrayPolyMeshND
