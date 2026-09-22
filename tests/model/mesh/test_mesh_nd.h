@@ -1,10 +1,12 @@
 #pragma once
 
 #include "../../../model/mesh/cell/array_cell_mesh_nd.h"
+#include "../../../model/mesh/cell/cell_material_nd.h"
 #include "../../../model/mesh/poly/array_poly_mesh_nd.h"
 #include "../../../model/mesh/poly/box_poly_mesh_nd.h"
 #include "../../../model/mesh/wire/array_wire_mesh_nd.h"
 #include "../../../model/mesh/wire/box_wire_mesh_nd.h"
+#include "../../../model/mesh/wire/wire_material_nd.h"
 
 #include "tests/test_macros.h"
 
@@ -392,5 +394,23 @@ TEST_CASE("[SingleSurfaceMeshND] Array conversions keep the name and metadata") 
 	const Ref<ArrayWireMeshND> array_wire = box_wire->to_array_wire_mesh();
 	CHECK(array_wire->get_name() == "WireNamed");
 	CHECK(array_wire->get_meta("source_file") == Variant("box_wire.off"));
+}
+TEST_CASE("[SingleSurfaceMeshND] Built-in mesh types share typed fallback materials") {
+	Ref<ArrayWireMeshND> wire;
+	wire.instantiate();
+	Ref<BoxWireMeshND> box_wire;
+	box_wire.instantiate();
+	const Ref<WireMaterialND> wire_fallback = wire->get_fallback_material();
+	REQUIRE(wire_fallback.is_valid());
+	CHECK(box_wire->get_fallback_material() == wire_fallback);
+
+	Ref<ArrayCellMeshND> cell;
+	cell.instantiate();
+	Ref<ArrayPolyMeshND> poly;
+	poly.instantiate();
+	const Ref<CellMaterialND> cell_fallback = cell->get_fallback_material();
+	REQUIRE(cell_fallback.is_valid());
+	CHECK_MESSAGE(poly->get_fallback_material() == cell_fallback, "Poly meshes are cell meshes, so they share the cell fallback material.");
+	CHECK(cell_fallback != wire_fallback);
 }
 } // namespace TestMeshND

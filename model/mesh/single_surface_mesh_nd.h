@@ -25,6 +25,7 @@ public:
 
 	Ref<MaterialND> get_material() const;
 	void set_material(const Ref<MaterialND> &p_material);
+	virtual Ref<MaterialND> get_fallback_material();
 	virtual void validate_material_for_mesh(const Ref<MaterialND> &p_material) override;
 
 	virtual PackedInt32Array get_edge_indices();
@@ -41,4 +42,6 @@ public:
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_vertex_positions);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_normal_values);
 	GDVIRTUAL0R(TypedArray<VectorM>, _get_texture_map_values);
+
+	GDVIRTUAL0R(Ref<MaterialND>, _get_fallback_material);
 };

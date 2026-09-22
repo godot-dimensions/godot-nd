@@ -16,7 +16,7 @@
 			<param index="0" name="surface_index" type="int" default="0" />
 			<description>
 				Returns the currently active [MaterialND] for the surface of [member mesh] at [param surface_index]. The index only matters for a [MultiSurfaceMeshND], since a [SingleSurfaceMeshND] only has surface [code]0[/code]. This is the material that rendering engines use to draw that surface.
-				If [member material_overrides] has a single element, it is returned for every surface. Otherwise, the element at [param surface_index] is returned if there is one and it is not null. Otherwise, the surface's own [member SingleSurfaceMeshND.material] is returned, which may be null if the surface has no material. Materials found through the overrides or the surface are validated against the surface before being returned.
+				If [member material_overrides] has a single element, it is returned for every surface. Otherwise, the element at [param surface_index] is returned if there is one and it is not null. Otherwise, the surface's own [member SingleSurfaceMeshND.material] is returned if it is set. Otherwise, the surface's fallback material is returned (see [method SingleSurfaceMeshND._get_fallback_material]), which may be null if the surface has no fallback material. Materials found through the overrides or the surface are validated against the surface before being returned, but fallback materials are not.
 				If [member mesh] is not set, or [param surface_index] does not refer to a surface of the mesh, only the overrides are consulted, so this returns the override for that index or null.
 			</description>
 		</method>

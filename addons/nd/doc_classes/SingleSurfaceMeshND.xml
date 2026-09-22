@@ -16,6 +16,12 @@
 				Callback method that should return the edge indices of a mesh. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_edge_indices] for details of the returned data.
 			</description>
 		</method>
+		<method name="_get_fallback_material" qualifiers="virtual">
+			<return type="MaterialND" />
+			<description>
+				Callback method that should return a fallback [MaterialND] for the mesh. This is used when neither the [MeshInstanceND] nor the [SingleSurfaceMeshND] itself have a material defined. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. This is only needed when creating a completely custom [SingleSurfaceMeshND] type; built-in types such as [CellMeshND] and [WireMeshND] already define a fallback material, and overriding this function does nothing for them.
+			</description>
+		</method>
 		<method name="_get_normal_values" qualifiers="virtual">
 			<return type="PackedFloat64Array[]" />
 			<description>

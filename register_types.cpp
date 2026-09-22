@@ -165,6 +165,9 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		RenderingServerND *rendering_server = memnew(RenderingServerND);
 		rendering_server->register_rendering_engine(memnew(WireframeCanvasRenderingEngineND));
 		add_godot_singleton("RenderingServerND", rendering_server);
+		// Initialize fallback materials in the opposite order from when they will later be destroyed.
+		WireMeshND::init_fallback_material();
+		CellMeshND::init_fallback_material();
 #ifdef TOOLS_ENABLED
 	} else if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
 #ifdef GDEXTENSION
@@ -205,6 +208,9 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE_OR_EARLIEST) {
+		// Clean up fallback materials in the opposite order of their creation.
+		CellMeshND::cleanup_fallback_material();
+		WireMeshND::cleanup_fallback_material();
 		// Unregister and free the singletons in the opposite order of registration.
 		remove_godot_singleton("WireMeshBuilderND", WireMeshBuilderND::get_singleton());
 		remove_godot_singleton("PolyMeshBuilderND", PolyMeshBuilderND::get_singleton());

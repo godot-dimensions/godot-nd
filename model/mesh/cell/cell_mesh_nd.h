@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../single_surface_mesh_nd.h"
+#include "cell_material_nd.h"
 
 class ArrayCellMeshND;
 
@@ -36,6 +37,10 @@ public:
 	Ref<ArrayCellMeshND> to_array_cell_mesh();
 	virtual Ref<CellMeshND> to_cell_mesh();
 
+	Ref<MaterialND> get_fallback_material() override;
+	static void init_fallback_material();
+	static void cleanup_fallback_material();
+
 	virtual int get_simplex_cell_count();
 	virtual int get_indices_per_simplex_cell();
 	virtual PackedInt32Array get_simplex_cell_vertex_indices();
@@ -57,4 +62,7 @@ public:
 	GDVIRTUAL0R(PackedInt32Array, _get_simplex_cell_normal_indices);
 	GDVIRTUAL0R(PackedInt32Array, _get_simplex_cell_texture_map_indices);
 	GDVIRTUAL0R(TypedArray<VectorN>, _get_simplex_cell_boundary_normals);
+
+private:
+	static Ref<CellMaterialND> _fallback_material;
 };

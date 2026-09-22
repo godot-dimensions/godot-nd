@@ -459,6 +459,20 @@ Ref<CellMeshND> CellMeshND::to_cell_mesh() {
 	return to_array_cell_mesh();
 }
 
+Ref<CellMaterialND> CellMeshND::_fallback_material;
+
+Ref<MaterialND> CellMeshND::get_fallback_material() {
+	return _fallback_material;
+}
+
+void CellMeshND::init_fallback_material() {
+	_fallback_material.instantiate();
+}
+
+void CellMeshND::cleanup_fallback_material() {
+	_fallback_material.unref();
+}
+
 int CellMeshND::get_simplex_cell_count() {
 	const int dimension = get_dimension();
 	ERR_FAIL_COND_V_MSG(dimension < 1, -1, "CellMeshND: Mesh is empty or 0-dimensional, cannot determine simplex cell count.");

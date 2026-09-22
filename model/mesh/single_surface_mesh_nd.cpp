@@ -76,6 +76,12 @@ void SingleSurfaceMeshND::set_material(const Ref<MaterialND> &p_material) {
 	_material = p_material;
 }
 
+Ref<MaterialND> SingleSurfaceMeshND::get_fallback_material() {
+	Ref<MaterialND> material;
+	GDVIRTUAL_CALL(_get_fallback_material, material);
+	return material;
+}
+
 void SingleSurfaceMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 	// Always call the virtual method to allow derived classes to provide more material validation.
 	GDVIRTUAL_CALL(_validate_material_for_mesh, p_material);
@@ -200,4 +206,6 @@ void SingleSurfaceMeshND::_bind_methods() {
 	GDVIRTUAL_BIND(_get_vertex_positions);
 	GDVIRTUAL_BIND(_get_normal_values);
 	GDVIRTUAL_BIND(_get_texture_map_values);
+
+	GDVIRTUAL_BIND(_get_fallback_material);
 }

@@ -44,6 +44,10 @@ void MeshInstanceND::_validate_property(PropertyInfo &p_property) const {
 Ref<MaterialND> MeshInstanceND::_get_valid_active_material_for_surface(const Ref<SingleSurfaceMeshND> &p_surface_mesh, Ref<MaterialND> p_material) {
 	if (p_material.is_null()) {
 		p_material = p_surface_mesh->get_material();
+		if (p_material.is_null()) {
+			// Use the fallback material from the surface mesh. Don't validate fallback materials ever, so return.
+			return p_surface_mesh->get_fallback_material();
+		}
 	}
 	// If both the surface mesh and material are valid, ensure the material is compatible with the mesh.
 	if (p_material.is_valid()) {
@@ -68,7 +72,7 @@ Ref<MaterialND> MeshInstanceND::get_active_material(const int p_surface_index) c
 		// If the overrides have not provided a material, try to get it from the mesh itself.
 		const Ref<SingleSurfaceMeshND> single_surface_mesh = _mesh;
 		if (single_surface_mesh.is_valid()) {
-			// Single-surface mesh: These have materials defined, so use it if no override is provided.
+			// Single-surface mesh: These have materials and fallback materials defined, so use it if no override is provided.
 			material = _get_valid_active_material_for_surface(single_surface_mesh, material);
 		} else {
 			// Multi-surface mesh: These do not have materials, but their surfaces do.
@@ -84,7 +88,7 @@ Ref<MaterialND> MeshInstanceND::get_active_material(const int p_surface_index) c
 			}
 		}
 	}
-	// Note: It is possible that the returned material is still null, since meshes may have no material.
+	// Note: It is possible that the returned material is still null, since meshes can return a null fallback material.
 	// Therefore, rendering engines MUST handle the case of this returning null.
 	return material;
 }

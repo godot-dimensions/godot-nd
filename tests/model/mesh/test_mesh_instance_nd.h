@@ -47,9 +47,10 @@ TEST_CASE("[MeshInstanceND] Material overrides apply per surface") {
 	mesh->set_surface_meshes({ surface_a, surface_b });
 	MeshInstanceND mesh_instance;
 	mesh_instance.set_mesh(mesh);
-	// Without overrides, each surface uses its own material, or null if it has none.
+	// Without overrides, each surface uses its own material, or its fallback material if it has none.
 	CHECK(mesh_instance.get_active_material(0) == red);
-	CHECK(mesh_instance.get_active_material(1).is_null());
+	CHECK(mesh_instance.get_active_material(1) == surface_b->get_fallback_material());
+	CHECK(surface_b->get_fallback_material().is_valid());
 	CHECK(mesh_instance.get_active_material(2).is_null());
 	// A single override applies to every surface.
 	Ref<CellMaterialND> blue;
@@ -68,7 +69,7 @@ TEST_CASE("[MeshInstanceND] Material overrides apply per surface") {
 	// Clearing the single override clears them all.
 	mesh_instance.set_material_override(Ref<MaterialND>());
 	CHECK(mesh_instance.get_material_overrides().is_empty());
-	CHECK(mesh_instance.get_active_material(1).is_null());
+	CHECK(mesh_instance.get_active_material(1) == surface_b->get_fallback_material());
 }
 
 TEST_CASE("[MeshInstanceND] Bounds with no mesh set") {

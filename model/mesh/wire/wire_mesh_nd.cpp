@@ -23,6 +23,20 @@ Vector<VectorN> WireMeshND::get_edge_positions() {
 	return _edge_positions_cache;
 }
 
+Ref<WireMaterialND> WireMeshND::_fallback_material;
+
+Ref<MaterialND> WireMeshND::get_fallback_material() {
+	return _fallback_material;
+}
+
+void WireMeshND::init_fallback_material() {
+	_fallback_material.instantiate();
+}
+
+void WireMeshND::cleanup_fallback_material() {
+	_fallback_material.unref();
+}
+
 void WireMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("wire_mesh_clear_cache", "reset_validation"), &WireMeshND::wire_mesh_clear_cache, DEFVAL(true));
 }
