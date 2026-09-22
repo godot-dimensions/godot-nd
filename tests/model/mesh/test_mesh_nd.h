@@ -2,7 +2,9 @@
 
 #include "../../../model/mesh/cell/array_cell_mesh_nd.h"
 #include "../../../model/mesh/poly/array_poly_mesh_nd.h"
+#include "../../../model/mesh/poly/box_poly_mesh_nd.h"
 #include "../../../model/mesh/wire/array_wire_mesh_nd.h"
+#include "../../../model/mesh/wire/box_wire_mesh_nd.h"
 
 #include "tests/test_macros.h"
 
@@ -137,6 +139,233 @@ TEST_CASE("[MeshND] Array mesh validators share the first-vertex dimension contr
 			CHECK_FALSE(mesh->is_mesh_data_valid());
 			ERR_PRINT_ON;
 		}
+	}
+}
+
+static const char *VALIDATION_RESET = "mesh_data_validation_reset";
+static const char *PROXY_DIRTY = "proxy_mesh_3d_marked_dirty";
+
+// Both signals have no arguments, so each emission is recorded as an empty argument list.
+static Array _emissions(const int p_count) {
+	Array emissions;
+	for (int i = 0; i < p_count; i++) {
+		emissions.push_back(Array());
+	}
+	return emissions;
+}
+
+static void _watch_signals(MeshND *p_mesh) {
+	SIGNAL_WATCH(p_mesh, VALIDATION_RESET);
+	SIGNAL_WATCH(p_mesh, PROXY_DIRTY);
+}
+
+static void _unwatch_signals(MeshND *p_mesh) {
+	SIGNAL_UNWATCH(p_mesh, VALIDATION_RESET);
+	SIGNAL_UNWATCH(p_mesh, PROXY_DIRTY);
+}
+
+static Ref<ArrayWireMeshND> _make_wire_mesh() {
+	Ref<ArrayWireMeshND> mesh;
+	mesh.instantiate();
+	mesh->set_vertex_positions(Vector<VectorN>({ VectorN{ 0, 0, 0, 0 }, VectorN{ 1, 0, 0, 0 } }));
+	mesh->set_edge_indices({ 0, 1 });
+	return mesh;
+}
+
+static Ref<ArrayCellMeshND> _make_cell_mesh() {
+	Ref<ArrayCellMeshND> mesh;
+	mesh.instantiate();
+	mesh->set_vertex_positions(Vector<VectorN>({ VectorN{ 0, 0, 0 }, VectorN{ 1, 0, 0 }, VectorN{ 0, 1, 0 }, VectorN{ 0, 0, 1 } }));
+	mesh->set_simplex_cell_vertex_indices({ 0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3 });
+	return mesh;
+}
+
+static Ref<ArrayPolyMeshND> _make_poly_mesh() {
+	Ref<BoxPolyMeshND> box;
+	box.instantiate();
+	box->set_size(VectorN{ 1, 1, 1, 1 });
+	return box->to_array_poly_mesh();
+}
+
+static TypedArray<VectorN> _to_typed_array(const Vector<VectorN> &p_vectors) {
+	TypedArray<VectorN> typed_array;
+	for (const VectorN &vector : p_vectors) {
+		typed_array.push_back(vector);
+	}
+	return typed_array;
+}
+
+static PackedStringArray signal_order;
+static void _record_validation_reset() {
+	signal_order.push_back(VALIDATION_RESET);
+}
+static void _record_proxy_dirty() {
+	signal_order.push_back(PROXY_DIRTY);
+}
+
+TEST_CASE("[MeshND] Resetting validation also marks the proxy mesh dirty") {
+	Ref<ArrayWireMeshND> mesh = _make_wire_mesh();
+	_watch_signals(mesh.ptr());
+	mesh->reset_mesh_data_validation();
+	SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+	SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+	_unwatch_signals(mesh.ptr());
+}
+
+TEST_CASE("[MeshND] Validation reset is emitted before the proxy mesh is marked dirty") {
+	Ref<ArrayWireMeshND> mesh = _make_wire_mesh();
+	signal_order.clear();
+	mesh->connect(VALIDATION_RESET, callable_mp_static(&_record_validation_reset));
+	mesh->connect(PROXY_DIRTY, callable_mp_static(&_record_proxy_dirty));
+	mesh->set_vertex_positions(Vector<VectorN>({ VectorN{ 0, 0, 0, 0 }, VectorN{ 2, 0, 0, 0 } }));
+	CHECK_MESSAGE(signal_order == PackedStringArray({ VALIDATION_RESET, PROXY_DIRTY }), "Listeners that care about validity should be notified before listeners that only rebuild proxy meshes.");
+	mesh->disconnect(VALIDATION_RESET, callable_mp_static(&_record_validation_reset));
+	mesh->disconnect(PROXY_DIRTY, callable_mp_static(&_record_proxy_dirty));
+}
+
+TEST_CASE("[MeshND] Structural changes emit both signals exactly once") {
+	SUBCASE("ArrayWireMeshND") {
+		Ref<ArrayWireMeshND> mesh = _make_wire_mesh();
+		_watch_signals(mesh.ptr());
+		mesh->set_vertex_positions(Vector<VectorN>({ VectorN{ 0, 0, 0, 0 }, VectorN{ 1, 0, 0, 0 }, VectorN{ 0, 1, 0, 0 } }));
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		mesh->append_edge_indices(1, 2);
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		mesh->append_vertex(VectorN{ 0, 0, 1, 0 });
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		_unwatch_signals(mesh.ptr());
+	}
+	SUBCASE("ArrayCellMeshND") {
+		Ref<ArrayCellMeshND> mesh = _make_cell_mesh();
+		_watch_signals(mesh.ptr());
+		mesh->set_simplex_cell_vertex_indices({ 0, 2, 1, 0, 1, 3, 0, 2, 3, 1, 2, 3 });
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		mesh->set_normal_values(Vector<VectorN>({ VectorN{ 0, 0, 1 } }));
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		mesh->append_vertex(VectorN{ 1, 1, 1 });
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		_unwatch_signals(mesh.ptr());
+	}
+	SUBCASE("ArrayPolyMeshND") {
+		Ref<ArrayPolyMeshND> mesh = _make_poly_mesh();
+		_watch_signals(mesh.ptr());
+		mesh->set_poly_cell_vertex_positions(mesh->get_poly_cell_vertex_positions());
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		mesh->set_poly_cell_normal_values(mesh->get_poly_cell_normal_values());
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		mesh->append_vertex(VectorN{ 5, 5, 5, 5 });
+		SIGNAL_CHECK(VALIDATION_RESET, _emissions(1));
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		_unwatch_signals(mesh.ptr());
+	}
+}
+
+TEST_CASE("[MeshND] Transforming the mesh marks the proxy dirty without resetting validation") {
+	SUBCASE("ArrayWireMeshND") {
+		Ref<ArrayWireMeshND> mesh = _make_wire_mesh();
+		REQUIRE(mesh->is_mesh_data_valid());
+		const double end_x_before = mesh->get_rect_bounds()->get_end()[0];
+		_watch_signals(mesh.ptr());
+		mesh->transform_mesh(TransformND::from_position(VectorN{ 10, 0, 0, 0 }));
+		SIGNAL_CHECK_FALSE(VALIDATION_RESET);
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		CHECK_MESSAGE(mesh->get_rect_bounds()->get_end()[0] == doctest::Approx(end_x_before + 10.0), "Transforming the mesh should mark the rect bounds dirty.");
+		_unwatch_signals(mesh.ptr());
+	}
+	SUBCASE("ArrayCellMeshND") {
+		Ref<ArrayCellMeshND> mesh = _make_cell_mesh();
+		REQUIRE(mesh->is_mesh_data_valid());
+		const double end_x_before = mesh->get_rect_bounds()->get_end()[0];
+		_watch_signals(mesh.ptr());
+		mesh->transform_mesh(TransformND::from_position(VectorN{ 10, 0, 0 }));
+		SIGNAL_CHECK_FALSE(VALIDATION_RESET);
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		CHECK_MESSAGE(mesh->get_rect_bounds()->get_end()[0] == doctest::Approx(end_x_before + 10.0), "Transforming the mesh should mark the rect bounds dirty.");
+		_unwatch_signals(mesh.ptr());
+	}
+	SUBCASE("ArrayPolyMeshND") {
+		Ref<ArrayPolyMeshND> mesh = _make_poly_mesh();
+		REQUIRE(mesh->is_mesh_data_valid());
+		const double end_x_before = mesh->get_rect_bounds()->get_end()[0];
+		_watch_signals(mesh.ptr());
+		mesh->transform_mesh(TransformND::from_position(VectorN{ 10, 0, 0, 0 }));
+		SIGNAL_CHECK_FALSE(VALIDATION_RESET);
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		CHECK_MESSAGE(mesh->get_rect_bounds()->get_end()[0] == doctest::Approx(end_x_before + 10.0), "Transforming the mesh should mark the rect bounds dirty.");
+		CHECK_MESSAGE(mesh->is_poly_mesh_data_valid(), "Transforming the mesh should not reset the poly mesh validation either.");
+		_unwatch_signals(mesh.ptr());
+	}
+}
+
+TEST_CASE("[MeshND] Appending only duplicate vertices emits nothing") {
+	SUBCASE("ArrayWireMeshND") {
+		Ref<ArrayWireMeshND> mesh = _make_wire_mesh();
+		_watch_signals(mesh.ptr());
+		mesh->append_vertices(mesh->get_vertex_positions(), true);
+		mesh->append_vertices(Vector<VectorN>(), true);
+		SIGNAL_CHECK_FALSE(VALIDATION_RESET);
+		SIGNAL_CHECK_FALSE(PROXY_DIRTY);
+		_unwatch_signals(mesh.ptr());
+	}
+	SUBCASE("ArrayCellMeshND") {
+		Ref<ArrayCellMeshND> mesh = _make_cell_mesh();
+		_watch_signals(mesh.ptr());
+		mesh->append_vertices(mesh->get_vertex_positions(), true);
+		mesh->append_vertices(Vector<VectorN>(), true);
+		SIGNAL_CHECK_FALSE(VALIDATION_RESET);
+		SIGNAL_CHECK_FALSE(PROXY_DIRTY);
+		_unwatch_signals(mesh.ptr());
+	}
+	SUBCASE("ArrayPolyMeshND") {
+		Ref<ArrayPolyMeshND> mesh = _make_poly_mesh();
+		_watch_signals(mesh.ptr());
+		mesh->append_vertices(_to_typed_array(mesh->get_poly_cell_vertex_positions()), true);
+		mesh->append_vertices(TypedArray<VectorN>(), true);
+		SIGNAL_CHECK_FALSE(VALIDATION_RESET);
+		SIGNAL_CHECK_FALSE(PROXY_DIRTY);
+		_unwatch_signals(mesh.ptr());
+	}
+}
+
+TEST_CASE("[ArrayWireMeshND] Appending a vertex updates the rect bounds") {
+	Ref<ArrayWireMeshND> mesh = _make_wire_mesh();
+	CHECK(VectorND::is_equal_exact(mesh->get_rect_bounds()->get_end(), VectorN{ 1, 0, 0, 0 }));
+	mesh->append_vertex(VectorN{ 0, 5, 0, 0 });
+	CHECK_MESSAGE(VectorND::is_equal_exact(mesh->get_rect_bounds()->get_end(), VectorN{ 1, 5, 0, 0 }), "A vertex without any edges still counts towards the rect bounds.");
+}
+
+TEST_CASE("[MeshND] Primitive size changes mark bounds and proxy dirty without resetting validation") {
+	SUBCASE("BoxWireMeshND") {
+		Ref<BoxWireMeshND> mesh;
+		mesh.instantiate();
+		mesh->set_size(VectorN{ 1, 1, 1, 1 });
+		REQUIRE(mesh->is_mesh_data_valid());
+		_watch_signals(mesh.ptr());
+		mesh->set_size(VectorN{ 2, 4, 6, 8 });
+		SIGNAL_CHECK_FALSE(VALIDATION_RESET);
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		CHECK(VectorND::is_equal_exact(mesh->get_rect_bounds()->get_end(), VectorN{ 1, 2, 3, 4 }));
+		_unwatch_signals(mesh.ptr());
+	}
+	SUBCASE("BoxPolyMeshND") {
+		Ref<BoxPolyMeshND> mesh;
+		mesh.instantiate();
+		mesh->set_size(VectorN{ 1, 1, 1, 1 });
+		REQUIRE(mesh->is_mesh_data_valid());
+		_watch_signals(mesh.ptr());
+		mesh->set_size(VectorN{ 2, 4, 6, 8 });
+		SIGNAL_CHECK_FALSE(VALIDATION_RESET);
+		SIGNAL_CHECK(PROXY_DIRTY, _emissions(1));
+		CHECK(VectorND::is_equal_exact(mesh->get_rect_bounds()->get_end(), VectorN{ 1, 2, 3, 4 }));
+		_unwatch_signals(mesh.ptr());
 	}
 }
 } // namespace TestMeshND

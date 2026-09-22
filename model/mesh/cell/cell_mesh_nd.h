@@ -19,6 +19,7 @@ protected:
 	static void _bind_methods();
 	PackedInt32Array _edge_indices_cache;
 	Vector<VectorN> _edge_positions_cache;
+	void _cell_mesh_clear_cache_internal();
 
 public:
 	// Nearest point and signed distance.
@@ -30,7 +31,7 @@ public:
 	bool raycast_intersects_fast(const VectorN &p_local_from, const VectorN &p_local_direction, const double p_max_distance = Math_INF);
 	Dictionary raycast_intersects(const VectorN &p_local_from, const VectorN &p_local_direction, const double p_max_distance = Math_INF);
 
-	void cell_mesh_clear_cache();
+	void cell_mesh_clear_cache(const bool p_reset_validation = true);
 	virtual void validate_material_for_mesh(const Ref<MaterialND> &p_material) override;
 	Ref<ArrayCellMeshND> to_array_cell_mesh();
 	virtual Ref<CellMeshND> to_cell_mesh();

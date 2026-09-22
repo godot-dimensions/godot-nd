@@ -11,15 +11,16 @@ void BoxPolyMeshND::_clear_caches() {
 	_texture_map_values_cache.clear();
 	_texture_map_indices_cache.clear();
 	_vertices_cache.clear();
-	poly_mesh_clear_cache();
+	poly_mesh_clear_cache(false);
 }
 
 void BoxPolyMeshND::set_poly_texture_map(const BoxPolyTextureMap p_map) {
 	_poly_texture_map = p_map;
-	// The position caches can be kept, but the texture map and poly caches need clearing.
+	// The position caches can be kept, but the texture map and poly caches need clearing and the proxy mesh 3D needs to be rebuilt.
+	// The mesh is still valid, so do not reset the validation.
 	_texture_map_values_cache.clear();
 	_texture_map_indices_cache.clear();
-	poly_mesh_clear_cache();
+	poly_mesh_clear_cache(false);
 }
 
 VectorN BoxPolyMeshND::get_half_extents() const {

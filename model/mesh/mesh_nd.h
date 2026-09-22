@@ -42,13 +42,12 @@ public:
 
 	// Returns the proxy 3D mesh associated with this ND mesh.
 	Ref<ArrayMesh> get_proxy_mesh_3d();
-	// Call when the mesh is modified to indicate that
-	// the 3D proxy mesh used for rendering needs to be updated.
-	void mark_proxy_mesh_3d_dirty() { _is_proxy_mesh_3d_dirty = true; }
-	void mark_mesh_bounds_and_proxy_mesh_3d_dirty() {
-		_is_proxy_mesh_3d_dirty = true;
-		_is_rect_bounds_dirty = true;
-	}
+	// Call when the mesh's data changes in a way that does not need revalidation, such as
+	// transforming the vertex positions, to indicate that the proxy 3D mesh used for rendering
+	// (and optionally the rect bounds) need to be updated. When structural data changes, call
+	// `reset_mesh_data_validation()` instead, which also marks the bounds and proxy mesh dirty.
+	void mark_proxy_mesh_3d_dirty();
+	void mark_mesh_bounds_and_proxy_mesh_3d_dirty();
 
 	bool is_mesh_data_valid();
 	void reset_mesh_data_validation();

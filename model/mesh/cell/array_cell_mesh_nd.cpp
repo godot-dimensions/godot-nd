@@ -5,7 +5,6 @@
 
 void ArrayCellMeshND::_clear_cache_and_validation() {
 	cell_mesh_clear_cache();
-	reset_mesh_data_validation();
 }
 
 bool ArrayCellMeshND::validate_mesh_data() {
@@ -59,7 +58,6 @@ int32_t ArrayCellMeshND::append_vertex(const VectorN &p_vertex, const bool p_ded
 	}
 	_vertex_positions.push_back(p_vertex);
 	cell_mesh_clear_cache();
-	reset_mesh_data_validation();
 	return (int32_t)vertex_pos_count;
 }
 
@@ -68,7 +66,6 @@ PackedInt32Array ArrayCellMeshND::append_vertices(const Vector<VectorN> &p_verte
 	for (int64_t i = 0; i < p_vertex_positions.size(); i++) {
 		indices.append(append_vertex(p_vertex_positions[i], p_deduplicate_vertices));
 	}
-	reset_mesh_data_validation();
 	return indices;
 }
 
@@ -106,7 +103,6 @@ void ArrayCellMeshND::compact_normal_values() {
 		_simplex_cell_normal_indices.set(i, old_to_new[_simplex_cell_normal_indices[i]]);
 	}
 	_normal_values = compacted_values;
-	mark_proxy_mesh_3d_dirty();
 	reset_mesh_data_validation();
 }
 
@@ -139,7 +135,6 @@ void ArrayCellMeshND::compact_texture_map_values() {
 		_simplex_cell_texture_map_indices.set(i, old_to_new[_simplex_cell_texture_map_indices[i]]);
 	}
 	_texture_map_values = compacted_values;
-	mark_proxy_mesh_3d_dirty();
 	reset_mesh_data_validation();
 }
 
@@ -160,7 +155,7 @@ void ArrayCellMeshND::transform_mesh(const Ref<TransformND> &p_transform) {
 	for (int64_t normal_index = 0; normal_index < normal_val_count; normal_index++) {
 		_normal_values.set(normal_index, inverse_transpose->xform_basis(_normal_values[normal_index]));
 	}
-	cell_mesh_clear_cache();
+	cell_mesh_clear_cache(false);
 }
 
 void ArrayCellMeshND::merge_with(const Ref<ArrayCellMeshND> &p_other, const Ref<TransformND> &p_transform) {
@@ -290,7 +285,6 @@ PackedInt32Array ArrayCellMeshND::get_simplex_cell_normal_indices() {
 
 void ArrayCellMeshND::set_simplex_cell_normal_indices(const PackedInt32Array &p_simplex_cell_normal_indices) {
 	_simplex_cell_normal_indices = p_simplex_cell_normal_indices;
-	mark_proxy_mesh_3d_dirty();
 	reset_mesh_data_validation();
 }
 
@@ -300,7 +294,6 @@ PackedInt32Array ArrayCellMeshND::get_simplex_cell_texture_map_indices() {
 
 void ArrayCellMeshND::set_simplex_cell_texture_map_indices(const PackedInt32Array &p_simplex_cell_texture_map_indices) {
 	_simplex_cell_texture_map_indices = p_simplex_cell_texture_map_indices;
-	mark_proxy_mesh_3d_dirty();
 	reset_mesh_data_validation();
 }
 
@@ -328,7 +321,6 @@ Vector<VectorN> ArrayCellMeshND::get_normal_values() {
 
 void ArrayCellMeshND::set_normal_values(const Vector<VectorN> &p_normal_values) {
 	_normal_values = p_normal_values;
-	mark_proxy_mesh_3d_dirty();
 	reset_mesh_data_validation();
 }
 
@@ -338,7 +330,6 @@ void ArrayCellMeshND::set_normal_values_bind(const TypedArray<VectorN> &p_normal
 	for (int i = 0; i < p_normal_values.size(); i++) {
 		_normal_values.set(i, p_normal_values[i]);
 	}
-	mark_proxy_mesh_3d_dirty();
 	reset_mesh_data_validation();
 }
 
@@ -348,7 +339,6 @@ Vector<VectorM> ArrayCellMeshND::get_texture_map_values() {
 
 void ArrayCellMeshND::set_texture_map_values(const Vector<VectorM> &p_texture_map_values) {
 	_texture_map_values = p_texture_map_values;
-	mark_proxy_mesh_3d_dirty();
 	reset_mesh_data_validation();
 }
 
@@ -358,7 +348,6 @@ void ArrayCellMeshND::set_texture_map_values_bind(const TypedArray<VectorM> &p_t
 	for (int i = 0; i < p_texture_map_values.size(); i++) {
 		_texture_map_values.set(i, p_texture_map_values[i]);
 	}
-	mark_proxy_mesh_3d_dirty();
 	reset_mesh_data_validation();
 }
 

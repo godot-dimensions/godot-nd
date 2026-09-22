@@ -28,6 +28,18 @@ PackedInt32Array MeshND::deduplicate_edge_indices(const PackedInt32Array &p_item
 	return deduplicated_items;
 }
 
+void MeshND::mark_proxy_mesh_3d_dirty() {
+	_is_proxy_mesh_3d_dirty = true;
+	emit_signal(StringName("proxy_mesh_3d_marked_dirty"));
+}
+
+void MeshND::mark_mesh_bounds_and_proxy_mesh_3d_dirty() {
+	_is_proxy_mesh_3d_dirty = true;
+	_is_rect_bounds_dirty = true;
+	emit_signal(StringName("proxy_mesh_3d_marked_dirty"));
+	// Only use signals as needed, so no separate rect bounds signal here.
+}
+
 bool MeshND::is_mesh_data_valid() {
 	if (likely(_is_mesh_data_valid)) {
 		return true;
@@ -41,6 +53,9 @@ bool MeshND::is_mesh_data_valid() {
 
 void MeshND::reset_mesh_data_validation() {
 	_is_mesh_data_valid = false;
+	emit_signal(StringName("mesh_data_validation_reset"));
+	// Call this after so that external things which care about mesh validity are notified before things that just need to update their proxy meshes.
+	mark_mesh_bounds_and_proxy_mesh_3d_dirty();
 }
 
 bool MeshND::validate_mesh_data() {
@@ -77,6 +92,9 @@ void MeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
 }
 
 void MeshND::_bind_methods() {
+	ADD_SIGNAL(MethodInfo("mesh_data_validation_reset"));
+	ADD_SIGNAL(MethodInfo("proxy_mesh_3d_marked_dirty"));
+
 	ClassDB::bind_static_method("MeshND", D_METHOD("deduplicate_edge_indices", "items"), &MeshND::deduplicate_edge_indices);
 	ClassDB::bind_method(D_METHOD("get_rect_bounds"), &MeshND::get_rect_bounds);
 	ClassDB::bind_method(D_METHOD("get_dimension"), &MeshND::get_dimension);

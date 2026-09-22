@@ -603,7 +603,8 @@ void PolyMeshND::_decompose_boundary_cells_into_simplexes() {
 	if (!is_poly_mesh_data_valid()) {
 		return;
 	}
-	poly_mesh_clear_cache();
+	// This fills a cache rather than changing the mesh, so only clear the old caches without marking anything dirty.
+	_poly_mesh_clear_cache_internal(false);
 	const int64_t dimension = get_dimension();
 	ERR_FAIL_COND_MSG(dimension < 3, "PolyMeshND: Cannot decompose boundary cells into simplexes because the mesh has fewer than 3 dimensions.");
 	const int64_t boundary_dim_index = dimension - 3;
@@ -1156,14 +1157,12 @@ TypedArray<PackedInt32Array> PolyMeshND::get_all_poly_cell_poly_indices_bind(con
 	return ret;
 }
 
-void PolyMeshND::poly_mesh_clear_cache(const bool p_normals_only) {
+void PolyMeshND::_poly_mesh_clear_cache_internal(const bool p_normals_only) {
 	_simplex_cell_boundary_normals_cache.clear();
 	_simplex_cell_normal_indices_cache.clear();
 	_simplex_cell_normal_values_cache.clear();
-	reset_poly_mesh_data_validation();
-	// Normals can be computed separately from the rest, so allow resetting just them (and mark the proxy mesh 3D dirty).
+	// Normals can be computed separately from the rest, so allow clearing just them.
 	if (p_normals_only) {
-		mark_proxy_mesh_3d_dirty();
 		return;
 	}
 	_simplex_cell_vertex_indices_cache.clear();
@@ -1171,7 +1170,17 @@ void PolyMeshND::poly_mesh_clear_cache(const bool p_normals_only) {
 	_simplex_cell_texture_map_indices_cache.clear();
 	_simplex_cell_vertex_positions_cache.clear();
 	_simplex_cell_texture_map_values_cache.clear();
-	cell_mesh_clear_cache();
+	_cell_mesh_clear_cache_internal();
+}
+
+void PolyMeshND::poly_mesh_clear_cache(const bool p_reset_validation, const bool p_normals_only) {
+	_poly_mesh_clear_cache_internal(p_normals_only);
+	// The proxy mesh and rect bounds are also caches, so they are always marked dirty here.
+	if (p_reset_validation) {
+		reset_poly_mesh_data_validation();
+	} else {
+		mark_mesh_bounds_and_proxy_mesh_3d_dirty();
+	}
 }
 
 Ref<ArrayPolyMeshND> PolyMeshND::to_array_poly_mesh() {
@@ -1695,7 +1704,7 @@ void PolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_all_cell_vertex_indices", "start_with_canonical_span"), &PolyMeshND::get_all_boundary_cell_vertex_indices_bind);
 	ClassDB::bind_method(D_METHOD("get_all_poly_cell_vertex_indices", "cell_dimension", "start_with_canonical_span"), &PolyMeshND::get_all_poly_cell_vertex_indices_bind);
 	ClassDB::bind_method(D_METHOD("get_all_poly_cell_poly_indices", "cell_dimension", "decomposition_dimension"), &PolyMeshND::get_all_poly_cell_poly_indices_bind);
-	ClassDB::bind_method(D_METHOD("poly_mesh_clear_cache", "normals_only"), &PolyMeshND::poly_mesh_clear_cache, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("poly_mesh_clear_cache", "reset_validation", "normals_only"), &PolyMeshND::poly_mesh_clear_cache, DEFVAL(true), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("to_array_poly_mesh"), &PolyMeshND::to_array_poly_mesh);
 
 	ClassDB::bind_method(D_METHOD("get_source_poly_cell_for_simplex_cell", "simplex_cell_index"), &PolyMeshND::get_source_poly_cell_for_simplex_cell);

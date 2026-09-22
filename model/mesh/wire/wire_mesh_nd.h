@@ -10,6 +10,6 @@ protected:
 	Vector<VectorN> _edge_positions_cache;
 
 public:
-	void wire_mesh_clear_cache();
+	void wire_mesh_clear_cache(const bool p_reset_validation = true);
 	virtual Vector<VectorN> get_edge_positions() override;
 };

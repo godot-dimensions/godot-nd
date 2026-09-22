@@ -11,7 +11,7 @@ void OrthoplexPolyMeshND::_clear_caches() {
 	_texture_map_values_cache.clear();
 	_texture_map_indices_cache.clear();
 	_vertices_cache.clear();
-	poly_mesh_clear_cache();
+	poly_mesh_clear_cache(false);
 }
 
 VectorN OrthoplexPolyMeshND::get_half_extents() const {

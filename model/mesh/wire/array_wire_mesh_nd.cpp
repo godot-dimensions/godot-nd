@@ -30,7 +30,6 @@ void ArrayWireMeshND::append_edge_points(const VectorN &p_point_a, const VectorN
 	const int32_t index_a = append_vertex(p_point_a, p_deduplicate_vertices);
 	const int32_t index_b = append_vertex(p_point_b, p_deduplicate_vertices);
 	append_edge_indices(index_a, index_b);
-	reset_mesh_data_validation();
 }
 
 void ArrayWireMeshND::append_edge_indices(int32_t p_index_a, int32_t p_index_b) {
@@ -40,7 +39,6 @@ void ArrayWireMeshND::append_edge_indices(int32_t p_index_a, int32_t p_index_b) 
 	_edge_vertex_indices.append(p_index_a);
 	_edge_vertex_indices.append(p_index_b);
 	wire_mesh_clear_cache();
-	reset_mesh_data_validation();
 }
 
 int32_t ArrayWireMeshND::append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices) {
@@ -63,7 +61,6 @@ PackedInt32Array ArrayWireMeshND::append_vertices(const Vector<VectorN> &p_verti
 	for (int i = 0; i < p_vertices.size(); i++) {
 		indices.append(append_vertex(p_vertices[i], p_deduplicate_vertices));
 	}
-	reset_mesh_data_validation();
 	return indices;
 }
 
@@ -72,7 +69,6 @@ PackedInt32Array ArrayWireMeshND::append_vertices_bind(const TypedArray<VectorN>
 	for (int i = 0; i < p_vertices.size(); i++) {
 		indices.append(append_vertex(p_vertices[i], p_deduplicate_vertices));
 	}
-	reset_mesh_data_validation();
 	return indices;
 }
 
@@ -130,7 +126,6 @@ void ArrayWireMeshND::deduplicate_all_elements() {
 	_vertex_positions = output_vertices;
 	_edge_vertex_indices = output_edge_vertex_indices;
 	wire_mesh_clear_cache();
-	reset_mesh_data_validation();
 }
 
 void ArrayWireMeshND::transform_mesh(const Ref<TransformND> &p_transform) {
@@ -139,7 +134,7 @@ void ArrayWireMeshND::transform_mesh(const Ref<TransformND> &p_transform) {
 	for (int64_t vertex_index = 0; vertex_index < vertex_pos_count; vertex_index++) {
 		_vertex_positions.set(vertex_index, p_transform->xform(_vertex_positions[vertex_index]));
 	}
-	wire_mesh_clear_cache();
+	wire_mesh_clear_cache(false);
 }
 
 void ArrayWireMeshND::merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<TransformND> &p_transform) {
@@ -162,7 +157,6 @@ void ArrayWireMeshND::merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<
 		set_material(p_other->get_material());
 	}
 	wire_mesh_clear_cache();
-	reset_mesh_data_validation();
 }
 
 PackedInt32Array ArrayWireMeshND::get_edge_indices() {
@@ -172,7 +166,6 @@ PackedInt32Array ArrayWireMeshND::get_edge_indices() {
 void ArrayWireMeshND::set_edge_indices(const PackedInt32Array &p_edge_indices) {
 	_edge_vertex_indices = p_edge_indices;
 	wire_mesh_clear_cache();
-	reset_mesh_data_validation();
 }
 
 Vector<VectorN> ArrayWireMeshND::get_vertex_positions() {
@@ -183,7 +176,6 @@ void ArrayWireMeshND::set_vertex_positions(const Vector<VectorN> &p_vertex_posit
 	ERR_FAIL_COND(p_vertex_positions.size() > MAX_VERTICES);
 	_vertex_positions = p_vertex_positions;
 	wire_mesh_clear_cache();
-	reset_mesh_data_validation();
 }
 
 void ArrayWireMeshND::set_vertex_positions_bind(const TypedArray<VectorN> &p_vertex_positions) {
@@ -193,7 +185,6 @@ void ArrayWireMeshND::set_vertex_positions_bind(const TypedArray<VectorN> &p_ver
 		_vertex_positions.set(i, p_vertex_positions[i]);
 	}
 	wire_mesh_clear_cache();
-	reset_mesh_data_validation();
 }
 
 void ArrayWireMeshND::set_dimension(int p_dimension) {
@@ -205,7 +196,6 @@ void ArrayWireMeshND::set_dimension(int p_dimension) {
 		}
 	}
 	wire_mesh_clear_cache();
-	reset_mesh_data_validation();
 }
 
 void ArrayWireMeshND::_bind_methods() {

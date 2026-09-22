@@ -394,12 +394,21 @@ Dictionary CellMeshND::raycast_intersects(const VectorN &p_local_from, const Vec
 	return result;
 }
 
-void CellMeshND::cell_mesh_clear_cache() {
+void CellMeshND::_cell_mesh_clear_cache_internal() {
 	_cell_positions_cache.clear();
 	_nearest_simplex_inverse_metric_cache.clear();
 	_edge_positions_cache.clear();
 	_edge_indices_cache.clear();
-	mark_mesh_bounds_and_proxy_mesh_3d_dirty();
+}
+
+void CellMeshND::cell_mesh_clear_cache(const bool p_reset_validation) {
+	_cell_mesh_clear_cache_internal();
+	// The proxy mesh and rect bounds are also caches, so they are always marked dirty here.
+	if (p_reset_validation) {
+		reset_mesh_data_validation();
+	} else {
+		mark_mesh_bounds_and_proxy_mesh_3d_dirty();
+	}
 }
 
 void CellMeshND::validate_material_for_mesh(const Ref<MaterialND> &p_material) {
@@ -615,7 +624,7 @@ void CellMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("raycast_intersects_fast", "local_from", "local_direction", "max_distance"), &CellMeshND::raycast_intersects_fast, DEFVAL(BINDING_SAFE_INF));
 	ClassDB::bind_method(D_METHOD("raycast_intersects", "local_from", "local_direction", "max_distance"), &CellMeshND::raycast_intersects, DEFVAL(BINDING_SAFE_INF));
 
-	ClassDB::bind_method(D_METHOD("cell_mesh_clear_cache"), &CellMeshND::cell_mesh_clear_cache);
+	ClassDB::bind_method(D_METHOD("cell_mesh_clear_cache", "reset_validation"), &CellMeshND::cell_mesh_clear_cache, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("get_simplex_cell_count"), &CellMeshND::get_simplex_cell_count);
 	ClassDB::bind_method(D_METHOD("get_indices_per_simplex_cell"), &CellMeshND::get_indices_per_simplex_cell);
 	ClassDB::bind_method(D_METHOD("to_array_cell_mesh"), &CellMeshND::to_array_cell_mesh);

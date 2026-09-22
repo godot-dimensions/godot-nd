@@ -21,7 +21,7 @@ void OrthoplexWireMeshND::set_size(const VectorN &p_size) {
 		}
 		_size = p_size;
 		_vertices_cache.clear();
-		wire_mesh_clear_cache();
+		wire_mesh_clear_cache(false);
 	}
 }
 
