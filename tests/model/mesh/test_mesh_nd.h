@@ -411,6 +411,7 @@ TEST_CASE("[SingleSurfaceMeshND] Built-in mesh types share typed fallback materi
 	const Ref<CellMaterialND> cell_fallback = cell->get_fallback_material();
 	REQUIRE(cell_fallback.is_valid());
 	CHECK_MESSAGE(poly->get_fallback_material() == cell_fallback, "Poly meshes are cell meshes, so they share the cell fallback material.");
-	CHECK(cell_fallback != wire_fallback);
+	// Compare as Object pointers because the two Ref types are unrelated, so Ref's comparison operators would need an impossible cast.
+	CHECK(static_cast<const Object *>(cell_fallback.ptr()) != static_cast<const Object *>(wire_fallback.ptr()));
 }
 } // namespace TestMeshND
