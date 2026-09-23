@@ -45,14 +45,10 @@ void WireMaterialND::_bind_methods() {
 	BIND_ENUM_CONSTANT(WIRE_COLOR_SOURCE_PER_EDGE_AND_SINGLE);
 }
 
-void WireMaterialND::_get_property_list(List<PropertyInfo> *p_list) const {
-	for (List<PropertyInfo>::Element *E = p_list->front(); E; E = E->next()) {
-		PropertyInfo &prop = E->get();
-		if (prop.name == StringName("albedo_color")) {
-			prop.usage = (_albedo_source == WIRE_COLOR_SOURCE_PER_EDGE_ONLY) ? PROPERTY_USAGE_NONE : PROPERTY_USAGE_DEFAULT;
-		} else if (prop.name == StringName("albedo_color_array")) {
-			prop.usage = (_albedo_source == WIRE_COLOR_SOURCE_SINGLE_COLOR) ? PROPERTY_USAGE_NONE : PROPERTY_USAGE_DEFAULT;
-		}
+void WireMaterialND::_validate_property(PropertyInfo &p_property) const {
+	if (p_property.name == StringName("albedo_color")) {
+		p_property.usage = (_albedo_source == WIRE_COLOR_SOURCE_PER_EDGE_ONLY) ? PROPERTY_USAGE_NONE : PROPERTY_USAGE_DEFAULT;
+	} else if (p_property.name == StringName("albedo_color_array")) {
+		p_property.usage = (_albedo_source == WIRE_COLOR_SOURCE_SINGLE_COLOR) ? PROPERTY_USAGE_NONE : PROPERTY_USAGE_DEFAULT;
 	}
-	MaterialND::_get_property_list(p_list);
 }

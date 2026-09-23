@@ -64,26 +64,28 @@ Color CellMaterialND::get_albedo_color_of_edge(const int64_t p_edge_index, const
 	return MaterialND::get_albedo_color_of_edge(p_edge_index, p_for_mesh);
 }
 
-void CellMaterialND::_get_property_list(List<PropertyInfo> *p_list) const {
-	const bool albedo_texture_used = (_albedo_source_flags & COLOR_SOURCE_FLAG_USES_TEXTURE) != 0;
-	const bool any_texture_used = albedo_texture_used; // Update this if more textures are added in the future.
+void CellMaterialND::_validate_property(PropertyInfo &p_property) const {
+	const bool albedo_texture_allowed = (_albedo_source_flags & COLOR_SOURCE_FLAG_USES_TEXTURE) != 0;
+	const bool albedo_texture_present = albedo_texture_allowed && false; // TODO: Replace false with actual texture presence check.
+	const bool any_texture_present = albedo_texture_present; // Update this if more 3D textures are added in the future.
 	const bool texture_transform_mode_all_channels = (_texture_transform_mode == TEXTURE_TRANSFORM_MODE_ALL_CHANNELS);
 	const bool texture_transform_mode_per_channel = (_texture_transform_mode == TEXTURE_TRANSFORM_MODE_PER_CHANNEL);
-	for (List<PropertyInfo>::Element *E = p_list->front(); E; E = E->next()) {
-		PropertyInfo &prop = E->get();
-		if (prop.name == StringName("albedo_color")) {
-			prop.usage = (_albedo_source_flags & COLOR_SOURCE_FLAG_SINGLE_COLOR) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
-		} else if (prop.name == StringName("albedo_color_array")) {
-			prop.usage = (_albedo_source_flags & COLOR_SOURCE_FLAG_USES_COLOR_ARRAY) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
-		} else if (prop.name == StringName("albedo_texture_map_offset")) {
-			prop.usage = (albedo_texture_used && texture_transform_mode_per_channel) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
-		} else if (prop.name == StringName("albedo_texture_map_scale")) {
-			prop.usage = (albedo_texture_used && texture_transform_mode_per_channel) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
-		} else if (prop.name == StringName("texture_map_offset")) {
-			prop.usage = (any_texture_used && texture_transform_mode_all_channels) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
-		} else if (prop.name == StringName("texture_map_scale")) {
-			prop.usage = (any_texture_used && texture_transform_mode_all_channels) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
-		}
+	if (p_property.name == StringName("texture_transform_mode")) {
+		// Don't show the per-channel option in the inspector until we actually have multiple channels to work with.
+		p_property.hint_string = "None,All Channels";
+		p_property.usage = (any_texture_present) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_STORAGE;
+	} else if (p_property.name == StringName("albedo_color")) {
+		p_property.usage = (_albedo_source_flags & COLOR_SOURCE_FLAG_SINGLE_COLOR) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
+	} else if (p_property.name == StringName("albedo_color_array")) {
+		p_property.usage = (_albedo_source_flags & COLOR_SOURCE_FLAG_USES_COLOR_ARRAY) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
+	} else if (p_property.name == StringName("albedo_texture_map_offset")) {
+		p_property.usage = (albedo_texture_present && texture_transform_mode_per_channel) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
+	} else if (p_property.name == StringName("albedo_texture_map_scale")) {
+		p_property.usage = (albedo_texture_present && texture_transform_mode_per_channel) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
+	} else if (p_property.name == StringName("texture_map_offset")) {
+		p_property.usage = (any_texture_present && texture_transform_mode_all_channels) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
+	} else if (p_property.name == StringName("texture_map_scale")) {
+		p_property.usage = (any_texture_present && texture_transform_mode_all_channels) ? PROPERTY_USAGE_DEFAULT : PROPERTY_USAGE_NONE;
 	}
 }
 
@@ -92,10 +94,9 @@ CellMaterialND::CellMaterialND() {
 }
 
 void CellMaterialND::_bind_methods() {
-	// Don't show the per-channel option in the inspector until we actually have multiple channels to work with.
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "texture_transform_mode", PROPERTY_HINT_ENUM, "None,All Channels"), "set_texture_transform_mode", "get_texture_transform_mode");
-	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "texture_map_offset"), "set_texture_map_offset", "get_texture_map_offset");
-	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "texture_map_scale"), "set_texture_map_scale", "get_texture_map_scale");
+	// Most properties are declared here, but the shared texture transform properties
+	// need to be declared by MaterialND in order to fix a C# bindings issue.
+	// Those are PROPERTY_USAGE_STORAGE by default, only shown here via `_validate_property`.
 
 	//ADD_GROUP("Albedo", "albedo_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "albedo_source", PROPERTY_HINT_ENUM, "Single Color:1,Per Vertex Only:2,Per Vertex and Single Color:3,Per Cell Only:8,Per Cell and Single Color:9,Cell Texture Map Only:16,Cell Texture Map and Single Color:17,Cell Texture Map and Per Vertex:18,Cell Texture Map and Per Vertex and Single Color:19,Cell Texture Map and Per Cell:24,Cell Texture Map and Per Cell and and Single Color:25"), "set_albedo_source_flags", "get_albedo_source_flags");

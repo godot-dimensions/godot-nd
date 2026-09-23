@@ -21,7 +21,7 @@ private:
 
 protected:
 	static void _bind_methods();
-	void _get_property_list(List<PropertyInfo> *p_list) const;
+	void _validate_property(PropertyInfo &p_property) const;
 
 public:
 	WireColorSourceND get_albedo_source() const { return _albedo_source; }
