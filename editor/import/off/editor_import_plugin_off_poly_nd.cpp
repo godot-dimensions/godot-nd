@@ -71,7 +71,7 @@ Error EditorImportPluginOFFPolyND::import(ResourceUID::ID p_source_id, const Str
 #endif // VERSION_HEX
 #endif // GDExtension or module.
 {
-	Ref<OFFDocumentND> off_doc = OFFDocumentND::import_load_from_file(p_source_file);
+	Ref<OFFDocumentND> off_doc = OFFDocumentND::import_read_from_file(p_source_file);
 	ERR_FAIL_COND_V(off_doc.is_null(), ERR_FILE_CANT_OPEN);
 	const int64_t force_dimension = p_options[StringName("force_dimension")];
 	if (force_dimension >= 0) {

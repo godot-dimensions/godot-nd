@@ -53,7 +53,7 @@ class OFFDocumentND : public Resource {
 	Vector<Vector<PackedInt32Array>> _calculate_simplex_vertex_indices(const Vector<Vector<PackedInt32Array>> &p_cell_vertex_indices);
 
 	String _export_save_to_string();
-	static Ref<OFFDocumentND> _import_load_from_raw_text(const String &p_raw_text, const String &p_path);
+	static Ref<OFFDocumentND> _import_read_from_raw_text(const String &p_raw_text, const String &p_path);
 
 protected:
 	static void _bind_methods();
@@ -63,8 +63,8 @@ public:
 	PackedByteArray export_save_to_byte_array();
 	void export_save_to_file(const String &p_path);
 
-	static Ref<OFFDocumentND> import_load_from_byte_array(const PackedByteArray &p_data);
-	static Ref<OFFDocumentND> import_load_from_file(const String &p_path);
+	static Ref<OFFDocumentND> import_read_from_byte_array(const PackedByteArray &p_data);
+	static Ref<OFFDocumentND> import_read_from_file(const String &p_path);
 	Ref<ArrayCellMeshND> import_generate_array_cell_mesh_nd();
 	Ref<ArrayPolyMeshND> import_generate_array_poly_mesh_nd();
 	Ref<ArrayWireMeshND> import_generate_wire_mesh_nd(const bool p_deduplicate_edges = true);

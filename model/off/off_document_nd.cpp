@@ -521,7 +521,7 @@ enum class OFFDocumentNDReadState {
 	READ_CELLS,
 };
 
-Ref<OFFDocumentND> OFFDocumentND::import_load_from_byte_array(const PackedByteArray &p_data) {
+Ref<OFFDocumentND> OFFDocumentND::import_read_from_byte_array(const PackedByteArray &p_data) {
 	ERR_FAIL_COND_V_MSG(p_data.is_empty(), Ref<OFFDocumentND>(), "OFF import: Error: Given byte array is empty.");
 #if GDEXTENSION
 	const String as_string = p_data.get_string_from_utf8();
@@ -536,10 +536,10 @@ Ref<OFFDocumentND> OFFDocumentND::import_load_from_byte_array(const PackedByteAr
 #endif
 	}
 #endif
-	return OFFDocumentND::_import_load_from_raw_text(as_string, "(in-memory data)");
+	return OFFDocumentND::_import_read_from_raw_text(as_string, "(in-memory data)");
 }
 
-Ref<OFFDocumentND> OFFDocumentND::import_load_from_file(const String &p_path) {
+Ref<OFFDocumentND> OFFDocumentND::import_read_from_file(const String &p_path) {
 #if GDEXTENSION
 	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
 	ERR_FAIL_COND_V_MSG(file.is_null(), Ref<OFFDocumentND>(), "OFF import: Error: Could not open file " + p_path + ".");
@@ -549,10 +549,10 @@ Ref<OFFDocumentND> OFFDocumentND::import_load_from_file(const String &p_path) {
 	ERR_FAIL_COND_V_MSG(err != OK, Ref<OFFDocumentND>(), "OFF import: Error: Could not open file " + p_path + ".");
 #endif
 	const String file_text = file->get_as_text();
-	return _import_load_from_raw_text(file_text, p_path);
+	return _import_read_from_raw_text(file_text, p_path);
 }
 
-Ref<OFFDocumentND> OFFDocumentND::_import_load_from_raw_text(const String &p_raw_text, const String &p_path) {
+Ref<OFFDocumentND> OFFDocumentND::_import_read_from_raw_text(const String &p_raw_text, const String &p_path) {
 	Ref<OFFDocumentND> off_document;
 	off_document.instantiate();
 	OFFDocumentNDReadState read_state = OFFDocumentNDReadState::READ_SIZE;
@@ -802,8 +802,8 @@ void OFFDocumentND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("export_save_to_byte_array"), &OFFDocumentND::export_save_to_byte_array);
 	ClassDB::bind_method(D_METHOD("export_save_to_file", "path"), &OFFDocumentND::export_save_to_file);
 
-	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_load_from_byte_array", "data"), &OFFDocumentND::import_load_from_byte_array);
-	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_load_from_file", "path"), &OFFDocumentND::import_load_from_file);
+	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_read_from_byte_array", "data"), &OFFDocumentND::import_read_from_byte_array);
+	ClassDB::bind_static_method("OFFDocumentND", D_METHOD("import_read_from_file", "path"), &OFFDocumentND::import_read_from_file);
 	ClassDB::bind_method(D_METHOD("import_generate_array_cell_mesh_nd"), &OFFDocumentND::import_generate_array_cell_mesh_nd);
 	ClassDB::bind_method(D_METHOD("import_generate_array_poly_mesh_nd"), &OFFDocumentND::import_generate_array_poly_mesh_nd);
 	ClassDB::bind_method(D_METHOD("import_generate_wire_mesh_nd", "deduplicate_edges"), &OFFDocumentND::import_generate_wire_mesh_nd, DEFVAL(true));

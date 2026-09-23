@@ -64,7 +64,7 @@ static const char *FIVE_CELL_OFF_TEXT =
 		"4 6 7 8 9\n";
 
 TEST_CASE("[OFFDocumentND] Export writes the face count and round-trips through import") {
-	Ref<OFFDocumentND> imported = OFFDocumentND::import_load_from_byte_array(String(FIVE_CELL_OFF_TEXT).to_utf8_buffer());
+	Ref<OFFDocumentND> imported = OFFDocumentND::import_read_from_byte_array(String(FIVE_CELL_OFF_TEXT).to_utf8_buffer());
 	REQUIRE(imported.is_valid());
 	REQUIRE(imported->get_vertex_positions().size() == 5);
 	REQUIRE(imported->get_cell_face_indices().size() == 2);
@@ -78,7 +78,7 @@ TEST_CASE("[OFFDocumentND] Export writes the face count and round-trips through 
 	CHECK(exported_lines[0] == "4OFF");
 	CHECK_MESSAGE(exported_lines[1] == "5 10 10 5", "The size line must be vertex, face, edge, and then higher cell counts, not the number of cell dimension levels.");
 
-	Ref<OFFDocumentND> reimported = OFFDocumentND::import_load_from_byte_array(exported_text.to_utf8_buffer());
+	Ref<OFFDocumentND> reimported = OFFDocumentND::import_read_from_byte_array(exported_text.to_utf8_buffer());
 	REQUIRE(reimported.is_valid());
 	REQUIRE(reimported->get_vertex_positions().size() == 5);
 	for (int i = 0; i < 5; i++) {
@@ -178,7 +178,7 @@ TEST_CASE("[OFFDocumentND] Exported simplex cell meshes round-trip with per-cell
 		REQUIRE(off_document->get_cell_colors().size() == off_document->get_cell_face_indices().size());
 		CHECK(off_document->get_cell_colors()[off_document->get_cell_colors().size() - 1].size() == 2);
 
-		Ref<OFFDocumentND> reimported = OFFDocumentND::import_load_from_byte_array(off_document->export_save_to_byte_array());
+		Ref<OFFDocumentND> reimported = OFFDocumentND::import_read_from_byte_array(off_document->export_save_to_byte_array());
 		REQUIRE(reimported.is_valid());
 		CHECK(reimported->get_dimension() == dimension);
 		CHECK(reimported->get_cell_face_indices().size() == off_document->get_cell_face_indices().size());
@@ -231,7 +231,7 @@ TEST_CASE("[OFFDocumentND] Export copies the poly mesh hierarchy without the hyp
 		REQUIRE(lines.size() > 2);
 		CHECK(lines[0] == "4OFF");
 		CHECK(lines[1] == "16 24 32 8");
-		Ref<OFFDocumentND> reimported = OFFDocumentND::import_load_from_byte_array(off_document->export_save_to_byte_array());
+		Ref<OFFDocumentND> reimported = OFFDocumentND::import_read_from_byte_array(off_document->export_save_to_byte_array());
 		REQUIRE(reimported.is_valid());
 		Ref<ArrayCellMeshND> cell_mesh = reimported->import_generate_array_cell_mesh_nd();
 		REQUIRE(cell_mesh.is_valid());
@@ -294,7 +294,7 @@ TEST_CASE("[OFFDocumentND] Export rejects meshes below 3 dimensions") {
 TEST_CASE("[OFFDocumentND] Import generates poly meshes with determinable cell orientation") {
 	// A 4D 5-cell from raw OFF text.
 	{
-		Ref<OFFDocumentND> off_document = OFFDocumentND::import_load_from_byte_array(String(FIVE_CELL_OFF_TEXT).to_utf8_buffer());
+		Ref<OFFDocumentND> off_document = OFFDocumentND::import_read_from_byte_array(String(FIVE_CELL_OFF_TEXT).to_utf8_buffer());
 		REQUIRE(off_document.is_valid());
 		Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
 		REQUIRE(poly_mesh.is_valid());
@@ -367,7 +367,7 @@ TEST_CASE("[OFFDocumentND] Poly mesh round trips preserve cell orientation") {
 		box->set_size(VectorND::fill(dimension, 1.0));
 		Ref<OFFDocumentND> off_document = OFFDocumentND::export_convert_mesh_nd(box);
 		REQUIRE(off_document.is_valid());
-		Ref<OFFDocumentND> reimported = OFFDocumentND::import_load_from_byte_array(off_document->export_save_to_byte_array());
+		Ref<OFFDocumentND> reimported = OFFDocumentND::import_read_from_byte_array(off_document->export_save_to_byte_array());
 		REQUIRE(reimported.is_valid());
 		Ref<ArrayPolyMeshND> poly_mesh = reimported->import_generate_array_poly_mesh_nd();
 		REQUIRE(poly_mesh.is_valid());
@@ -472,7 +472,7 @@ TEST_CASE("[OFFDocumentND] Imported poly meshes get poly materials from cell col
 	material->set_albedo_source_flags(MaterialND::COLOR_SOURCE_FLAG_PER_CELL);
 	material->set_albedo_color_array(PackedColorArray{ Color(1.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 1.0f) });
 	mesh->set_material(material);
-	Ref<OFFDocumentND> off_document = OFFDocumentND::import_load_from_byte_array(OFFDocumentND::export_convert_mesh_nd(mesh)->export_save_to_byte_array());
+	Ref<OFFDocumentND> off_document = OFFDocumentND::import_read_from_byte_array(OFFDocumentND::export_convert_mesh_nd(mesh)->export_save_to_byte_array());
 	REQUIRE(off_document.is_valid());
 	Ref<ArrayPolyMeshND> poly_mesh = off_document->import_generate_array_poly_mesh_nd();
 	REQUIRE(poly_mesh.is_valid());
