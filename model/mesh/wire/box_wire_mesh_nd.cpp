@@ -26,6 +26,16 @@ void BoxWireMeshND::set_size(const VectorN &p_size) {
 	}
 }
 
+Ref<RectND> BoxWireMeshND::get_rect_bounds() {
+	if (likely(!_is_rect_bounds_dirty)) {
+		return _rect_bounds;
+	}
+	// The primitive is centered on the origin, so its bounds follow directly from its size.
+	_rect_bounds = RectND::from_position_size(VectorND::negate(get_half_extents()), _size);
+	_is_rect_bounds_dirty = false;
+	return _rect_bounds;
+}
+
 void BoxWireMeshND::set_dimension(int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "BoxWireMeshND: Dimension must not be negative.");
 	ERR_FAIL_COND_MSG(p_dimension > 30, "BoxWireMeshND: Too many dimensions for wireframe box.");

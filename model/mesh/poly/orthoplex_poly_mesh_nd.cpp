@@ -32,6 +32,16 @@ void OrthoplexPolyMeshND::set_size(const VectorN &p_size) {
 	_clear_caches();
 }
 
+Ref<RectND> OrthoplexPolyMeshND::get_rect_bounds() {
+	if (likely(!_is_rect_bounds_dirty)) {
+		return _rect_bounds;
+	}
+	// The primitive is centered on the origin, so its bounds follow directly from its size.
+	_rect_bounds = RectND::from_position_size(VectorND::negate(get_half_extents()), _size);
+	_is_rect_bounds_dirty = false;
+	return _rect_bounds;
+}
+
 void OrthoplexPolyMeshND::set_dimension(const int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "OrthoplexPolyMeshND: Dimension must not be negative.");
 	ERR_FAIL_COND_MSG(p_dimension > 10, "OrthoplexPolyMeshND: Too many dimensions for poly-based orthoplex.");

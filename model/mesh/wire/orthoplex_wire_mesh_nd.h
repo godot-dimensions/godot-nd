@@ -20,6 +20,8 @@ public:
 	VectorN get_size() const;
 	void set_size(const VectorN &p_size);
 
+	virtual Ref<RectND> get_rect_bounds() override;
+
 	virtual PackedInt32Array get_edge_indices() override;
 	virtual Vector<VectorN> get_vertex_positions() override;
 	virtual int get_dimension() override { return _size.size(); }
