@@ -401,6 +401,11 @@ void RenderingServerND::unregister_rendering_engine(const String &p_friendly_nam
 	_rendering_engines.erase(p_friendly_name);
 }
 
+void RenderingServerND::unregister_all_rendering_engines() {
+	_warned_incompatible_rendering_engine_names.clear();
+	_rendering_engines.clear();
+}
+
 PackedStringArray RenderingServerND::get_rendering_engine_names() const {
 	// HashMap doesn't have a keys() method, so we have to do this manually.
 	PackedStringArray engine_names;

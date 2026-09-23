@@ -162,8 +162,13 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(WireframeRenderCanvasND);
 		GDREGISTER_CLASS(WireframeCanvasRenderingEngineND);
 #endif // GDEXTENSION
+	}
+	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+		// Render. This must be initialized after RenderingServer and RenderingDevice.
 		RenderingServerND *rendering_server = memnew(RenderingServerND);
-		rendering_server->register_rendering_engine(memnew(WireframeCanvasRenderingEngineND));
+		Ref<WireframeCanvasRenderingEngineND> wireframe_canvas_engine;
+		wireframe_canvas_engine.instantiate();
+		rendering_server->register_rendering_engine(wireframe_canvas_engine);
 		add_godot_singleton("RenderingServerND", rendering_server);
 		// Initialize fallback materials in the opposite order from when they will later be destroyed.
 		WireMeshND::init_fallback_material();
@@ -207,14 +212,19 @@ void initialize_nd_module(ModuleInitializationLevel p_level) {
 }
 
 void uninitialize_nd_module(ModuleInitializationLevel p_level) {
-	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE_OR_EARLIEST) {
+	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
 		// Clean up fallback materials in the opposite order of their creation.
 		CellMeshND::cleanup_fallback_material();
 		WireMeshND::cleanup_fallback_material();
+		// Clean up RenderingServerND and its engines.
+		RenderingServerND *rendering_server = RenderingServerND::get_singleton();
+		rendering_server->unregister_all_rendering_engines();
+		remove_godot_singleton("RenderingServerND", rendering_server);
+	}
+	if (p_level == MODULE_INITIALIZATION_LEVEL_CORE_OR_EARLIEST) {
 		// Unregister and free the singletons in the opposite order of registration.
 		remove_godot_singleton("WireMeshBuilderND", WireMeshBuilderND::get_singleton());
 		remove_godot_singleton("PolyMeshBuilderND", PolyMeshBuilderND::get_singleton());
-		remove_godot_singleton("RenderingServerND", RenderingServerND::get_singleton());
 		remove_godot_singleton("VectorND", VectorND::get_singleton());
 		remove_godot_singleton("MathND", MathND::get_singleton());
 		remove_godot_singleton("GeometryND", GeometryND::get_singleton());
