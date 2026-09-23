@@ -39,6 +39,46 @@ void PolyMaterialND::populate_albedo_color_array_for_poly_mesh(const Ref<CellMes
 	}
 }
 
+// For a PolyMaterialND, the merged items are the polyhedral boundary cells colored by `poly_albedo_color_array`,
+// so callers must pass the boundary cell counts of the meshes rather than their vertex counts.
+void PolyMaterialND::merge_with(const Ref<MaterialND> &p_material, const int p_first_item_count, const int p_second_item_count) {
+	ERR_FAIL_COND_MSG(p_material.is_null(), "PolyMaterialND.merge_with: Cannot merge with a null material.");
+	// MaterialND::merge_with merges `_albedo_color_array`, but for PolyMaterialND that array is only a
+	// per-simplex cache derived from `_poly_albedo_color_array`, which holds the real per-cell colors.
+	// Build a view of the other material whose color array is per-cell, and merge our per-cell array with it.
+	ColorSourceFlagsND other_flags = p_material->get_albedo_source_flags();
+	Color other_color = p_material->get_albedo_color();
+	PackedColorArray other_cell_colors;
+	const Ref<PolyMaterialND> other_poly_material = p_material;
+	if (other_poly_material.is_valid()) {
+		other_cell_colors = other_poly_material->get_poly_albedo_color_array();
+	} else if (other_flags & COLOR_SOURCE_FLAG_USES_COLOR_ARRAY) {
+		// The other material's colors are per-vertex, per-simplex, or per-edge. Without the mesh there
+		// is no way to map those onto polyhedral cells, so the best we can do is keep its single color.
+		WARN_PRINT("PolyMaterialND.merge_with: The other material's color array cannot be converted to per-cell colors, so it will be ignored. Merge with a PolyMaterialND to preserve per-cell colors.");
+		other_flags = ColorSourceFlagsND(other_flags & ~COLOR_SOURCE_FLAG_USES_COLOR_ARRAY);
+		if (!(other_flags & COLOR_SOURCE_FLAG_SINGLE_COLOR)) {
+			other_flags = ColorSourceFlagsND(other_flags | COLOR_SOURCE_FLAG_SINGLE_COLOR);
+			other_color = Color(1, 1, 1, 1);
+		}
+	}
+	Ref<MaterialND> other_per_cell_material;
+	other_per_cell_material.instantiate();
+	other_per_cell_material->set_albedo_source_flags(other_flags);
+	other_per_cell_material->set_albedo_color(other_color);
+	other_per_cell_material->set_albedo_color_array(other_cell_colors);
+	// Let the base classes merge the per-cell arrays and update the albedo source, then move the result back.
+	_albedo_color_array = _poly_albedo_color_array;
+	CellMaterialND::merge_with(other_per_cell_material, p_first_item_count, p_second_item_count);
+	_poly_albedo_color_array = _albedo_color_array;
+	_albedo_color_array.clear();
+	// The base class only knows that a color array is now used, not which items it colors, so it enables every
+	// per-item flag. For a PolyMaterialND the array always colors the boundary cells, so pin the flags to that.
+	if (_albedo_source_flags & COLOR_SOURCE_FLAG_USES_COLOR_ARRAY) {
+		_albedo_source_flags = ColorSourceFlagsND((_albedo_source_flags & ~COLOR_SOURCE_FLAG_USES_COLOR_ARRAY) | COLOR_SOURCE_FLAG_PER_CELL);
+	}
+}
+
 void PolyMaterialND::set_poly_albedo_color_array(const PackedColorArray &p_colors) {
 	_poly_albedo_color_array = p_colors;
 	_albedo_color_array.clear();

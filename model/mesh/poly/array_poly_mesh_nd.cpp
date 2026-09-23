@@ -2,6 +2,7 @@
 
 #include "../../../math/math_nd.h"
 #include "../../../math/vector_nd.h"
+#include "poly_material_nd.h"
 
 // Append and delete functions.
 
@@ -2399,14 +2400,31 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 	// Merge materials.
 	Ref<MaterialND> other_material = p_other->get_material();
 	if (other_material.is_valid()) {
+		// A PolyMaterialND colors the polyhedral boundary cells, while other materials color the vertices.
+		const int64_t start_boundary_cell_count = (boundary_dim_index >= 0 && boundary_dim_index < poly_cell_indices_dims) ? start_poly_cell_indices_counts[boundary_dim_index] : 0;
+		const int64_t other_boundary_cell_count = (boundary_dim_index >= 0 && boundary_dim_index < poly_cell_indices_dims) ? other_poly_cell_indices_counts[boundary_dim_index] : 0;
+		const Ref<PolyMaterialND> other_poly_material = other_material;
 		Ref<MaterialND> self_material = get_material();
 		if (self_material.is_valid()) {
-			self_material->merge_with(other_material, start_vertex_pos_count, other_vertex_pos_count);
-		} else if (other_material->get_albedo_color_array().size() > 0) {
+			// Merging mutates the material, so do not alter one that may be shared with other meshes.
+			self_material = self_material->duplicate();
+		} else if (other_poly_material.is_valid() && !other_poly_material->get_poly_albedo_color_array().is_empty()) {
+			Ref<PolyMaterialND> new_poly_material;
+			new_poly_material.instantiate();
+			self_material = new_poly_material;
+		} else if (!other_material->get_albedo_color_array().is_empty()) {
 			self_material.instantiate();
-			self_material->merge_with(other_material, start_vertex_pos_count, other_vertex_pos_count);
+		}
+		if (self_material.is_valid()) {
+			const Ref<PolyMaterialND> self_poly_material = self_material;
+			if (self_poly_material.is_valid()) {
+				self_material->merge_with(other_material, start_boundary_cell_count, other_boundary_cell_count);
+			} else {
+				self_material->merge_with(other_material, start_vertex_pos_count, other_vertex_pos_count);
+			}
 			set_material(self_material);
 		} else {
+			// This mesh had no material and the other material has no per-item colors, so it can be shared as-is.
 			set_material(other_material);
 		}
 	}

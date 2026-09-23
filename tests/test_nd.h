@@ -10,6 +10,7 @@
 #include "math/test_vector_nd.h"
 #include "model/mesh/cell/test_cell_mesh_nd.h"
 #include "model/mesh/poly/test_array_poly_mesh_nd.h"
+#include "model/mesh/poly/test_poly_material_nd.h"
 #include "model/mesh/poly/test_poly_mesh_builder_nd.h"
 #include "model/mesh/poly/test_poly_mesh_nd.h"
 #include "model/mesh/test_mesh_instance_nd.h"

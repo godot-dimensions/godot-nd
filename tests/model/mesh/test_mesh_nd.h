@@ -4,8 +4,10 @@
 #include "../../../model/mesh/cell/cell_material_nd.h"
 #include "../../../model/mesh/poly/array_poly_mesh_nd.h"
 #include "../../../model/mesh/poly/box_poly_mesh_nd.h"
+#include "../../../model/mesh/poly/orthoplex_poly_mesh_nd.h"
 #include "../../../model/mesh/wire/array_wire_mesh_nd.h"
 #include "../../../model/mesh/wire/box_wire_mesh_nd.h"
+#include "../../../model/mesh/wire/orthoplex_wire_mesh_nd.h"
 #include "../../../model/mesh/wire/wire_material_nd.h"
 
 #include "tests/test_macros.h"
@@ -413,5 +415,42 @@ TEST_CASE("[SingleSurfaceMeshND] Built-in mesh types share typed fallback materi
 	CHECK_MESSAGE(poly->get_fallback_material() == cell_fallback, "Poly meshes are cell meshes, so they share the cell fallback material.");
 	// Compare as Object pointers because the two Ref types are unrelated, so Ref's comparison operators would need an impossible cast.
 	CHECK(static_cast<const Object *>(cell_fallback.ptr()) != static_cast<const Object *>(wire_fallback.ptr()));
+}
+TEST_CASE("[MeshND] Procedural primitives compute their rect bounds from their size") {
+	for (const int dimension : { 2, 3, 4, 5 }) {
+		CAPTURE(dimension);
+		const VectorN size = VectorND::fill(dimension, 3.0);
+		const VectorN half_extents = VectorND::fill(dimension, 1.5);
+		Ref<BoxPolyMeshND> box_poly;
+		box_poly.instantiate();
+		box_poly->set_size(size);
+		Ref<OrthoplexPolyMeshND> orthoplex_poly;
+		orthoplex_poly.instantiate();
+		orthoplex_poly->set_size(size);
+		Ref<BoxWireMeshND> box_wire;
+		box_wire.instantiate();
+		box_wire->set_size(size);
+		Ref<OrthoplexWireMeshND> orthoplex_wire;
+		orthoplex_wire.instantiate();
+		orthoplex_wire->set_size(size);
+		const Vector<Ref<SingleSurfaceMeshND>> primitives = { box_poly, orthoplex_poly, box_wire, orthoplex_wire };
+		for (const Ref<SingleSurfaceMeshND> &primitive : primitives) {
+			const Ref<RectND> bounds = primitive->get_rect_bounds();
+			CHECK(VectorND::is_equal_approx(bounds->get_position(), VectorND::negate(half_extents)));
+			CHECK(VectorND::is_equal_approx(bounds->get_size(), size));
+			// The algebraic bounds must agree with the bounds of the actual vertices.
+			Ref<RectND> vertex_bounds = RectND::from_position_size(VectorND::zero(dimension), VectorND::zero(dimension));
+			for (const VectorN &vertex : primitive->get_vertex_positions()) {
+				vertex_bounds->expand_self_to_point(vertex);
+			}
+			CHECK(VectorND::is_equal_approx(bounds->get_position(), vertex_bounds->get_position()));
+			CHECK(VectorND::is_equal_approx(bounds->get_end(), vertex_bounds->get_end()));
+		}
+		// Resizing marks the bounds dirty, so they follow the new size.
+		box_poly->set_size(VectorND::fill(dimension, 1.0));
+		CHECK(VectorND::is_equal_approx(box_poly->get_rect_bounds()->get_end(), VectorND::fill(dimension, 0.5)));
+		box_wire->set_half_extents(VectorND::fill(dimension, 2.0));
+		CHECK(VectorND::is_equal_approx(box_wire->get_rect_bounds()->get_end(), VectorND::fill(dimension, 2.0)));
+	}
 }
 } // namespace TestMeshND
