@@ -4,6 +4,7 @@
 
 #include "math/test_basis_nd.h"
 #include "math/test_geometry_nd.h"
+#include "math/test_math_nd.h"
 #include "math/test_plane_nd.h"
 #include "math/test_rect_nd.h"
 #include "math/test_transform_nd.h"

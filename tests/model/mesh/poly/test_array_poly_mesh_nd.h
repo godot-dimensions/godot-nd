@@ -232,6 +232,51 @@ TEST_CASE("[ArrayPolyMeshND] Single cell from all cells") {
 	}
 }
 
+TEST_CASE("[ArrayPolyMeshND] Seams follow element deletion and deduplication") {
+	// Seams are the members of the boundary cells: edges for 3D meshes, faces for 4D meshes.
+	auto seam_member_count = [](const Ref<ArrayPolyMeshND> &p_mesh) -> int32_t {
+		return p_mesh->get_dimension() == 3 ? (int32_t)(p_mesh->get_edge_indices().size() / 2) : (int32_t)p_mesh->get_poly_cell_indices()[0].size();
+	};
+	SUBCASE("Deleting a seam member removes it and shifts the later seams down") {
+		for (int dimension = 3; dimension <= 4; dimension++) {
+			Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_box_poly_mesh(dimension)->to_array_poly_mesh();
+			mesh->set_seam_indices_bind(PackedInt32Array{ 2, 5, 7 });
+			mesh->delete_poly_element(dimension - 2, 5);
+			CHECK((mesh->get_seam_indices_bind() == PackedInt32Array{ 2, 6 }));
+		}
+	}
+	SUBCASE("Deleting a vertex removes the seams through it and keeps the others") {
+		for (int dimension = 3; dimension <= 4; dimension++) {
+			Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_box_poly_mesh(dimension)->to_array_poly_mesh();
+			mesh->calculate_seams();
+			const int32_t old_member_count = seam_member_count(mesh);
+			REQUIRE_MESSAGE(mesh->get_seam_indices_bind().size() == old_member_count, "Every member of a box's boundary cells is a seam at the default threshold.");
+			mesh->delete_poly_element(0, 0);
+			// The remaining members were all seams, so they must all still be, numbered contiguously after the deletion.
+			const int32_t new_member_count = seam_member_count(mesh);
+			REQUIRE(new_member_count < old_member_count);
+			const PackedInt32Array seams = mesh->get_seam_indices_bind();
+			REQUIRE(seams.size() == new_member_count);
+			for (int32_t i = 0; i < seams.size(); i++) {
+				CHECK(seams[i] == i);
+			}
+		}
+	}
+	SUBCASE("Deduplicating a mesh merged with its copy maps the copy's seams back onto the original") {
+		for (int dimension = 3; dimension <= 4; dimension++) {
+			Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_box_poly_mesh(dimension)->to_array_poly_mesh();
+			const int32_t member_count = seam_member_count(mesh);
+			mesh->set_seam_indices_bind(PackedInt32Array{ 2, 5, 7 });
+			Ref<ArrayPolyMeshND> copy = mesh->duplicate();
+			mesh->merge_with(copy);
+			REQUIRE((mesh->get_seam_indices_bind() == PackedInt32Array{ 2, 5, 7, member_count + 2, member_count + 5, member_count + 7 }));
+			mesh->deduplicate_all_elements();
+			CHECK(seam_member_count(mesh) == member_count);
+			CHECK((mesh->get_seam_indices_bind() == PackedInt32Array{ 2, 5, 7 }));
+		}
+	}
+}
+
 TEST_CASE("[ArrayPolyMeshND] Seams and islands") {
 	SUBCASE("All box faces are seams at the default threshold in 4D") {
 		Ref<BoxPolyMeshND> box = TestPolyMeshND::make_box_poly_mesh(4);
