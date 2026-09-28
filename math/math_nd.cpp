@@ -506,6 +506,20 @@ HashSet<int32_t> MathND::remap_int32_set(const HashSet<int32_t> &p_indices, cons
 	return ret;
 }
 
+PackedInt32Array MathND::remap_int32s_by_matching_keys(const PackedInt32Array &p_old_keys, const PackedInt32Array &p_new_keys, const PackedInt32Array &p_old_values) {
+	PackedInt32Array ret;
+	ret.resize(p_new_keys.size());
+	for (int64_t new_index = 0; new_index < p_new_keys.size(); new_index++) {
+		const int64_t old_index = p_old_keys.find(p_new_keys[new_index]);
+		if (old_index < 0 || old_index >= p_old_values.size()) {
+			ret.set(new_index, -1);
+		} else {
+			ret.set(new_index, p_old_values[old_index]);
+		}
+	}
+	return ret;
+}
+
 MathND *MathND::singleton = nullptr;
 
 void MathND::_bind_methods() {

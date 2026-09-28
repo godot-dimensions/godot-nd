@@ -711,15 +711,7 @@ void ArrayPolyMeshND::orient_cells_to_boundary_normals(const Vector<VectorN> &p_
 					if (pre_flip_cell.size() != post_flip_cell.size() || old_cell_value_indices.size() != pre_flip_cell.size()) {
 						continue; // Malformed for this cell, leave the data alone and let validation report it.
 					}
-					PackedInt32Array new_cell_value_indices;
-					new_cell_value_indices.resize(old_cell_value_indices.size());
-					for (int64_t element_index = 0; element_index < pre_flip_cell.size(); element_index++) {
-						const int64_t destination_index = post_flip_cell.find(pre_flip_cell[element_index]);
-						if (destination_index >= 0) {
-							new_cell_value_indices.set(destination_index, old_cell_value_indices[element_index]);
-						}
-					}
-					data_bindings.set(cell_index, new_cell_value_indices);
+					data_bindings.set(cell_index, MathND::remap_int32s_by_matching_keys(pre_flip_cell, post_flip_cell, old_cell_value_indices));
 				}
 				data_binding_map->insert(key, data_bindings);
 			}
@@ -902,21 +894,14 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 				continue;
 			}
 		}
-		// Flipping changes the derived vertex order. Map each flipped vertex back to
-		// its original position so normal and texture values stay on the same vertex.
-		PackedInt32Array flipped_vertex_order_remap;
+		// Flipping changes the derived vertex order. Match attributes by vertex identity
+		// so normal and texture values stay on the same vertex.
+		PackedInt32Array flipped_cell_vertices;
 		if (has_vertex_normals || has_texture_map) {
-			const PackedInt32Array &original_cell_vertices = original_cell_vertex_indices[cell_index];
 			Vector<Vector<PackedInt32Array>> flipped_poly_cell_indices = _poly_cell_indices;
 			flipped_poly_cell_indices.set(boundary_dim_index, Vector<PackedInt32Array>{ flipped_cell_members });
 			// This traverses a modified copy of the geometry, so it cannot use the cached traversal.
-			const PackedInt32Array flipped_cell_vertices = _get_vertex_indices_of_boundary_cells(flipped_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, false)[0];
-			flipped_vertex_order_remap.resize(flipped_cell_vertices.size());
-			for (int64_t vertex_in_cell = 0; vertex_in_cell < flipped_cell_vertices.size(); vertex_in_cell++) {
-				const int64_t original_position = original_cell_vertices.find(flipped_cell_vertices[vertex_in_cell]);
-				CRASH_COND(original_position < 0);
-				flipped_vertex_order_remap.set(vertex_in_cell, (int32_t)original_position);
-			}
+			flipped_cell_vertices = _get_vertex_indices_of_boundary_cells(flipped_poly_cell_indices, _edge_vertex_indices, boundary_dim_index, false)[0];
 		}
 		// Copy the texture map if it exists for this cell before adding the flipped cell.
 		// The flipped cell shares the same texture map values, so only the indices are copied.
@@ -924,16 +909,9 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 			// HashMap's indexing operator allows getting a mutable reference, so we don't need to set it back after.
 			Vector<PackedInt32Array> &poly_cell_texture_map_indices = _all_poly_cell_texture_map_indices[cell_to_vert_key];
 			const PackedInt32Array &original_cell_texture_map_indices = poly_cell_texture_map_indices[cell_index];
-			PackedInt32Array flipped_cell_texture_map_indices;
-			// Validation guarantees that populated arrays have one index per vertex.
 			// Empty arrays remain empty, preserving cells without texture map data.
-			if (!original_cell_texture_map_indices.is_empty()) {
-				flipped_cell_texture_map_indices.resize(flipped_vertex_order_remap.size());
-				for (int64_t vertex_in_cell = 0; vertex_in_cell < flipped_vertex_order_remap.size(); vertex_in_cell++) {
-					const int32_t original_position = flipped_vertex_order_remap[vertex_in_cell];
-					flipped_cell_texture_map_indices.set(vertex_in_cell, original_cell_texture_map_indices[original_position]);
-				}
-			}
+			const PackedInt32Array flipped_cell_texture_map_indices = original_cell_texture_map_indices.is_empty() ? PackedInt32Array() : MathND::remap_int32s_by_matching_keys(original_cell_vertex_indices[cell_index], flipped_cell_vertices, original_cell_texture_map_indices);
+			CRASH_COND(flipped_cell_texture_map_indices.has(-1)); // Every vertex of the flipped cell is a vertex of the original cell.
 			poly_cell_texture_map_indices.append(flipped_cell_texture_map_indices);
 		}
 		// Copy and flip the vertex normals if they exist for this cell before adding the flipped cell.
@@ -941,11 +919,11 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 			// HashMap's indexing operator allows getting a mutable reference, so we don't need to set it back after.
 			Vector<PackedInt32Array> &poly_cell_normal_indices = _all_poly_cell_normal_indices[cell_to_vert_key];
 			const PackedInt32Array &original_cell_normal_indices = poly_cell_normal_indices[cell_index];
-			PackedInt32Array flipped_cell_normal_indices;
-			flipped_cell_normal_indices.resize(original_cell_normal_indices.size());
-			for (int64_t vertex_in_cell = 0; vertex_in_cell < original_cell_normal_indices.size(); vertex_in_cell++) {
-				const int32_t original_position = flipped_vertex_order_remap[vertex_in_cell];
-				const VectorN flipped_normal = VectorND::negate(_poly_cell_normal_values[original_cell_normal_indices[original_position]]);
+			// Empty arrays remain empty, preserving cells without vertex normal data.
+			PackedInt32Array flipped_cell_normal_indices = original_cell_normal_indices.is_empty() ? PackedInt32Array() : MathND::remap_int32s_by_matching_keys(original_cell_vertex_indices[cell_index], flipped_cell_vertices, original_cell_normal_indices);
+			CRASH_COND(flipped_cell_normal_indices.has(-1)); // Every vertex of the flipped cell is a vertex of the original cell.
+			for (int64_t vertex_in_cell = 0; vertex_in_cell < flipped_cell_normal_indices.size(); vertex_in_cell++) {
+				const VectorN flipped_normal = VectorND::negate(_poly_cell_normal_values[flipped_cell_normal_indices[vertex_in_cell]]);
 				const int64_t normal_index = VectorND::array_append_deduplicate(_poly_cell_normal_values, flipped_normal);
 				flipped_cell_normal_indices.set(vertex_in_cell, (int32_t)normal_index);
 			}
@@ -1777,20 +1755,9 @@ void ArrayPolyMeshND::deduplicate_all_elements(const int64_t p_max_dimension) {
 							if (!cell_value_indices.is_empty()) {
 								ERR_CONTINUE_MSG(key.y >= 2 && (key.y - 2) >= poly_cell_index_remaps.size(), "ArrayPolyMeshND: Invalid data binding sub-element dimension " + itos(key.y) + ". Skipping remap.");
 								const PackedInt32Array &subelement_remap = (key.y == 0) ? vertex_index_remap : ((key.y == 1) ? edge_index_remap : poly_cell_index_remaps[key.y - 2]);
-								PackedInt32Array remapped_value_indices;
-								remapped_value_indices.resize(new_elems.size());
-								for (int64_t new_pos = 0; new_pos < new_elems.size(); new_pos++) {
-									const int32_t new_elem = new_elems[new_pos];
-									bool found = false;
-									for (int64_t old_pos = 0; old_pos < old_elems.size(); old_pos++) {
-										if (subelement_remap[old_elems[old_pos]] == new_elem) {
-											remapped_value_indices.set(new_pos, cell_value_indices[old_pos]);
-											found = true;
-											break;
-										}
-									}
-									ERR_FAIL_COND_MSG(!found, vformat("ArrayPolyMeshND::deduplicate_all_elements: Failed to remap data binding for cell %d (new sub-element %d not found in pre-dedup traversal).", input_index, new_elem));
-								}
+								// Translate the old sub-elements to their deduplicated indices, then match the new traversal against them.
+								const PackedInt32Array remapped_value_indices = MathND::remap_int32s_by_matching_keys(MathND::remap_int32_array(old_elems, subelement_remap), new_elems, cell_value_indices);
+								ERR_FAIL_COND_MSG(remapped_value_indices.has(-1), vformat("ArrayPolyMeshND::deduplicate_all_elements: Failed to remap data binding for cell %d (a new sub-element was not found in the pre-dedup traversal).", input_index));
 								cell_value_indices = remapped_value_indices;
 							}
 						}
@@ -1869,14 +1836,7 @@ void ArrayPolyMeshND::deduplicate_all_elements(const int64_t p_max_dimension) {
 					if (old_cell_value_indices.is_empty()) {
 						continue; // Cells without this attribute have nothing to reorder.
 					}
-					PackedInt32Array new_cell_value_indices;
-					new_cell_value_indices.resize(old_cell_value_indices.size());
-					for (int64_t elem_index = 0; elem_index < remapped_cell_poly.size(); elem_index++) {
-						const int64_t search_element = remapped_cell_poly[elem_index];
-						const int64_t dest_index = recalculated_cell_poly.find(search_element);
-						new_cell_value_indices.set(dest_index, old_cell_value_indices[elem_index]);
-					}
-					data_bindings.set(cell_index, new_cell_value_indices);
+					data_bindings.set(cell_index, MathND::remap_int32s_by_matching_keys(remapped_cell_poly, recalculated_cell_poly, old_cell_value_indices));
 				}
 				data_binding_map->insert(key, data_bindings);
 			}
