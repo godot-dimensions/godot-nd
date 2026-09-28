@@ -116,6 +116,7 @@ public:
 	static Ref<ArrayPolyMeshND> extrude_linear(const Ref<ArrayPolyMeshND> &p_input_mesh, const VectorN &p_extrusion_vector = VectorN());
 
 	// In-place adjustments to the given mesh.
+	static int64_t delete_interior(const Ref<ArrayPolyMeshND> &p_mesh_nd);
 	static void make_boundary_normals_topologically_consistent(const Ref<ArrayPolyMeshND> &p_mesh_nd, const PackedInt32Array &p_authoritative);
 	static int64_t merge_coplanar_faces(const Ref<ArrayPolyMeshND> &p_mesh_nd, const double p_angle_tolerance_radians = 0.001);
 	static PackedInt32Array subdivide_elements(const Ref<ArrayPolyMeshND> &p_input_mesh, const int p_dimension, const PackedInt32Array &p_elements = PackedInt32Array());

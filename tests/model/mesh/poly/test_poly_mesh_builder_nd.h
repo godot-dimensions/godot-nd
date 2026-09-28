@@ -1033,4 +1033,47 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Merge coplanar faces of a 4D mesh") {
 	}
 }
 
+TEST_CASE("[SceneTree][PolyMeshBuilderND] Delete interior keeps only the boundary cells on the outside") {
+	// Two squares sharing an edge, extruded into two cubes sharing a face, then into two 4D boxes sharing a 3D cell.
+	// In each dimension, the boundary cell shared by the two volumes is interior to the solid and not part of its
+	// outside boundary.
+	const Vector<VectorN> positions = { VectorN{ 0, 0 }, VectorN{ 1, 0 }, VectorN{ 2, 0 }, VectorN{ 2, 1 }, VectorN{ 1, 1 }, VectorN{ 0, 1 } };
+	Ref<ArrayPolyMeshND> solid_2d = make_face_loops_mesh(positions, { { 0, 1, 4, 5 }, { 1, 2, 3, 4 } });
+	REQUIRE(solid_2d->is_mesh_data_valid());
+	REQUIRE(solid_2d->get_dimension() == 2);
+	Ref<ArrayPolyMeshND> solid_3d = PolyMeshBuilderND::extrude_linear(solid_2d);
+	REQUIRE(solid_3d->is_mesh_data_valid());
+	REQUIRE(solid_3d->get_dimension() == 3);
+	Ref<ArrayPolyMeshND> solid_4d = PolyMeshBuilderND::extrude_linear(solid_3d);
+	REQUIRE(solid_4d->is_mesh_data_valid());
+	REQUIRE(solid_4d->get_dimension() == 4);
+	// The number of boundary cells of each solid: edges in 2D, faces in 3D, and cells in 4D.
+	auto boundary_cell_count = [](const Ref<ArrayPolyMeshND> &p_mesh) -> int64_t {
+		const int64_t boundary_dim_index = int64_t(p_mesh->get_dimension()) - 3;
+		return boundary_dim_index < 0 ? p_mesh->get_edge_indices().size() / 2 : p_mesh->get_poly_cell_indices()[boundary_dim_index].size();
+	};
+	REQUIRE_MESSAGE(boundary_cell_count(solid_2d) == 7, "Two squares sharing one edge have 7 edges.");
+	REQUIRE_MESSAGE(boundary_cell_count(solid_3d) == 11, "Two cubes sharing one face have 11 faces.");
+	REQUIRE_MESSAGE(boundary_cell_count(solid_4d) == 15, "Two 4D boxes sharing one cell have 15 cells.");
+	for (const Ref<ArrayPolyMeshND> &solid : { solid_2d, solid_3d, solid_4d }) {
+		const int dimension = solid->get_dimension();
+		CAPTURE(dimension);
+		Ref<ArrayPolyMeshND> mesh = solid->duplicate();
+		REQUIRE(mesh->get_poly_cell_indices().size() == dimension - 1);
+		REQUIRE(mesh->get_poly_cell_indices()[dimension - 2].size() == 2);
+		CHECK_MESSAGE(PolyMeshBuilderND::delete_interior(mesh) == 1, "Only the boundary cell shared by both volumes is interior.");
+		CHECK(mesh->is_mesh_data_valid());
+		CHECK_MESSAGE(mesh->get_poly_cell_indices().size() == dimension - 2, "The volumes must be gone.");
+		CHECK_MESSAGE(boundary_cell_count(mesh) == boundary_cell_count(solid) - 1, "All other boundary cells must remain.");
+		if (dimension >= 3) {
+			CHECK(mesh->get_poly_cell_boundary_normals().size() == boundary_cell_count(mesh));
+		}
+	}
+	// A mesh without volumes is left alone.
+	Ref<ArrayPolyMeshND> surface = PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(make_quad_array_mesh_3d());
+	REQUIRE(surface->is_mesh_data_valid());
+	CHECK(PolyMeshBuilderND::delete_interior(surface) == 0);
+	CHECK(surface->get_poly_cell_indices()[0].size() == 2);
+}
+
 } // namespace TestPolyMeshBuilderND

@@ -982,6 +982,56 @@ int64_t PolyMeshBuilderND::merge_coplanar_faces(const Ref<ArrayPolyMeshND> &p_me
 	return merge_count;
 }
 
+int64_t PolyMeshBuilderND::delete_interior(const Ref<ArrayPolyMeshND> &p_mesh_nd) {
+	ERR_FAIL_COND_V_MSG(p_mesh_nd.is_null() || !p_mesh_nd->is_mesh_data_valid(), 0, "PolyMeshBuilderND: Cannot delete the volumes of an invalid mesh.");
+	Vector<Vector<PackedInt32Array>> poly_cell_indices = p_mesh_nd->get_poly_cell_indices();
+	// The volumes are the N-dimensional cells of an N-dimensional mesh, and their members are the boundary cells.
+	// If the mesh has no volumes, there is nothing to delete. No boundary cells could be interior without volumes.
+	const int dimension = p_mesh_nd->get_dimension();
+	const int64_t volume_dim_index = int64_t(dimension) - 2;
+	if (volume_dim_index < 0 || poly_cell_indices.size() <= volume_dim_index) {
+		return 0;
+	}
+	// Gather the interior boundary cells first. A boundary cell shared by two volumes lies between them, inside the
+	// solid, so it is not part of its boundary. The list is in descending order, so that deleting them leaves the
+	// lower indices valid.
+	PackedInt32Array interior_cells;
+	{
+		const int64_t boundary_cell_count = volume_dim_index == 0 ? p_mesh_nd->get_edge_indices().size() / 2 : poly_cell_indices[volume_dim_index - 1].size();
+		PackedInt32Array cell_volume_counts;
+		cell_volume_counts.resize(boundary_cell_count);
+		cell_volume_counts.fill(0);
+		for (const PackedInt32Array &volume : poly_cell_indices[volume_dim_index]) {
+			for (const int32_t cell_index : volume) {
+				cell_volume_counts.set(cell_index, cell_volume_counts[cell_index] + 1);
+			}
+		}
+		for (int64_t cell_index = cell_volume_counts.size() - 1; cell_index >= 0; cell_index--) {
+			if (cell_volume_counts[cell_index] > 1) {
+				interior_cells.append((int32_t)cell_index);
+			}
+		}
+	}
+	// Drop the volumes and the bindings that refer to them before deleting any cells, so that those deletions have
+	// no volumes to cascade into and adjust.
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : p_mesh_nd->get_all_poly_cell_normal_indices()) {
+		if (kv.key.x >= dimension) {
+			p_mesh_nd->set_poly_cell_dense_normals(kv.key, Vector<Vector<VectorN>>());
+		}
+	}
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : p_mesh_nd->get_all_poly_cell_texture_map_indices()) {
+		if (kv.key.x >= dimension) {
+			p_mesh_nd->set_poly_cell_dense_texture_map(kv.key, Vector<Vector<VectorM>>());
+		}
+	}
+	poly_cell_indices.resize(volume_dim_index);
+	p_mesh_nd->set_poly_cell_indices(poly_cell_indices);
+	for (const int32_t cell_index : interior_cells) {
+		p_mesh_nd->delete_poly_element(dimension - 1, cell_index);
+	}
+	return interior_cells.size();
+}
+
 void PolyMeshBuilderND::make_boundary_normals_topologically_consistent(const Ref<ArrayPolyMeshND> &p_mesh_nd, const PackedInt32Array &p_authoritative) {
 	// TODO: This function relies on averages and pivot overrides, which breaks in non-convex edge cases.
 	// Properly solving this in ND is non-trivial, this can be improved in the future if needed.
@@ -2026,6 +2076,7 @@ void PolyMeshBuilderND::_bind_methods() {
 	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("convert_mesh_3d_to_nd_faces_only", "mesh_3d", "which_surface", "deduplicate"), &PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only, DEFVAL(-1), DEFVAL(true));
 	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("extrude_linear", "input_mesh", "extrusion_vector"), &PolyMeshBuilderND::extrude_linear, DEFVAL(VectorN()));
 	// In-place adjustments to the given mesh.
+	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("delete_interior", "mesh_nd"), &PolyMeshBuilderND::delete_interior);
 	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("make_boundary_normals_topologically_consistent", "mesh_nd", "authoritative_boundary_cells"), &PolyMeshBuilderND::make_boundary_normals_topologically_consistent);
 	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("merge_coplanar_faces", "mesh_nd", "angle_tolerance_radians"), &PolyMeshBuilderND::merge_coplanar_faces, DEFVAL(0.001));
 	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("subdivide_elements", "input_mesh", "dimension", "elements"), &PolyMeshBuilderND::subdivide_elements, DEFVAL(PackedInt32Array()));

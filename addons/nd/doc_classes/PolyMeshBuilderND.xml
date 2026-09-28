@@ -20,6 +20,16 @@
 				The resulting mesh will only have the 2D faces brought in with as minimal modifications as possible. After conversion, the mesh can be further modified with other functions in this class, such as extruding it into a higher dimension with [method extrude_linear].
 			</description>
 		</method>
+		<method name="delete_interior" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="mesh_nd" type="ArrayPolyMeshND" />
+			<description>
+				Deletes the interior of a poly mesh, meaning any interior boundary cells shared by two volumes, as well as all volumes and all higher-dimensional elements. For an N-dimensional mesh, the volumes are its N-dimensional cells, and the boundary cells are its (N-1)-dimensional cells, such as 3D cells in a 4D mesh, faces in a 3D mesh, or edges in a 2D mesh. This operates on [param mesh_nd], in place, turning a solid poly mesh into its boundary.
+				Any boundary cells shared by two volumes are considered to be structural scaffolding on the interior of the mesh. These cells do not result in any visible geometry and are not rendered.
+				Returns the number of boundary cells deleted. A mesh without volumes is left unchanged. Any bindings associated with the deleted elements are also removed.
+				This is the counterpart of [method extrude_linear] on a solid mesh, whose output has one volume per input volume and an interior boundary cell between each pair of adjacent input volumes.
+			</description>
+		</method>
 		<method name="extrude_linear" qualifiers="static">
 			<return type="ArrayPolyMeshND" />
 			<param index="0" name="input_mesh" type="ArrayPolyMeshND" />
