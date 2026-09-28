@@ -245,6 +245,84 @@ inline Ref<ArrayPolyMeshND> make_solid_tetrahedron_mesh() {
 	return mesh;
 }
 
+TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear carries corner data into the extruded cells") {
+	// Each vertex gets its own normal and UV, so any cell corner that receives another vertex's data is detectable.
+	Ref<ArrayMesh> quad_mesh;
+	quad_mesh.instantiate();
+	PackedVector3Array quad_vertices = { Vector3(0, 0, 0), Vector3(2, 0, 0), Vector3(0, 2, 0), Vector3(2, 2, 0) };
+	PackedVector3Array quad_normals = { Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0) };
+	PackedVector2Array quad_uvs = { Vector2(0, 0), Vector2(1, 0), Vector2(0, 1), Vector2(1, 1) };
+	PackedInt32Array quad_indices = { 0, 2, 1, 3, 1, 2 };
+	Array arrays;
+	arrays.resize(Mesh::ARRAY_MAX);
+	arrays[Mesh::ARRAY_VERTEX] = quad_vertices;
+	arrays[Mesh::ARRAY_NORMAL] = quad_normals;
+	arrays[Mesh::ARRAY_TEX_UV] = quad_uvs;
+	arrays[Mesh::ARRAY_INDEX] = quad_indices;
+	quad_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
+	Ref<ArrayPolyMeshND> flat = PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(quad_mesh);
+	REQUIRE(flat->is_poly_mesh_data_valid());
+	const Vector<VectorN> input_vertices = flat->get_poly_cell_vertex_positions();
+	const Vector<PackedInt32Array> input_face_vertices = flat->get_all_poly_cell_vertex_indices(2, false);
+	const Vector<Vector<VectorN>> input_corner_normals = flat->get_poly_cell_dense_normals(Vector2i(2, 0));
+	const Vector<Vector<VectorM>> input_corner_texture_maps = flat->get_poly_cell_dense_texture_map(Vector2i(2, 0));
+	REQUIRE(input_face_vertices.size() == 2);
+	REQUIRE(input_corner_normals.size() == 2);
+	REQUIRE(input_corner_texture_maps.size() == 2);
+	Ref<ArrayPolyMeshND> extruded = PolyMeshBuilderND::extrude_linear(flat);
+	REQUIRE(extruded->is_poly_mesh_data_valid());
+	REQUIRE(extruded->get_dimension() == 4);
+	const Vector<VectorN> vertices = extruded->get_poly_cell_vertex_positions();
+	const Vector<PackedInt32Array> cell_vertices = extruded->get_all_poly_cell_vertex_indices(3, false);
+	REQUIRE_MESSAGE(cell_vertices.size() == 2, "Each input face must extrude into one cell.");
+	const Vector<Vector<VectorN>> cell_corner_normals = extruded->get_poly_cell_dense_normals(Vector2i(3, 0));
+	const Vector<Vector<VectorM>> cell_corner_texture_maps = extruded->get_poly_cell_dense_texture_map(Vector2i(3, 0));
+	REQUIRE_MESSAGE(cell_corner_normals.size() == 2, "Every extruded cell must have corner normals.");
+	REQUIRE_MESSAGE(cell_corner_texture_maps.size() == 2, "Every extruded cell must have corner texture maps.");
+	for (int64_t cell_index = 0; cell_index < 2; cell_index++) {
+		const PackedInt32Array &corners = cell_vertices[cell_index];
+		REQUIRE(corners.size() == 6);
+		REQUIRE(cell_corner_normals[cell_index].size() == 6);
+		REQUIRE(cell_corner_texture_maps[cell_index].size() == 6);
+		// Each corner is a copy of an input vertex, on the negative or positive side of the new axis.
+		PackedInt32Array corner_input_vertices;
+		for (const int32_t vertex_index : corners) {
+			const VectorN flattened = VectorND::with_dimension(vertices[vertex_index], 3);
+			int32_t input_vertex = -1;
+			for (int32_t candidate = 0; candidate < input_vertices.size(); candidate++) {
+				if (VectorND::is_equal_approx(VectorND::with_dimension(input_vertices[candidate], 3), flattened)) {
+					input_vertex = candidate;
+				}
+			}
+			REQUIRE_MESSAGE(input_vertex != -1, "Every extruded vertex must be a copy of an input vertex.");
+			corner_input_vertices.append(input_vertex);
+		}
+		// The cell is a prism over the one input face that has all of its corners' input vertices.
+		int32_t input_face = -1;
+		for (int32_t candidate = 0; candidate < input_face_vertices.size(); candidate++) {
+			bool has_all = true;
+			for (const int32_t input_vertex : corner_input_vertices) {
+				has_all = has_all && input_face_vertices[candidate].has(input_vertex);
+			}
+			if (has_all) {
+				input_face = candidate;
+			}
+		}
+		REQUIRE(input_face != -1);
+		for (int64_t corner = 0; corner < corners.size(); corner++) {
+			const int64_t vert_in_face = input_face_vertices[input_face].find(corner_input_vertices[corner]);
+			const VectorN expected_normal = VectorND::with_dimension(input_corner_normals[input_face][vert_in_face], 4);
+			CHECK_MESSAGE(VectorND::is_equal_approx(VectorND::with_dimension(cell_corner_normals[cell_index][corner], 4), expected_normal), "Each cell corner must take its vertex's corner normal from the input face.");
+			// The second copy of the input faces, on the positive side of the new axis, has its texture maps offset by 1 on the new texture axis.
+			VectorM expected_texture_map = VectorND::with_dimension(input_corner_texture_maps[input_face][vert_in_face], 3);
+			if (vertices[corners[corner]][3] > 0.0) {
+				expected_texture_map.set(2, expected_texture_map[2] + 1.0);
+			}
+			CHECK_MESSAGE(VectorND::is_equal_approx(VectorND::with_dimension(cell_corner_texture_maps[cell_index][corner], 3), expected_texture_map), "Each cell corner must take its vertex's texture map from the copy of the input face it lies on.");
+		}
+	}
+}
+
 TEST_CASE("[PolyMeshBuilderND] Subdivide box boundary cells") {
 	for (int dimension = 3; dimension <= 4; dimension++) {
 		Ref<BoxPolyMeshND> box;

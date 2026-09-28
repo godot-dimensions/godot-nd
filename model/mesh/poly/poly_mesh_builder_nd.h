@@ -6,6 +6,26 @@
 class PolyMeshBuilderND : public Object {
 	GDCLASS(PolyMeshBuilderND, Object);
 
+	// These helpers carry dense data bindings (normals and texture maps) across topology changes. A dense
+	// element-to-vertex binding stores one array per element, with one value per corner of the element, in the
+	// order that `PolyMeshND::get_all_poly_cell_vertex_indices(dim, false)` lists the element's vertices.
+	// Normals and texture maps are both stored as `PackedFloat64Array` values, so one set of helpers serves both.
+	enum CornerSampleMode {
+		CORNER_SAMPLE_FIRST_FOUND, // Take the value from the first source element that has the vertex.
+		CORNER_SAMPLE_AVERAGE, // Take the mean of the values from every source element that has the vertex.
+	};
+	// Looks up one vertex in the corner lists of the given source elements and reads its bound value.
+	// Sources that are out of range, lack the vertex, or have fewer values than corners are skipped.
+	// Returns the number of sources that had the vertex, and leaves `r_value` untouched when that is zero.
+	static int64_t _find_corner_value(const int32_t p_vertex, const PackedInt32Array &p_source_elements, const Vector<PackedInt32Array> &p_source_corners, const Vector<Vector<PackedFloat64Array>> &p_source_values, const CornerSampleMode p_mode, PackedFloat64Array &r_value);
+	// Samples a value for every corner of a new element from the corners of the given source elements.
+	// Corners whose vertex is found in no source get `p_fallback`. With `p_normalize`, every sampled value is
+	// normalized, which averaged normals need. When `p_derived_vertex_sources` is given, a corner vertex at or
+	// above `p_first_derived_vertex` is a new vertex derived from the listed old vertices (such as an edge
+	// midpoint), and gets the mean of whatever those old vertices sample to.
+	// Returns the number of corners that received a sampled value rather than the fallback.
+	static int64_t _sample_corner_values(const PackedInt32Array &p_new_corners, const PackedInt32Array &p_source_elements, const Vector<PackedInt32Array> &p_source_corners, const Vector<Vector<PackedFloat64Array>> &p_source_values, const CornerSampleMode p_mode, const PackedFloat64Array &p_fallback, Vector<PackedFloat64Array> &r_values, const bool p_normalize = false, const Vector<PackedInt32Array> *p_derived_vertex_sources = nullptr, const int64_t p_first_derived_vertex = INT64_MAX);
+
 	// Rebinds dense corner values of the input mesh's boundary cells, copied twice into an extruded mesh, from the
 	// input mesh's vertex order of those elements to the extruded mesh's vertex order. When an extrusion adds a
 	// dimension, those elements are no longer boundary cells, so their vertices may be listed in a different order.

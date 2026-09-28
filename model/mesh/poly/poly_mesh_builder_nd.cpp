@@ -106,6 +106,66 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(const R
 	return ret;
 }
 
+int64_t PolyMeshBuilderND::_find_corner_value(const int32_t p_vertex, const PackedInt32Array &p_source_elements, const Vector<PackedInt32Array> &p_source_corners, const Vector<Vector<PackedFloat64Array>> &p_source_values, const CornerSampleMode p_mode, PackedFloat64Array &r_value) {
+	int64_t hits = 0;
+	PackedFloat64Array sum;
+	for (const int32_t source : p_source_elements) {
+		if (source < 0 || source >= p_source_corners.size() || source >= p_source_values.size()) {
+			continue;
+		}
+		const int64_t corner = p_source_corners[source].find(p_vertex);
+		if (corner == -1 || corner >= p_source_values[source].size()) {
+			continue;
+		}
+		if (p_mode == CORNER_SAMPLE_FIRST_FOUND) {
+			r_value = p_source_values[source][corner];
+			return 1;
+		}
+		sum = VectorND::add(sum, p_source_values[source][corner]);
+		hits++;
+	}
+	if (hits > 0) {
+		r_value = VectorND::divide_scalar(sum, (double)hits);
+	}
+	return hits;
+}
+
+int64_t PolyMeshBuilderND::_sample_corner_values(const PackedInt32Array &p_new_corners, const PackedInt32Array &p_source_elements, const Vector<PackedInt32Array> &p_source_corners, const Vector<Vector<PackedFloat64Array>> &p_source_values, const CornerSampleMode p_mode, const PackedFloat64Array &p_fallback, Vector<PackedFloat64Array> &r_values, const bool p_normalize, const Vector<PackedInt32Array> *p_derived_vertex_sources, const int64_t p_first_derived_vertex) {
+	r_values.resize(p_new_corners.size());
+	int64_t sampled_count = 0;
+	for (int64_t i = 0; i < p_new_corners.size(); i++) {
+		const int32_t vertex = p_new_corners[i];
+		PackedFloat64Array value = p_fallback;
+		int64_t hits = 0;
+		if (p_derived_vertex_sources != nullptr && vertex >= p_first_derived_vertex) {
+			const int64_t derived_index = vertex - p_first_derived_vertex;
+			PackedFloat64Array sum;
+			if (derived_index < p_derived_vertex_sources->size()) {
+				for (const int32_t source_vertex : (*p_derived_vertex_sources)[derived_index]) {
+					PackedFloat64Array source_value;
+					if (_find_corner_value(source_vertex, p_source_elements, p_source_corners, p_source_values, p_mode, source_value) > 0) {
+						sum = VectorND::add(sum, source_value);
+						hits++;
+					}
+				}
+			}
+			if (hits > 0) {
+				value = VectorND::divide_scalar(sum, (double)hits);
+			}
+		} else {
+			hits = _find_corner_value(vertex, p_source_elements, p_source_corners, p_source_values, p_mode, value);
+		}
+		if (hits > 0) {
+			sampled_count++;
+			if (p_normalize && VectorND::length_squared(value) > (double)CMP_EPSILON) {
+				value = VectorND::normalized(value);
+			}
+		}
+		r_values.set(i, value);
+	}
+	return sampled_count;
+}
+
 void PolyMeshBuilderND::_rematch_extruded_corner_values(Vector<Vector<PackedFloat64Array>> &r_values, const Vector<PackedInt32Array> &p_input_corners, const Vector<PackedInt32Array> &p_output_corners, const int32_t p_input_vertex_count) {
 	const int64_t input_element_count = p_input_corners.size();
 	for (int64_t copy = 0; copy < 2; copy++) {
@@ -397,27 +457,12 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 			Vector<Vector<VectorN>> cell_to_vert_normals = all_poly_cell_normals.has(output_cell_to_vert_key) ? all_poly_cell_normals[output_cell_to_vert_key] : Vector<Vector<VectorN>>();
 			cell_to_vert_normals.resize(all_cell_vert.size());
 			for (int input_cell_index = 0; input_cell_index < input_boundary_cell_count; input_cell_index++) {
-				const Vector<VectorN> &input_cell_vert_normals = input_level_vert_normals[input_cell_index];
-				const PackedInt32Array &first_copy_cell_vert = all_input_level_vert[input_cell_index];
 				// The second copy being offset by the input cell count is guaranteed because we start with `merge_with`.
-				const PackedInt32Array &second_copy_cell_vert = all_input_level_vert[input_cell_index + input_boundary_cell_count];
+				const PackedInt32Array copy_cells = { (int32_t)input_cell_index, (int32_t)(input_cell_index + input_boundary_cell_count) };
 				const int64_t cell_index = boundary_to_extruded_cell[input_cell_index];
-				const PackedInt32Array &this_cell_vert = all_cell_vert[cell_index];
+				// A vertex in neither copy has no vertex normal data in this cell, so it uses the cell's boundary normal.
 				Vector<VectorN> cell_vert_normals;
-				cell_vert_normals.resize(this_cell_vert.size());
-				for (int64_t vert_in_cell = 0; vert_in_cell < this_cell_vert.size(); vert_in_cell++) {
-					const int32_t vert_index = this_cell_vert[vert_in_cell];
-					const int64_t vert_in_first_copy = first_copy_cell_vert.find(vert_index);
-					const int64_t vert_in_second_copy = second_copy_cell_vert.find(vert_index);
-					if (vert_in_first_copy != -1 && vert_in_first_copy < input_cell_vert_normals.size()) {
-						cell_vert_normals.set(vert_in_cell, input_cell_vert_normals[vert_in_first_copy]);
-					} else if (vert_in_second_copy != -1 && vert_in_second_copy < input_cell_vert_normals.size()) {
-						cell_vert_normals.set(vert_in_cell, input_cell_vert_normals[vert_in_second_copy]);
-					} else {
-						// Neither copy has vertex normal data for this vertex in this cell, so just use the cell's boundary normal.
-						cell_vert_normals.set(vert_in_cell, per_cell_normals[cell_index]);
-					}
-				}
+				_sample_corner_values(all_cell_vert[cell_index], copy_cells, all_input_level_vert, input_level_vert_normals, CORNER_SAMPLE_FIRST_FOUND, per_cell_normals[cell_index], cell_vert_normals);
 				cell_to_vert_normals.set(cell_index, cell_vert_normals);
 			}
 			all_poly_cell_normals.insert(output_cell_to_vert_key, cell_to_vert_normals);
@@ -456,28 +501,12 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 			Vector<Vector<VectorM>> cell_to_vert_texture_maps = all_poly_cell_texture_maps.has(output_cell_to_vert_key) ? all_poly_cell_texture_maps[output_cell_to_vert_key] : Vector<Vector<VectorM>>();
 			cell_to_vert_texture_maps.resize(all_cell_vert.size());
 			for (int input_cell_index = 0; input_cell_index < input_boundary_cell_count; input_cell_index++) {
-				const Vector<VectorM> &first_copy_cell_vert_texture_maps = input_level_texture_maps[input_cell_index];
-				const PackedInt32Array &first_copy_cell_vert_ind = all_input_level_vert[input_cell_index];
 				// The second copy being offset by the input cell count is guaranteed because we start with `merge_with`.
-				const Vector<VectorM> &second_copy_cell_vert_texture_maps = input_level_texture_maps[input_cell_index + input_boundary_cell_count];
-				const PackedInt32Array &second_copy_cell_vert_ind = all_input_level_vert[input_cell_index + input_boundary_cell_count];
+				const PackedInt32Array copy_cells = { (int32_t)input_cell_index, (int32_t)(input_cell_index + input_boundary_cell_count) };
 				const int64_t cell_index = boundary_to_extruded_cell[input_cell_index];
-				const PackedInt32Array &this_cell_vert = all_cell_vert[cell_index];
+				// A vertex in neither copy has no vertex texture map data in this cell, so it uses a default value.
 				Vector<VectorM> cell_vert_texture_maps;
-				cell_vert_texture_maps.resize(this_cell_vert.size());
-				for (int64_t vert_in_cell = 0; vert_in_cell < this_cell_vert.size(); vert_in_cell++) {
-					const int32_t vert_index = this_cell_vert[vert_in_cell];
-					const int64_t vert_in_first_copy = first_copy_cell_vert_ind.find(vert_index);
-					const int64_t vert_in_second_copy = second_copy_cell_vert_ind.find(vert_index);
-					if (vert_in_first_copy != -1 && vert_in_first_copy < first_copy_cell_vert_texture_maps.size()) {
-						cell_vert_texture_maps.set(vert_in_cell, first_copy_cell_vert_texture_maps[vert_in_first_copy]);
-					} else if (vert_in_second_copy != -1 && vert_in_second_copy < second_copy_cell_vert_texture_maps.size()) {
-						cell_vert_texture_maps.set(vert_in_cell, second_copy_cell_vert_texture_maps[vert_in_second_copy]);
-					} else {
-						// Neither copy has vertex texture map data for this vertex in this cell, so just use a default value.
-						cell_vert_texture_maps.set(vert_in_cell, VectorND::zero(output_texture_dimension));
-					}
-				}
+				_sample_corner_values(all_cell_vert[cell_index], copy_cells, all_input_level_vert, input_level_texture_maps, CORNER_SAMPLE_FIRST_FOUND, VectorND::zero(output_texture_dimension), cell_vert_texture_maps);
 				cell_to_vert_texture_maps.set(cell_index, cell_vert_texture_maps);
 			}
 			all_poly_cell_texture_maps.insert(output_cell_to_vert_key, cell_to_vert_texture_maps);
@@ -1484,65 +1513,17 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 				}
 				const PackedInt32Array &parent_vertices = ctx.old_level_vertices[boundary_level][parent];
 				const PackedInt32Array &new_cell_vertices = new_cell_vertex_indices[i];
-				// Interpolate the vertex normals within the parent cell.
+				const PackedInt32Array parent_source = { parent };
+				// Interpolate the vertex normals within the parent cell. New vertices average their source vertices.
 				if (old_vertex_normals != nullptr && parent < old_vertex_normals->size() && (*old_vertex_normals)[parent].size() == parent_vertices.size()) {
-					const Vector<VectorN> &parent_values = (*old_vertex_normals)[parent];
 					Vector<VectorN> cell_values;
-					cell_values.resize(new_cell_vertices.size());
-					for (int64_t vert_num = 0; vert_num < new_cell_vertices.size(); vert_num++) {
-						const int32_t vertex = new_cell_vertices[vert_num];
-						VectorN value;
-						if (vertex < old_vertex_count) {
-							const int64_t found = parent_vertices.find(vertex);
-							if (found != -1) {
-								value = parent_values[found];
-							}
-						} else {
-							const PackedInt32Array &sources = ctx.new_vertex_sources[vertex - old_vertex_count];
-							for (const int32_t source : sources) {
-								const int64_t found = parent_vertices.find(source);
-								if (found != -1) {
-									value = VectorND::add(value, parent_values[found]);
-								}
-							}
-						}
-						// Normalize copied values too, since the input normals are not required to be unit length.
-						if (VectorND::length_squared(value) > (double)CMP_EPSILON) {
-							value = VectorND::normalized(value);
-						}
-						cell_values.set(vert_num, value);
-					}
+					_sample_corner_values(new_cell_vertices, parent_source, ctx.old_level_vertices[boundary_level], *old_vertex_normals, CORNER_SAMPLE_AVERAGE, VectorN(), cell_values, true, &ctx.new_vertex_sources, old_vertex_count);
 					new_vertex_normals.set(i, cell_values);
 				}
 				// Interpolate the texture map within the parent cell.
 				if (old_texture_maps != nullptr && parent < old_texture_maps->size() && (*old_texture_maps)[parent].size() == parent_vertices.size()) {
-					const Vector<VectorM> &parent_values = (*old_texture_maps)[parent];
 					Vector<VectorM> cell_values;
-					cell_values.resize(new_cell_vertices.size());
-					for (int64_t vert_num = 0; vert_num < new_cell_vertices.size(); vert_num++) {
-						const int32_t vertex = new_cell_vertices[vert_num];
-						VectorM value;
-						if (vertex < old_vertex_count) {
-							const int64_t found = parent_vertices.find(vertex);
-							if (found != -1) {
-								value = parent_values[found];
-							}
-						} else {
-							const PackedInt32Array &sources = ctx.new_vertex_sources[vertex - old_vertex_count];
-							int64_t found_count = 0;
-							for (const int32_t source : sources) {
-								const int64_t found = parent_vertices.find(source);
-								if (found != -1) {
-									value = VectorND::add(value, parent_values[found]);
-									found_count++;
-								}
-							}
-							if (found_count > 0) {
-								value = VectorND::divide_scalar(value, found_count);
-							}
-						}
-						cell_values.set(vert_num, value);
-					}
+					_sample_corner_values(new_cell_vertices, parent_source, ctx.old_level_vertices[boundary_level], *old_texture_maps, CORNER_SAMPLE_AVERAGE, VectorM(), cell_values, false, &ctx.new_vertex_sources, old_vertex_count);
 					new_texture_maps.set(i, cell_values);
 				}
 			}
