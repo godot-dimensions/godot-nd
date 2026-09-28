@@ -309,6 +309,71 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide box boundary cells") {
 	}
 }
 
+TEST_CASE("[PolyMeshBuilderND] Subdivide interpolates boundary cell corner normals and texture maps") {
+	// Corner values set from an affine function of the vertex position stay affine under subdivision, since every new
+	// vertex is the centroid of the vertices it averages. The normals are not unit length, so every subdivided corner,
+	// including those on the original vertices, must be normalized.
+	auto normal_at = [](const VectorN &p_position) -> VectorN {
+		VectorN normal = p_position;
+		for (int64_t i = 0; i < normal.size(); i++) {
+			normal.set(i, normal[i] + double(i + 1));
+		}
+		return normal;
+	};
+	auto texture_map_at = [](const VectorN &p_position) -> VectorM {
+		const int64_t last_axis = p_position.size() - 1;
+		VectorM texture_map;
+		texture_map.resize(last_axis);
+		for (int64_t i = 0; i < last_axis; i++) {
+			texture_map.set(i, p_position[i] * 0.5 + p_position[last_axis] * 0.25 + 0.5);
+		}
+		return texture_map;
+	};
+	for (int dimension = 3; dimension <= 4; dimension++) {
+		Ref<BoxPolyMeshND> box;
+		box.instantiate();
+		box->set_size(VectorND::fill(dimension, 2.0));
+		Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
+		const Vector2i cell_to_vert_key = Vector2i(dimension - 1, 0);
+		const Vector<VectorN> old_vertices = mesh->get_poly_cell_vertex_positions();
+		const Vector<PackedInt32Array> old_cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+		Vector<Vector<VectorN>> old_cell_normals;
+		Vector<Vector<VectorM>> old_cell_texture_maps;
+		for (const PackedInt32Array &corners : old_cell_vertices) {
+			Vector<VectorN> cell_normals;
+			Vector<VectorM> cell_texture_maps;
+			for (const int32_t vertex_index : corners) {
+				cell_normals.append(normal_at(old_vertices[vertex_index]));
+				cell_texture_maps.append(texture_map_at(old_vertices[vertex_index]));
+			}
+			old_cell_normals.append(cell_normals);
+			old_cell_texture_maps.append(cell_texture_maps);
+		}
+		mesh->set_poly_cell_dense_normals(cell_to_vert_key, old_cell_normals);
+		mesh->set_poly_cell_dense_texture_map(cell_to_vert_key, old_cell_texture_maps);
+		REQUIRE(mesh->is_poly_mesh_data_valid());
+		const PackedInt32Array new_pieces = PolyMeshBuilderND::subdivide_elements(mesh, dimension - 1, PackedInt32Array());
+		REQUIRE(mesh->is_poly_mesh_data_valid());
+		const Vector<VectorN> vertices = mesh->get_poly_cell_vertex_positions();
+		const Vector<PackedInt32Array> cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+		const Vector<Vector<VectorN>> cell_normals = mesh->get_poly_cell_dense_normals(cell_to_vert_key);
+		const Vector<Vector<VectorM>> cell_texture_maps = mesh->get_poly_cell_dense_texture_map(cell_to_vert_key);
+		REQUIRE(cell_vertices.size() == new_pieces.size());
+		REQUIRE(cell_normals.size() == new_pieces.size());
+		REQUIRE(cell_texture_maps.size() == new_pieces.size());
+		for (int64_t cell_index = 0; cell_index < cell_vertices.size(); cell_index++) {
+			const PackedInt32Array &corners = cell_vertices[cell_index];
+			REQUIRE(cell_normals[cell_index].size() == corners.size());
+			REQUIRE(cell_texture_maps[cell_index].size() == corners.size());
+			for (int64_t corner = 0; corner < corners.size(); corner++) {
+				const VectorN &position = vertices[corners[corner]];
+				CHECK_MESSAGE(VectorND::is_equal_approx(cell_normals[cell_index][corner], VectorND::normalized(normal_at(position))), "Each cell corner normal must be the normalized interpolation of its parent cell's corner normals.");
+				CHECK_MESSAGE(VectorND::is_equal_approx(cell_texture_maps[cell_index][corner], texture_map_at(position)), "Each cell corner texture map must be the interpolation of its parent cell's corner texture maps.");
+			}
+		}
+	}
+}
+
 TEST_CASE("[PolyMeshBuilderND] Subdivide simplex and orthoplex volumes") {
 	SUBCASE("A tetrahedron subdivides into 4 corner tetrahedra and a central octahedron") {
 		Ref<ArrayPolyMeshND> mesh = make_solid_tetrahedron_mesh();

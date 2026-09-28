@@ -1469,9 +1469,10 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 									value = VectorND::add(value, parent_values[found]);
 								}
 							}
-							if (VectorND::length_squared(value) > (double)CMP_EPSILON) {
-								value = VectorND::normalized(value);
-							}
+						}
+						// Normalize copied values too, since the input normals are not required to be unit length.
+						if (VectorND::length_squared(value) > (double)CMP_EPSILON) {
+							value = VectorND::normalized(value);
 						}
 						cell_values.set(vert_num, value);
 					}
