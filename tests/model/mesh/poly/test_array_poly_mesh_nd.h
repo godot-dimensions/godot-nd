@@ -1133,11 +1133,11 @@ TEST_CASE("[ArrayPolyMeshND] Compaction after flat shading removes replaced valu
 	HashMap<Vector2i, Vector<PackedInt32Array>> bindings;
 	bindings.insert(Vector2i(3, 0), Vector<PackedInt32Array>{ PackedInt32Array{ 0, 0, 0, 0 } });
 	bindings.insert(Vector2i(3, 3), Vector<PackedInt32Array>{ PackedInt32Array{ 1 } });
-	bindings.insert(Vector2i(0, 0), Vector<PackedInt32Array>{ PackedInt32Array{ 2, 2, 2, 2 } });
+	bindings.insert(PolyMeshND::PER_VERTEX_KEY, Vector<PackedInt32Array>{ PackedInt32Array{ 2, 2, 2, 2 } });
 	mesh->set_all_poly_cell_normal_indices(bindings);
 	REQUIRE(mesh->is_mesh_data_valid());
 	const Vector<VectorN> boundary_normals = mesh->get_poly_cell_boundary_normals();
-	const Vector<Vector<VectorN>> vertex_normals = mesh->get_poly_cell_dense_normals(Vector2i(0, 0));
+	const Vector<Vector<VectorN>> vertex_normals = mesh->get_poly_cell_dense_normals(PolyMeshND::PER_VERTEX_KEY);
 	mesh->set_flat_shading_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY, false);
 	REQUIRE(mesh->is_mesh_data_valid());
 	// The value replaced by flat shading stays in the pool until explicit compaction.
@@ -1145,7 +1145,7 @@ TEST_CASE("[ArrayPolyMeshND] Compaction after flat shading removes replaced valu
 	mesh->compact_normal_values();
 	CHECK(mesh->get_poly_cell_normal_values().size() == 2);
 	CHECK(mesh->get_poly_cell_boundary_normals() == boundary_normals);
-	CHECK(mesh->get_poly_cell_dense_normals(Vector2i(0, 0)) == vertex_normals);
+	CHECK(mesh->get_poly_cell_dense_normals(PolyMeshND::PER_VERTEX_KEY) == vertex_normals);
 	const Vector<Vector<VectorN>> flat_normals = mesh->get_poly_cell_dense_normals(Vector2i(3, 0));
 	REQUIRE(flat_normals.size() == 1);
 	REQUIRE(flat_normals[0].size() == 4);
@@ -2665,7 +2665,7 @@ TEST_CASE("[ArrayPolyMeshND] Orient cells to boundary normals") {
 		for (const VectorN &vertex : vertices) {
 			vertex_normals.append(VectorND::normalized(vertex));
 		}
-		mesh->set_poly_cell_dense_normals(Vector2i(0, 0), Vector<Vector<VectorN>>{ vertex_normals });
+		mesh->set_poly_cell_dense_normals(PolyMeshND::PER_VERTEX_KEY, Vector<Vector<VectorN>>{ vertex_normals });
 		const PackedInt32Array edge_indices = mesh->get_edge_indices();
 		Vector<Vector<VectorM>> edge_vertex_texture;
 		for (int64_t edge = 0; edge < edge_indices.size() / 2; edge++) {
@@ -2684,7 +2684,7 @@ TEST_CASE("[ArrayPolyMeshND] Orient cells to boundary normals") {
 		const Ref<ArrayPolyMeshND> copy = mesh->to_array_poly_mesh();
 		REQUIRE(copy.is_valid());
 		CHECK(copy->is_mesh_data_valid());
-		CHECK(copy->get_poly_cell_dense_normals(Vector2i(0, 0)) == mesh->get_poly_cell_dense_normals(Vector2i(0, 0)));
+		CHECK(copy->get_poly_cell_dense_normals(PolyMeshND::PER_VERTEX_KEY) == mesh->get_poly_cell_dense_normals(PolyMeshND::PER_VERTEX_KEY));
 		CHECK(copy->get_poly_cell_dense_texture_map(Vector2i(1, 0)) == mesh->get_poly_cell_dense_texture_map(Vector2i(1, 0)));
 		CHECK(copy->get_poly_cell_dense_normals(cell_to_vert_key) == mesh->get_poly_cell_dense_normals(cell_to_vert_key));
 		CHECK(VectorND::array_is_equal_exact(copy->get_poly_cell_boundary_normals(), mesh->get_poly_cell_boundary_normals()));

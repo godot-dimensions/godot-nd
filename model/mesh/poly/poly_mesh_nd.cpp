@@ -5,6 +5,10 @@
 #include "../material_nd.h"
 #include "array_poly_mesh_nd.h"
 
+#if USE_CONST_NOT_CONSTEXPR_FOR_VECTORS
+const Vector2i PolyMeshND::PER_VERTEX_KEY = Vector2i(0, 0);
+#endif
+
 bool PolyMeshND::is_poly_mesh_data_valid() {
 	if (likely(_is_poly_mesh_data_valid)) {
 		return true;

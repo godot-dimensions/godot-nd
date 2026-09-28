@@ -26,6 +26,7 @@
 #define resize_initialized resize
 #define resize_uninitialized resize
 #define RSE RenderingServer
+#define USE_CONST_NOT_CONSTEXPR_FOR_VECTORS 1
 #define VariantUtilityFunctions UtilityFunctions
 // Note: This MUST NOT be set for module builds, only GDExtension builds, due to namespace pollution issues.
 #define USE_FUNCTIONS_FOR_VECTORS 1
@@ -90,6 +91,9 @@ using namespace godot;
 // See https://github.com/godotengine/godot/pull/104522
 #define resize_initialized resize_zeroed
 #define resize_uninitialized resize
+
+// As of Godot 4.5, we can use constexpr for vectors, but 4.4 and earlier don't support constexpr for vectors.
+#define USE_CONST_NOT_CONSTEXPR_FOR_VECTORS 1
 #endif
 
 #if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR > 4

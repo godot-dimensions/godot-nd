@@ -18,6 +18,16 @@ class ArrayPolyMeshND;
 class PolyMeshND : public CellMeshND {
 	GDCLASS(PolyMeshND, CellMeshND);
 
+public:
+	// Most data binding keys depend on the mesh dimension, see `_get_per_cell_key` and `_get_cell_to_vert_key`.
+	// The per-vertex key is the same in every dimension.
+#if USE_CONST_NOT_CONSTEXPR_FOR_VECTORS
+	static const Vector2i PER_VERTEX_KEY;
+#else
+	static constexpr Vector2i PER_VERTEX_KEY = Vector2i(0, 0);
+#endif
+
+private:
 	PackedInt32Array _simplex_cell_vertex_indices_cache;
 	PackedInt32Array _simplex_cell_source_poly_cells;
 	PackedInt32Array _simplex_cell_normal_indices_cache;
