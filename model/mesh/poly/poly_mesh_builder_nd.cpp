@@ -1,5 +1,6 @@
 #include "poly_mesh_builder_nd.h"
 
+#include "../../../math/math_nd.h"
 #include "../../../math/vector_nd.h"
 
 Ref<ArrayPolyMeshND> PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(const Ref<ArrayMesh> &p_mesh_3d, const int p_which_surface, const bool p_deduplicate) {
@@ -103,6 +104,37 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(const R
 		ret->set_poly_cell_dense_texture_map(Vector2i(2, 0), output_face_texture_maps);
 	}
 	return ret;
+}
+
+void PolyMeshBuilderND::_rematch_extruded_corner_values(Vector<Vector<PackedFloat64Array>> &r_values, const Vector<PackedInt32Array> &p_input_corners, const Vector<PackedInt32Array> &p_output_corners, const int32_t p_input_vertex_count) {
+	const int64_t input_element_count = p_input_corners.size();
+	for (int64_t copy = 0; copy < 2; copy++) {
+		for (int64_t input_index = 0; input_index < input_element_count; input_index++) {
+			const int64_t output_index = input_index + copy * input_element_count;
+			if (output_index >= r_values.size() || output_index >= p_output_corners.size() || r_values[output_index].is_empty()) {
+				continue; // Missing data stays missing.
+			}
+			const Vector<PackedFloat64Array> &old_values = r_values[output_index];
+			PackedInt32Array old_keys = p_input_corners[input_index];
+			PackedInt32Array old_positions;
+			old_positions.resize(old_values.size());
+			for (int32_t i = 0; i < old_keys.size(); i++) {
+				old_keys.set(i, old_keys[i] + (int32_t)copy * p_input_vertex_count);
+			}
+			for (int32_t i = 0; i < old_positions.size(); i++) {
+				old_positions.set(i, i);
+			}
+			// Match the corners by vertex identity, then read the values from the matched positions.
+			const PackedInt32Array new_positions = MathND::remap_int32s_by_matching_keys(old_keys, p_output_corners[output_index], old_positions);
+			CRASH_COND(new_positions.has(-1)); // Both lists hold the same vertices, since the extruded elements are copies.
+			Vector<PackedFloat64Array> new_values;
+			new_values.resize(new_positions.size());
+			for (int64_t i = 0; i < new_positions.size(); i++) {
+				new_values.set(i, old_values[new_positions[i]]);
+			}
+			r_values.set(output_index, new_values);
+		}
+	}
 }
 
 Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND> &p_input_mesh, const VectorN &p_extrusion_vector) {
@@ -354,11 +386,13 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 			const int64_t input_boundary_cell_count = input_poly_cell_indices[output_boundary_dim_index - 1].size();
 			input_level_vert_normals.resize(input_boundary_cell_count); // Just in case the original size was smaller due to missing data. Empty entries are fine.
 			input_level_vert_normals.append_array(input_level_vert_normals); // New size will be 2x the input boundary cell count.
+			// The values are in the input mesh's vertex order, which the extruded mesh may list differently.
+			const Vector<PackedInt32Array> all_input_level_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 2, false);
+			_rematch_extruded_corner_values(input_level_vert_normals, p_input_mesh->get_all_poly_cell_vertex_indices(input_dimension - 1, false), all_input_level_vert, (int32_t)p_input_mesh->get_poly_cell_vertex_positions().size());
 			all_poly_cell_normals.insert(input_cell_to_vert_key, input_level_vert_normals);
 			ret->set_poly_cell_dense_normals(input_cell_to_vert_key, input_level_vert_normals);
 			// Now transfer the input cell vertex normals to the extruded cell vertex normals.
 			const Vector<VectorN> &per_cell_normals = ret->get_poly_cell_boundary_normals();
-			const Vector<PackedInt32Array> all_input_level_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 2, false);
 			const Vector<PackedInt32Array> all_cell_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 1, false);
 			Vector<Vector<VectorN>> cell_to_vert_normals = all_poly_cell_normals.has(output_cell_to_vert_key) ? all_poly_cell_normals[output_cell_to_vert_key] : Vector<Vector<VectorN>>();
 			cell_to_vert_normals.resize(all_cell_vert.size());
@@ -412,10 +446,12 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 				}
 				input_level_texture_maps.set(input_cell_index + input_boundary_cell_count, cell_vert_texture_map);
 			}
+			// The values are in the input mesh's vertex order, which the extruded mesh may list differently.
+			const Vector<PackedInt32Array> all_input_level_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 2, false);
+			_rematch_extruded_corner_values(input_level_texture_maps, p_input_mesh->get_all_poly_cell_vertex_indices(input_dimension - 1, false), all_input_level_vert, (int32_t)p_input_mesh->get_poly_cell_vertex_positions().size());
 			all_poly_cell_texture_maps.insert(input_cell_to_vert_key, input_level_texture_maps);
 			ret->set_poly_cell_dense_texture_map(input_cell_to_vert_key, input_level_texture_maps);
 			// Now transfer the input cell vertex texture maps to the extruded cell vertex texture maps.
-			const Vector<PackedInt32Array> all_input_level_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 2, false);
 			const Vector<PackedInt32Array> all_cell_vert = ret->get_all_poly_cell_vertex_indices(output_dimension - 1, false);
 			Vector<Vector<VectorM>> cell_to_vert_texture_maps = all_poly_cell_texture_maps.has(output_cell_to_vert_key) ? all_poly_cell_texture_maps[output_cell_to_vert_key] : Vector<Vector<VectorM>>();
 			cell_to_vert_texture_maps.resize(all_cell_vert.size());

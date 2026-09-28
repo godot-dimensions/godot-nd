@@ -6,6 +6,12 @@
 class PolyMeshBuilderND : public Object {
 	GDCLASS(PolyMeshBuilderND, Object);
 
+	// Rebinds dense corner values of the input mesh's boundary cells, copied twice into an extruded mesh, from the
+	// input mesh's vertex order of those elements to the extruded mesh's vertex order. When an extrusion adds a
+	// dimension, those elements are no longer boundary cells, so their vertices may be listed in a different order.
+	// The first copy uses the input's vertex indices, and the second copy is offset by `p_input_vertex_count`.
+	static void _rematch_extruded_corner_values(Vector<Vector<PackedFloat64Array>> &r_values, const Vector<PackedInt32Array> &p_input_corners, const Vector<PackedInt32Array> &p_output_corners, const int32_t p_input_vertex_count);
+
 	// These helper types and functions are for `subdivide_elements`.
 	enum SubdivisionCellClass {
 		SUBDIV_CLASS_UNKNOWN = 0,
