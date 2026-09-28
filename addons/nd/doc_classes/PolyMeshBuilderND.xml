@@ -11,11 +11,11 @@
 	<methods>
 		<method name="convert_mesh_3d_to_nd_faces_only" qualifiers="static">
 			<return type="ArrayPolyMeshND" />
-			<param index="0" name="mesh_3d" type="ArrayMesh" />
+			<param index="0" name="mesh_3d" type="Mesh" />
 			<param index="1" name="which_surface" type="int" default="-1" />
 			<param index="2" name="deduplicate" type="bool" default="true" />
 			<description>
-				Converts a 3D [ArrayMesh] into a 3-dimensional [ArrayPolyMeshND] by copying the vertex positions, inferring the edges of faces, and translating the faces to use those edges. Since the result is a 3-dimensional mesh, the faces are its boundary cells, so the face normals become the boundary normals, the 3D mesh's vertex normals become the boundary cell vertex normals, and the 3D mesh's UVs become the 2-dimensional cell texture map.
+				Converts a 3D [Mesh] into a 3-dimensional [ArrayPolyMeshND] by copying the vertex positions, inferring the edges of faces, and translating the faces to use those edges. Since the result is a 3-dimensional mesh, the faces are its boundary cells, so the face normals become the boundary normals, the 3D mesh's vertex normals become the boundary cell vertex normals, and the 3D mesh's UVs become the 2-dimensional cell texture map.
 				If [param which_surface] is -1, then all surfaces are used, otherwise the specified surface is used. If [param deduplicate] is true, then vertices and edges will be deduplicated so that vertices with the same position will be merged into a single vertex, otherwise separate vertices and edges in the input will be kept separate.
 				The resulting mesh will only have the 2D faces brought in with as minimal modifications as possible. After conversion, the mesh can be further modified with other functions in this class, such as extruding it into a higher dimension with [method extrude_linear].
 			</description>
@@ -38,6 +38,15 @@
 			<description>
 				Makes the boundary normals of an N-dimensional polytope mesh topologically consistent by ensuring that all boundary cells that share a common (N-2)-dimensional member have the same normal direction. The [param authoritative_boundary_cells] parameter specifies a list of boundary cell indices that are considered authoritative for determining the normal direction. Their normals will be preserved, and any adjacent non-authoritative boundary cells will be flipped if necessary to match the authoritative normals, recursively propagating in a flood-fill manner.
 				[b]Note:[/b] This function only works correctly if the input mesh has star-shaped polytope boundary cells, and if it can locate a point within the star-shaped region of that cell. For non-convex cells, you may need to set [member ArrayPolyMeshND.poly_cell_boundary_pivot_overrides] to specify where the pivot point is located in the cells.
+			</description>
+		</method>
+		<method name="merge_coplanar_faces" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="mesh_nd" type="ArrayPolyMeshND" />
+			<param index="1" name="angle_tolerance_radians" type="float" default="0.001" />
+			<description>
+				Merges adjacent 2D faces that lie in the same plane into single faces, in place, and returns how many merges were made. Two faces are merged when they share an edge, every vertex of one lies in the plane of the other within [param angle_tolerance_radians] (measured as the angle of each vertex's offset out of the plane), and the merged polygon is convex, since faces are triangulated as fans. The edges that were interior to the merged faces are deleted.
+				This intentionally only operates on 2D faces, and does not merge cells of higher dimensions. It repairs faces that were needlessly split, such as quads triangulated by a glTF export and brought in through [method convert_mesh_3d_to_nd_faces_only]. For a 3D mesh, the faces are the boundary cells, so each merged face keeps the orientation, boundary normal, and pivot override of the faces it absorbed, and faces are not merged across seam edges or when they face opposite ways. For meshes of higher dimensions, the cells keep referencing the merged faces and keep their orientation and boundary normals. Every normal and texture map binding is carried over: each merged face takes its values from the faces it absorbed, and the bindings of edges and cells follow their surviving sub-elements. An element whose values cannot all be found in its sources, such as a face merged from a mapped and an unmapped triangle, ends up with an empty entry, meaning missing data. Faces must have their edges stored in loop order, which every built-in mesh source provides.
 			</description>
 		</method>
 		<method name="subdivide_elements" qualifiers="static">

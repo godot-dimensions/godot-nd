@@ -98,6 +98,13 @@ class PolyMeshBuilderND : public Object {
 	static void _subdivide_refine_face(SubdivisionContext &r_ctx, const int32_t p_face_index);
 	static void _subdivide_refine_cell(SubdivisionContext &r_ctx, const int64_t p_level, const int32_t p_index);
 	static PackedInt32Array _subdivide_conform_face(SubdivisionContext &r_ctx, const int32_t p_face_index);
+	// Coplanar face merging helpers. These intentionally only operate on 2D faces, such as the triangles of a 3D mesh.
+	static PackedInt32Array _get_loop_face_vertices(const PackedInt32Array &p_face_edges, const PackedInt32Array &p_edge_vertex_indices);
+	static bool _rotate_out_shared_edges(const PackedInt32Array &p_face_edges, const PackedInt32Array &p_other_face_edges, PackedInt32Array &r_remainder);
+	static bool _get_face_plane_basis(const PackedInt32Array &p_vertex_loop, const Vector<VectorN> &p_positions, const double p_sin_tolerance, VectorN &r_origin, VectorN &r_basis_u, VectorN &r_basis_v);
+	static bool _try_merge_coplanar_face_pair(const PackedInt32Array &p_face_a_edges, const PackedInt32Array &p_face_b_edges, const PackedInt32Array &p_edge_vertex_indices, const Vector<VectorN> &p_positions, const double p_sin_tolerance, PackedInt32Array &r_merged_edges);
+	static bool _is_binding_affected_by_face_merge(const Vector2i &p_key);
+	static Vector<PackedInt32Array> _remap_binding_after_face_merge(const Vector2i &p_key, const Vector<PackedInt32Array> &p_old_binding, const Vector<PackedInt32Array> &p_element_sources, const Vector<PackedInt32Array> &p_old_sub_elements, const Vector<PackedInt32Array> &p_new_sub_elements, const PackedInt32Array &p_sub_element_old_to_new);
 
 protected:
 	static PolyMeshBuilderND *singleton;
@@ -105,11 +112,12 @@ protected:
 
 public:
 	// These functions create new meshes from the given data.
-	static Ref<ArrayPolyMeshND> convert_mesh_3d_to_nd_faces_only(const Ref<ArrayMesh> &p_mesh_3d, const int p_which_surface = -1, const bool p_deduplicate = true);
+	static Ref<ArrayPolyMeshND> convert_mesh_3d_to_nd_faces_only(const Ref<Mesh> &p_mesh_3d, const int p_which_surface = -1, const bool p_deduplicate = true);
 	static Ref<ArrayPolyMeshND> extrude_linear(const Ref<ArrayPolyMeshND> &p_input_mesh, const VectorN &p_extrusion_vector = VectorN());
 
 	// In-place adjustments to the given mesh.
 	static void make_boundary_normals_topologically_consistent(const Ref<ArrayPolyMeshND> &p_mesh_nd, const PackedInt32Array &p_authoritative);
+	static int64_t merge_coplanar_faces(const Ref<ArrayPolyMeshND> &p_mesh_nd, const double p_angle_tolerance_radians = 0.001);
 	static PackedInt32Array subdivide_elements(const Ref<ArrayPolyMeshND> &p_input_mesh, const int p_dimension, const PackedInt32Array &p_elements = PackedInt32Array());
 
 	static PolyMeshBuilderND *get_singleton() { return singleton; }

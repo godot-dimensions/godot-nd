@@ -3,7 +3,7 @@
 #include "../../../math/math_nd.h"
 #include "../../../math/vector_nd.h"
 
-Ref<ArrayPolyMeshND> PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(const Ref<ArrayMesh> &p_mesh_3d, const int p_which_surface, const bool p_deduplicate) {
+Ref<ArrayPolyMeshND> PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(const Ref<Mesh> &p_mesh_3d, const int p_which_surface, const bool p_deduplicate) {
 	Ref<ArrayPolyMeshND> ret;
 	ret.instantiate();
 	ERR_FAIL_COND_V_MSG(p_mesh_3d.is_null(), ret, "Input mesh is null.");
@@ -23,7 +23,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::convert_mesh_3d_to_nd_faces_only(const R
 	Vector<PackedInt32Array> output_face_indices;
 	for (int surface_index = start_surface; surface_index < end_surface; surface_index++) {
 		const Array surface_arrays = p_mesh_3d->surface_get_arrays(surface_index);
-		CRASH_COND(surface_arrays.size() < Mesh::ARRAY_MAX); // ArrayMesh should always return surfaces arrays of length Mesh::ARRAY_MAX, even if some of them are empty.
+		CRASH_COND(surface_arrays.size() < Mesh::ARRAY_MAX); // Mesh should always return surfaces arrays of length Mesh::ARRAY_MAX, even if some of them are empty.
 		const PackedVector3Array surface_vertices = PackedVector3Array(surface_arrays[Mesh::ARRAY_VERTEX]);
 		const PackedVector3Array surface_normals = PackedVector3Array(surface_arrays[Mesh::ARRAY_NORMAL]);
 		const PackedVector2Array surface_uvs = PackedVector2Array(surface_arrays[Mesh::ARRAY_TEX_UV]);
@@ -522,6 +522,465 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 }
 
 // In-place adjustments to the given mesh.
+
+// Coplanar face merging. This intentionally only operates on 2D faces, such as the triangles of a 3D mesh that was
+// triangulated when exported (for example to glTF), and does not generalize to merging cells of higher dimensions.
+
+// The vertices of a face whose edges are stored in loop order: vertex i is the one shared by edges i and i + 1.
+// Returns an empty array if consecutive edges do not share a vertex, or if a vertex repeats, so the face is not a
+// single simple closed loop.
+PackedInt32Array PolyMeshBuilderND::_get_loop_face_vertices(const PackedInt32Array &p_face_edges, const PackedInt32Array &p_edge_vertex_indices) {
+	const int64_t edge_count = p_face_edges.size();
+	PackedInt32Array vertices;
+	if (edge_count < 3) {
+		return vertices;
+	}
+	for (int64_t i = 0; i < edge_count; i++) {
+		const int32_t a0 = p_edge_vertex_indices[p_face_edges[i] * 2];
+		const int32_t a1 = p_edge_vertex_indices[p_face_edges[i] * 2 + 1];
+		const int32_t b0 = p_edge_vertex_indices[p_face_edges[(i + 1) % edge_count] * 2];
+		const int32_t b1 = p_edge_vertex_indices[p_face_edges[(i + 1) % edge_count] * 2 + 1];
+		const int32_t shared_vertex = (a0 == b0 || a0 == b1) ? a0 : ((a1 == b0 || a1 == b1) ? a1 : -1);
+		if (shared_vertex == -1 || vertices.has(shared_vertex)) {
+			return PackedInt32Array();
+		}
+		vertices.append(shared_vertex);
+	}
+	return vertices;
+}
+
+// Rotates a loop-ordered face so that the edges it shares with another face come last, and returns the edges
+// before them. Fails if the shared edges are not one contiguous run, if nothing is shared, or if everything is.
+bool PolyMeshBuilderND::_rotate_out_shared_edges(const PackedInt32Array &p_face_edges, const PackedInt32Array &p_other_face_edges, PackedInt32Array &r_remainder) {
+	const int64_t edge_count = p_face_edges.size();
+	int64_t shared_count = 0;
+	int64_t remainder_start = -1;
+	for (int64_t i = 0; i < edge_count; i++) {
+		if (p_other_face_edges.has(p_face_edges[i])) {
+			shared_count++;
+		} else if (p_other_face_edges.has(p_face_edges[(i + edge_count - 1) % edge_count])) {
+			remainder_start = i; // An unshared edge right after a shared one starts the remainder.
+		}
+	}
+	if (shared_count == 0 || shared_count == edge_count || remainder_start == -1) {
+		return false;
+	}
+	r_remainder.clear();
+	for (int64_t i = 0; i < edge_count - shared_count; i++) {
+		const int32_t edge_index = p_face_edges[(remainder_start + i) % edge_count];
+		if (p_other_face_edges.has(edge_index)) {
+			return false; // A second shared run, so the faces touch along more than one run of edges.
+		}
+		r_remainder.append(edge_index);
+	}
+	return true;
+}
+
+// Finds an orthonormal basis of the 2D plane a face lies in, from its first vertex and the two directions that
+// span it most robustly. Fails for a degenerate face whose vertices are all collinear within the tolerance.
+bool PolyMeshBuilderND::_get_face_plane_basis(const PackedInt32Array &p_vertex_loop, const Vector<VectorN> &p_positions, const double p_sin_tolerance, VectorN &r_origin, VectorN &r_basis_u, VectorN &r_basis_v) {
+	r_origin = p_positions[p_vertex_loop[0]];
+	// The first basis direction goes to the farthest vertex, and the second is the largest rejection from it.
+	double best_length_squared = 0.0;
+	for (int64_t i = 1; i < p_vertex_loop.size(); i++) {
+		const VectorN offset = VectorND::subtract(p_positions[p_vertex_loop[i]], r_origin);
+		const double length_squared = VectorND::length_squared(offset);
+		if (length_squared > best_length_squared) {
+			best_length_squared = length_squared;
+			r_basis_u = offset;
+		}
+	}
+	if (best_length_squared == 0.0) {
+		return false;
+	}
+	r_basis_u = VectorND::normalized(r_basis_u);
+	double best_rejection_ratio = p_sin_tolerance;
+	bool found_v = false;
+	for (int64_t i = 1; i < p_vertex_loop.size(); i++) {
+		const VectorN offset = VectorND::subtract(p_positions[p_vertex_loop[i]], r_origin);
+		const VectorN rejection = VectorND::subtract(offset, VectorND::multiply_scalar(r_basis_u, VectorND::dot(r_basis_u, offset)));
+		const double ratio = VectorND::length(rejection) / MAX(VectorND::length(offset), (double)CMP_EPSILON);
+		if (ratio > best_rejection_ratio) {
+			best_rejection_ratio = ratio;
+			r_basis_v = rejection;
+			found_v = true;
+		}
+	}
+	if (!found_v) {
+		return false;
+	}
+	r_basis_v = VectorND::normalized(r_basis_v);
+	return true;
+}
+
+// Checks whether two loop-ordered faces sharing a run of edges lie in the same plane and merge into one convex
+// face. If so, writes the merged face's edges, in loop order, without the shared edges.
+bool PolyMeshBuilderND::_try_merge_coplanar_face_pair(const PackedInt32Array &p_face_a_edges, const PackedInt32Array &p_face_b_edges, const PackedInt32Array &p_edge_vertex_indices, const Vector<VectorN> &p_positions, const double p_sin_tolerance, PackedInt32Array &r_merged_edges) {
+	// Coplanar means every vertex of B lies in A's plane, up to the angular tolerance relative to its distance.
+	const PackedInt32Array loop_a = _get_loop_face_vertices(p_face_a_edges, p_edge_vertex_indices);
+	const PackedInt32Array loop_b = _get_loop_face_vertices(p_face_b_edges, p_edge_vertex_indices);
+	VectorN origin, basis_u, basis_v;
+	if (loop_a.is_empty() || loop_b.is_empty() || !_get_face_plane_basis(loop_a, p_positions, p_sin_tolerance, origin, basis_u, basis_v)) {
+		return false;
+	}
+	for (const int32_t vertex_index : loop_b) {
+		const VectorN offset = VectorND::subtract(p_positions[vertex_index], origin);
+		const VectorN in_plane = VectorND::add(VectorND::multiply_scalar(basis_u, VectorND::dot(basis_u, offset)), VectorND::multiply_scalar(basis_v, VectorND::dot(basis_v, offset)));
+		if (VectorND::length(VectorND::subtract(offset, in_plane)) > p_sin_tolerance * VectorND::length(offset)) {
+			return false;
+		}
+	}
+	// Splice the two loops around their shared run: A's remaining edges followed by B's, which may need reversing
+	// to continue where A's end. The result must itself be a single simple loop, which rules out pinched shapes.
+	PackedInt32Array remainder_a, remainder_b;
+	if (!_rotate_out_shared_edges(p_face_a_edges, p_face_b_edges, remainder_a) || !_rotate_out_shared_edges(p_face_b_edges, p_face_a_edges, remainder_b)) {
+		return false;
+	}
+	PackedInt32Array merged_edges = remainder_a;
+	merged_edges.append_array(remainder_b);
+	PackedInt32Array merged_loop = _get_loop_face_vertices(merged_edges, p_edge_vertex_indices);
+	if (merged_loop.is_empty()) {
+		remainder_b.reverse();
+		merged_edges = remainder_a;
+		merged_edges.append_array(remainder_b);
+		merged_loop = _get_loop_face_vertices(merged_edges, p_edge_vertex_indices);
+		if (merged_loop.is_empty()) {
+			return false;
+		}
+	}
+	// The merged polygon must be convex, since faces are triangulated as fans from one of their vertices.
+	// Consecutive edges must all turn the same way in the plane, allowing straight continuations.
+	const int64_t loop_size = merged_loop.size();
+	double turn_sign = 0.0;
+	int64_t first_corner = -1;
+	for (int64_t i = 0; i < loop_size; i++) {
+		const VectorN previous = p_positions[merged_loop[(i + loop_size - 1) % loop_size]];
+		const VectorN current = p_positions[merged_loop[i]];
+		const VectorN next = p_positions[merged_loop[(i + 1) % loop_size]];
+		const VectorN edge_1 = VectorND::subtract(current, previous);
+		const VectorN edge_2 = VectorND::subtract(next, current);
+		const double edge_1_u = VectorND::dot(basis_u, edge_1);
+		const double edge_1_v = VectorND::dot(basis_v, edge_1);
+		const double edge_2_u = VectorND::dot(basis_u, edge_2);
+		const double edge_2_v = VectorND::dot(basis_v, edge_2);
+		const double cross = edge_1_u * edge_2_v - edge_1_v * edge_2_u;
+		const double edge_lengths = Math::sqrt((edge_1_u * edge_1_u + edge_1_v * edge_1_v) * (edge_2_u * edge_2_u + edge_2_v * edge_2_v));
+		if (Math::abs(cross) <= p_sin_tolerance * edge_lengths) {
+			continue; // Straight continuation.
+		}
+		if (turn_sign == 0.0) {
+			turn_sign = SIGN(cross);
+			first_corner = i;
+		} else if (SIGN(cross) != turn_sign) {
+			return false; // Concave corner.
+		}
+	}
+	if (first_corner == -1) {
+		return false; // Every vertex is a straight continuation, so the merged polygon is degenerate.
+	}
+	// Rotate the loop to start at the two edges meeting at a real corner, since the face's canonical span is
+	// taken from its first two edges, and a straight continuation would make that span degenerate.
+	r_merged_edges.clear();
+	for (int64_t i = 0; i < loop_size; i++) {
+		r_merged_edges.append(merged_edges[(first_corner + i) % loop_size]);
+	}
+	return true;
+}
+
+// Merging faces changes the edge and face lists, and therefore the sub-elements of everything above them. Per-vertex
+// bindings, and bindings of higher cells to their cells, are keyed by elements the merge leaves in place.
+bool PolyMeshBuilderND::_is_binding_affected_by_face_merge(const Vector2i &p_key) {
+	return p_key.x == 1 || p_key.x == 2 || (p_key.x >= 3 && p_key.y <= 2);
+}
+
+// Rebuilds one binding of value indices after faces were merged. Each new element takes the values of its
+// sub-elements from the old elements behind it (`p_element_sources`, or each element itself when empty), matched
+// by sub-element identity after the old sub-element indices are translated through `p_sub_element_old_to_new`
+// (empty when that dimension did not change). A new element whose sub-elements cannot all be matched, such as
+// one whose sources had no data, gets an empty entry, meaning missing data. Flat bindings take the value of each
+// new element's first source.
+Vector<PackedInt32Array> PolyMeshBuilderND::_remap_binding_after_face_merge(const Vector2i &p_key, const Vector<PackedInt32Array> &p_old_binding, const Vector<PackedInt32Array> &p_element_sources, const Vector<PackedInt32Array> &p_old_sub_elements, const Vector<PackedInt32Array> &p_new_sub_elements, const PackedInt32Array &p_sub_element_old_to_new) {
+	Vector<PackedInt32Array> ret;
+	if (p_key.x == p_key.y) {
+		ERR_FAIL_COND_V(p_old_binding.size() != 1 || p_element_sources.is_empty(), ret);
+		const PackedInt32Array &old_flat = p_old_binding[0];
+		PackedInt32Array new_flat;
+		for (int64_t i = 0; i < p_element_sources.size(); i++) {
+			const int32_t source = p_element_sources[i][0];
+			if (source >= old_flat.size()) {
+				break; // Flat bindings may be shorter than the element count, so the new one stops where the data does.
+			}
+			new_flat.append(old_flat[source]);
+		}
+		ret.append(new_flat);
+		return ret;
+	}
+	const int64_t new_count = p_new_sub_elements.size();
+	ERR_FAIL_COND_V(!p_element_sources.is_empty() && p_element_sources.size() != new_count, ret);
+	ret.resize(new_count);
+	for (int64_t i = 0; i < new_count; i++) {
+		// Concatenate the sources' sub-elements and values into two parallel arrays, so one lookup covers them all.
+		PackedInt32Array old_keys;
+		PackedInt32Array old_values;
+		const PackedInt32Array sources = p_element_sources.is_empty() ? PackedInt32Array{ (int32_t)i } : p_element_sources[i];
+		for (const int32_t source : sources) {
+			if (source >= p_old_binding.size() || source >= p_old_sub_elements.size() || p_old_binding[source].size() != p_old_sub_elements[source].size()) {
+				continue; // This source has no data, or malformed data.
+			}
+			old_keys.append_array(p_sub_element_old_to_new.is_empty() ? p_old_sub_elements[source] : MathND::remap_int32_array(p_old_sub_elements[source], p_sub_element_old_to_new));
+			old_values.append_array(p_old_binding[source]);
+		}
+		const PackedInt32Array new_values = MathND::remap_int32s_by_matching_keys(old_keys, p_new_sub_elements[i], old_values);
+		if (!new_values.has(-1)) {
+			ret.set(i, new_values);
+		}
+	}
+	return ret;
+}
+
+int64_t PolyMeshBuilderND::merge_coplanar_faces(const Ref<ArrayPolyMeshND> &p_mesh_nd, const double p_angle_tolerance_radians) {
+	ERR_FAIL_COND_V_MSG(p_mesh_nd.is_null() || !p_mesh_nd->is_mesh_data_valid(), 0, "PolyMeshBuilderND: Cannot merge the coplanar faces of an invalid mesh.");
+	Vector<Vector<PackedInt32Array>> poly_cell_indices = p_mesh_nd->get_poly_cell_indices();
+	if (poly_cell_indices.is_empty()) {
+		return 0;
+	}
+	const int dimension = p_mesh_nd->get_dimension();
+	// For 3D meshes, the faces are the boundary cells themselves, so their orientation, boundary normals, pivot
+	// overrides, and seams (which are edges) follow the merge. For higher dimensions, the faces are members of
+	// other cells, like in 4D, and only the boundary cells above them need their orientation restored.
+	const int64_t boundary_dim_index = int64_t(dimension) - 3;
+	const bool faces_are_boundary_cells = boundary_dim_index == 0;
+	const bool has_boundary_cells = boundary_dim_index >= 0 && poly_cell_indices.size() > boundary_dim_index;
+	const PackedInt32Array edge_vertex_indices = p_mesh_nd->get_edge_indices();
+	const int64_t edge_count = edge_vertex_indices.size() / 2;
+	// Positions may be stored with fewer components than the mesh dimension, so expand them for the plane math.
+	Vector<VectorN> positions = p_mesh_nd->get_poly_cell_vertex_positions();
+	for (int64_t i = 0; i < positions.size(); i++) {
+		positions.set(i, VectorND::with_dimension(positions[i], dimension));
+	}
+	const double sin_tolerance = Math::sin(p_angle_tolerance_radians);
+	Vector<PackedInt32Array> faces = poly_cell_indices[0];
+	const int64_t old_face_count = faces.size();
+	const bool has_cells = poly_cell_indices.size() > 1;
+	// Mesh validation only warns about faces whose edges are not stored in loop order, but merging relies on it.
+	for (int64_t face_index = 0; face_index < old_face_count; face_index++) {
+		ERR_FAIL_COND_V_MSG(_get_loop_face_vertices(faces[face_index], edge_vertex_indices).is_empty(), 0, "PolyMeshBuilderND: Cannot merge coplanar faces because the edges of face " + itos(face_index) + " are not stored as a single closed loop.");
+	}
+	// Snapshot everything that the merge invalidates: the bindings as value indices, along with the sub-elements
+	// each entry is listed by, the seams, the pivot overrides, and the boundary normals, which restore the boundary
+	// cells' orientation at the end.
+	Vector<VectorN> old_boundary_normals;
+	if (has_boundary_cells) {
+		if (p_mesh_nd->get_poly_cell_boundary_normals().size() != poly_cell_indices[boundary_dim_index].size()) {
+			p_mesh_nd->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
+		}
+		old_boundary_normals = p_mesh_nd->get_poly_cell_boundary_normals();
+	}
+	const PackedInt32Array old_pivot_overrides = p_mesh_nd->get_poly_cell_boundary_pivot_overrides();
+	const HashMap<Vector2i, Vector<PackedInt32Array>> old_normal_indices = p_mesh_nd->get_all_poly_cell_normal_indices();
+	const HashMap<Vector2i, Vector<PackedInt32Array>> old_texture_map_indices = p_mesh_nd->get_all_poly_cell_texture_map_indices();
+	HashMap<Vector2i, Vector<PackedInt32Array>> old_sub_elements;
+	for (const HashMap<Vector2i, Vector<PackedInt32Array>> *old_bindings : { &old_normal_indices, &old_texture_map_indices }) {
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : *old_bindings) {
+			if (_is_binding_affected_by_face_merge(kv.key) && kv.key.y < kv.key.x && !old_sub_elements.has(kv.key)) {
+				old_sub_elements.insert(kv.key, p_mesh_nd->get_all_poly_cell_poly_indices(kv.key.x, kv.key.y));
+			}
+		}
+	}
+	const HashSet<int32_t> old_seams = p_mesh_nd->get_seam_indices();
+	// Merge greedily, one adjacent coplanar pair at a time, until no pair is left. Each surviving face remembers
+	// which original faces it absorbed, for resampling the bindings at the end.
+	Vector<PackedInt32Array> face_sources;
+	face_sources.resize(old_face_count);
+	Vector<bool> face_alive;
+	face_alive.resize(old_face_count);
+	for (int64_t face_index = 0; face_index < old_face_count; face_index++) {
+		face_sources.set(face_index, PackedInt32Array{ (int32_t)face_index });
+		face_alive.write[face_index] = true;
+	}
+	// The faces using each edge, kept up to date as faces merge, so that a merged face can merge again in the same
+	// pass. The passes repeat until one of them merges nothing.
+	Vector<PackedInt32Array> edge_faces;
+	edge_faces.resize(edge_count);
+	for (int64_t face_index = 0; face_index < old_face_count; face_index++) {
+		for (const int32_t edge_index : faces[face_index]) {
+			edge_faces.write[edge_index].append((int32_t)face_index);
+		}
+	}
+	int64_t merge_count = 0;
+	bool merged_any = true;
+	while (merged_any) {
+		merged_any = false;
+		for (int64_t edge_index = 0; edge_index < edge_count; edge_index++) {
+			if (edge_faces[edge_index].size() != 2) {
+				continue; // Only an edge shared by exactly two faces can join them.
+			}
+			const int32_t face_a = edge_faces[edge_index][0];
+			const int32_t face_b = edge_faces[edge_index][1];
+			if (faces_are_boundary_cells) {
+				// For 3D meshes, a seam edge borders a texture island, so faces are not merged across it. Faces that
+				// face opposite ways cannot share one boundary normal, so they are not merged either.
+				if (old_seams.has((int32_t)edge_index)) {
+					continue;
+				}
+				if (VectorND::dot(old_boundary_normals[face_sources[face_a][0]], old_boundary_normals[face_sources[face_b][0]]) <= 0.0) {
+					continue;
+				}
+			}
+			PackedInt32Array merged_edges;
+			if (!_try_merge_coplanar_face_pair(faces[face_a], faces[face_b], edge_vertex_indices, positions, sin_tolerance, merged_edges)) {
+				continue;
+			}
+			// B's edges now belong to A, except the shared ones, which are interior to the merged face and unused.
+			for (const int32_t b_edge_index : faces[face_b]) {
+				PackedInt32Array &b_edge_faces = edge_faces.write[b_edge_index];
+				if (merged_edges.has(b_edge_index)) {
+					b_edge_faces.set(b_edge_faces.find(face_b), face_a);
+				} else {
+					b_edge_faces.clear();
+				}
+			}
+			faces.set(face_a, merged_edges);
+			faces.set(face_b, PackedInt32Array());
+			face_alive.write[face_b] = false;
+			face_sources.write[face_a].append_array(face_sources[face_b]);
+			merge_count++;
+			merged_any = true;
+		}
+	}
+	if (merge_count == 0) {
+		return 0;
+	}
+	// Compact the surviving faces and map every original face to its new index.
+	PackedInt32Array old_to_new_face;
+	old_to_new_face.resize(old_face_count);
+	Vector<PackedInt32Array> new_faces;
+	Vector<PackedInt32Array> new_face_sources;
+	for (int64_t face_index = 0; face_index < old_face_count; face_index++) {
+		if (!face_alive[face_index]) {
+			continue;
+		}
+		const int32_t new_index = (int32_t)new_faces.size();
+		new_faces.append(faces[face_index]);
+		new_face_sources.append(face_sources[face_index]);
+		for (const int32_t source : face_sources[face_index]) {
+			old_to_new_face.set(source, new_index);
+		}
+	}
+	// Compact the edges, dropping those that were interior to merged faces, and point the faces at the new indices.
+	PackedInt32Array old_to_new_edge;
+	old_to_new_edge.resize(edge_count);
+	old_to_new_edge.fill(-1);
+	PackedInt32Array new_edge_vertex_indices;
+	Vector<PackedInt32Array> edge_sources;
+	for (int64_t edge_index = 0; edge_index < edge_count; edge_index++) {
+		if (edge_faces[edge_index].is_empty()) {
+			continue; // No face uses this edge anymore.
+		}
+		old_to_new_edge.set(edge_index, (int32_t)edge_sources.size());
+		edge_sources.append(PackedInt32Array{ (int32_t)edge_index });
+		new_edge_vertex_indices.append(edge_vertex_indices[edge_index * 2]);
+		new_edge_vertex_indices.append(edge_vertex_indices[edge_index * 2 + 1]);
+	}
+	MathND::remap_int32_arrays(new_faces, old_to_new_edge, false);
+	poly_cell_indices.set(0, new_faces);
+	// Cells now reference the merged faces, once each, and still need their first two faces to share an edge.
+	if (has_cells) {
+		Vector<PackedInt32Array> cells = poly_cell_indices[1];
+		MathND::remap_int32_arrays(cells, old_to_new_face, true);
+		for (int64_t cell_index = 0; cell_index < cells.size(); cell_index++) {
+			if (cells[cell_index].size() >= 2) {
+				MathND::ensure_first_two_indices_share_common_int32(cells.write[cell_index], new_faces);
+			}
+		}
+		poly_cell_indices.set(1, cells);
+	}
+	// Every new element lists the old elements it came from: a merged face has several, edges have one, and cells
+	// above the faces are left empty, meaning each is its own source. Sub-element indices are translated per
+	// dimension, where vertices and cells keep their indices.
+	Vector<Vector<PackedInt32Array>> element_sources_by_dimension;
+	element_sources_by_dimension.resize(dimension + 1);
+	element_sources_by_dimension.set(1, edge_sources);
+	element_sources_by_dimension.set(2, new_face_sources);
+	Vector<PackedInt32Array> sub_element_old_to_new_by_dimension;
+	sub_element_old_to_new_by_dimension.resize(dimension + 1);
+	sub_element_old_to_new_by_dimension.set(1, old_to_new_edge);
+	sub_element_old_to_new_by_dimension.set(2, old_to_new_face);
+	// Remove every binding that the new topology invalidates before changing it, so the mesh stays valid in between.
+	const HashMap<Vector2i, Vector<PackedInt32Array>> *old_bindings_by_type[2] = { &old_normal_indices, &old_texture_map_indices };
+	HashMap<Vector2i, Vector<PackedInt32Array>> new_normal_indices;
+	HashMap<Vector2i, Vector<PackedInt32Array>> new_texture_map_indices;
+	HashMap<Vector2i, Vector<PackedInt32Array>> *new_bindings_by_type[2] = { &new_normal_indices, &new_texture_map_indices };
+	for (int which_binding = 0; which_binding < 2; which_binding++) {
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : *old_bindings_by_type[which_binding]) {
+			if (!_is_binding_affected_by_face_merge(kv.key)) {
+				new_bindings_by_type[which_binding]->insert(kv.key, kv.value);
+			}
+		}
+	}
+	p_mesh_nd->set_all_poly_cell_normal_indices(new_normal_indices);
+	p_mesh_nd->set_all_poly_cell_texture_map_indices(new_texture_map_indices);
+	if (faces_are_boundary_cells) {
+		p_mesh_nd->set_poly_cell_boundary_pivot_overrides(PackedInt32Array());
+	}
+	p_mesh_nd->set_edge_vertex_indices(new_edge_vertex_indices);
+	p_mesh_nd->set_poly_cell_indices(poly_cell_indices);
+	// For 3D meshes, each merged face keeps the pivot override of its first source, if that vertex is still in it.
+	if (faces_are_boundary_cells && !old_pivot_overrides.is_empty()) {
+		PackedInt32Array new_pivot_overrides;
+		new_pivot_overrides.resize(new_faces.size());
+		for (int64_t face_index = 0; face_index < new_faces.size(); face_index++) {
+			const int32_t source = new_face_sources[face_index][0];
+			const int32_t pivot = source < old_pivot_overrides.size() ? old_pivot_overrides[source] : -1;
+			const bool pivot_in_face = pivot >= 0 && _get_loop_face_vertices(new_faces[face_index], new_edge_vertex_indices).has(pivot);
+			new_pivot_overrides.set(face_index, pivot_in_face ? pivot : -1);
+		}
+		p_mesh_nd->set_poly_cell_boundary_pivot_overrides(new_pivot_overrides);
+	}
+	ERR_FAIL_COND_V_MSG(!p_mesh_nd->is_mesh_data_valid(), merge_count, "PolyMeshBuilderND: Merging coplanar faces left the mesh invalid.");
+	// Merging or reordering may have flipped the orientation of the boundary cells. Restore it before reading the new
+	// sub-element orders, so that the bindings are rebuilt against the final topology. For 3D meshes, each merged face
+	// takes the boundary normal of its first source, which all of its sources share.
+	if (has_boundary_cells) {
+		Vector<VectorN> desired_boundary_normals;
+		if (faces_are_boundary_cells) {
+			desired_boundary_normals.resize(new_faces.size());
+			for (int64_t face_index = 0; face_index < new_faces.size(); face_index++) {
+				desired_boundary_normals.set(face_index, old_boundary_normals[new_face_sources[face_index][0]]);
+			}
+		} else if (old_boundary_normals.size() == poly_cell_indices[boundary_dim_index].size()) {
+			desired_boundary_normals = old_boundary_normals;
+		}
+		if (!desired_boundary_normals.is_empty()) {
+			p_mesh_nd->orient_cells_to_boundary_normals(desired_boundary_normals);
+		}
+	}
+	// Rebuild the affected bindings on the merged topology, on top of whatever the mesh holds now.
+	new_normal_indices = p_mesh_nd->get_all_poly_cell_normal_indices();
+	new_texture_map_indices = p_mesh_nd->get_all_poly_cell_texture_map_indices();
+	for (int which_binding = 0; which_binding < 2; which_binding++) {
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : *old_bindings_by_type[which_binding]) {
+			if (!_is_binding_affected_by_face_merge(kv.key)) {
+				continue;
+			}
+			ERR_CONTINUE_MSG(kv.key.x > dimension || kv.key.y > dimension, "PolyMeshBuilderND: Invalid data binding key " + String(Variant(kv.key)) + ". Discarding it.");
+			const Vector<PackedInt32Array> new_sub_elements = kv.key.y < kv.key.x ? p_mesh_nd->get_all_poly_cell_poly_indices(kv.key.x, kv.key.y) : Vector<PackedInt32Array>();
+			const Vector<PackedInt32Array> *old_subs = old_sub_elements.getptr(kv.key);
+			new_bindings_by_type[which_binding]->insert(kv.key, _remap_binding_after_face_merge(kv.key, kv.value, element_sources_by_dimension[kv.key.x], old_subs != nullptr ? *old_subs : Vector<PackedInt32Array>(), new_sub_elements, sub_element_old_to_new_by_dimension[kv.key.y]));
+		}
+	}
+	p_mesh_nd->set_all_poly_cell_normal_indices(new_normal_indices);
+	p_mesh_nd->set_all_poly_cell_texture_map_indices(new_texture_map_indices);
+	// Seams are the members of the boundary cells: edges for 3D meshes, and faces for 4D meshes. Seam edges are never
+	// interior to a merged face, since faces are not merged across them. Higher dimensional seams are unaffected.
+	if (faces_are_boundary_cells) {
+		p_mesh_nd->set_seam_indices(MathND::remap_int32_set(old_seams, old_to_new_edge));
+	} else if (boundary_dim_index == 1) {
+		p_mesh_nd->set_seam_indices(MathND::remap_int32_set(old_seams, old_to_new_face));
+	}
+	ERR_FAIL_COND_V_MSG(!p_mesh_nd->is_mesh_data_valid(), merge_count, "PolyMeshBuilderND: Merging coplanar faces left the mesh's data bindings invalid.");
+	return merge_count;
+}
 
 void PolyMeshBuilderND::make_boundary_normals_topologically_consistent(const Ref<ArrayPolyMeshND> &p_mesh_nd, const PackedInt32Array &p_authoritative) {
 	// TODO: This function relies on averages and pivot overrides, which breaks in non-convex edge cases.
@@ -1568,5 +2027,6 @@ void PolyMeshBuilderND::_bind_methods() {
 	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("extrude_linear", "input_mesh", "extrusion_vector"), &PolyMeshBuilderND::extrude_linear, DEFVAL(VectorN()));
 	// In-place adjustments to the given mesh.
 	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("make_boundary_normals_topologically_consistent", "mesh_nd", "authoritative_boundary_cells"), &PolyMeshBuilderND::make_boundary_normals_topologically_consistent);
+	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("merge_coplanar_faces", "mesh_nd", "angle_tolerance_radians"), &PolyMeshBuilderND::merge_coplanar_faces, DEFVAL(0.001));
 	ClassDB::bind_static_method("PolyMeshBuilderND", D_METHOD("subdivide_elements", "input_mesh", "dimension", "elements"), &PolyMeshBuilderND::subdivide_elements, DEFVAL(PackedInt32Array()));
 }
