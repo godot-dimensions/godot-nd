@@ -465,6 +465,18 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 				_sample_corner_values(all_cell_vert[cell_index], copy_cells, all_input_level_vert, input_level_vert_normals, CORNER_SAMPLE_FIRST_FOUND, per_cell_normals[cell_index], cell_vert_normals);
 				cell_to_vert_normals.set(cell_index, cell_vert_normals);
 			}
+			// The input's own cells, copied as the two caps, have no vertex normals when the input had none for them,
+			// so they take their boundary normal at every vertex, which keeps the binding complete for rendering.
+			for (int64_t cell_index = 0; cell_index < cell_to_vert_normals.size() && cell_index < per_cell_normals.size(); cell_index++) {
+				if (cell_to_vert_normals[cell_index].is_empty()) {
+					Vector<VectorN> flat_normals;
+					flat_normals.resize(all_cell_vert[cell_index].size());
+					for (int64_t vert_in_cell = 0; vert_in_cell < flat_normals.size(); vert_in_cell++) {
+						flat_normals.set(vert_in_cell, per_cell_normals[cell_index]);
+					}
+					cell_to_vert_normals.set(cell_index, flat_normals);
+				}
+			}
 			all_poly_cell_normals.insert(output_cell_to_vert_key, cell_to_vert_normals);
 			ret->set_poly_cell_dense_normals(output_cell_to_vert_key, cell_to_vert_normals);
 		}

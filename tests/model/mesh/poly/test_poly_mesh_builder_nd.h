@@ -325,6 +325,55 @@ TEST_CASE("[SceneTree][PolyMeshBuilderND] Extrude linear carries corner data int
 	}
 }
 
+TEST_CASE("[PolyMeshBuilderND] Extrude linear gives the caps flat vertex normals") {
+	// A solid cube whose faces have corner normals but whose volume has none. Extruding it into 4D sweeps each face
+	// into a boundary cell, which takes its vertex normals from the face, and copies the volume into the two caps,
+	// which must take their boundary normal at every vertex, so that rendering does not fall back to zero normals.
+	Ref<BoxPolyMeshND> box;
+	box.instantiate();
+	box->set_size(VectorND::fill(3, 2.0));
+	Ref<ArrayPolyMeshND> cube = box->to_array_poly_mesh();
+	REQUIRE(cube->get_poly_cell_indices().size() == 2);
+	{
+		const Vector<VectorN> face_normals = cube->get_poly_cell_boundary_normals();
+		const Vector<PackedInt32Array> face_vertices = cube->get_all_poly_cell_vertex_indices(2, false);
+		REQUIRE(face_normals.size() == face_vertices.size());
+		Vector<Vector<VectorN>> corner_normals;
+		for (int64_t face_index = 0; face_index < face_vertices.size(); face_index++) {
+			Vector<VectorN> face_corner_normals;
+			for (int64_t corner = 0; corner < face_vertices[face_index].size(); corner++) {
+				face_corner_normals.append(face_normals[face_index]);
+			}
+			corner_normals.append(face_corner_normals);
+		}
+		cube->set_poly_cell_dense_normals(Vector2i(2, 0), corner_normals);
+	}
+	REQUIRE(cube->is_mesh_data_valid());
+	REQUIRE(cube->get_poly_cell_dense_normals(Vector2i(3, 0)).is_empty());
+	Ref<ArrayPolyMeshND> extruded = PolyMeshBuilderND::extrude_linear(cube);
+	REQUIRE(extruded->is_mesh_data_valid());
+	REQUIRE(extruded->get_dimension() == 4);
+	const Vector<Vector<VectorN>> cell_normals = extruded->get_poly_cell_dense_normals(Vector2i(3, 0));
+	const Vector<VectorN> boundary_normals = extruded->get_poly_cell_boundary_normals();
+	const Vector<PackedInt32Array> cell_vertices = extruded->get_all_poly_cell_vertex_indices(3, false);
+	REQUIRE_MESSAGE(cell_vertices.size() == 8, "Extruding a cube gives a tesseract with 8 boundary cells.");
+	REQUIRE(cell_normals.size() == 8);
+	REQUIRE(boundary_normals.size() == 8);
+	int64_t cap_count = 0;
+	for (int64_t cell_index = 0; cell_index < 8; cell_index++) {
+		CHECK_MESSAGE(cell_normals[cell_index].size() == cell_vertices[cell_index].size(), "Every extruded cell, caps included, must have a vertex normal for each of its vertices.");
+		// The caps are the two copies of the cube's volume, whose normals are along the new axis, and they are flat.
+		const VectorN boundary_normal = VectorND::with_dimension(boundary_normals[cell_index], 4);
+		if (Math::is_equal_approx(Math::abs(boundary_normal[3]), 1.0)) {
+			cap_count++;
+			for (const VectorN &normal : cell_normals[cell_index]) {
+				CHECK(VectorND::is_equal_approx(VectorND::with_dimension(normal, 4), boundary_normal));
+			}
+		}
+	}
+	CHECK(cap_count == 2);
+}
+
 TEST_CASE("[PolyMeshBuilderND] Subdivide box boundary cells") {
 	for (int dimension = 3; dimension <= 4; dimension++) {
 		Ref<BoxPolyMeshND> box;
