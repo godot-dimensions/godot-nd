@@ -1201,21 +1201,23 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 		// For the first cell in the island, there is nothing to "build on", so project the cell
 		// isometrically onto its own hyperplane, using an orthonormal basis of the cell's spans.
 		const VectorN base = _poly_cell_vertex_positions[cell_vertex_list[0]];
+		// A direction only counts when it leaves the span of the others by more than a tiny fraction of the cell's
+		// size, so that a cell that is flat compared to its size reads as degenerate, whatever its absolute size.
+		const double tolerance = _get_max_distance_from_vertex(_poly_cell_vertex_positions, cell_vertex_list, cell_vertex_list[0]) * (double)CMP_EPSILON;
 		Vector<VectorN> ortho_dirs;
 		for (int64_t i = 1; i < cell_vertex_list.size(); i++) {
 			if (ortho_dirs.size() >= texture_dimension) {
 				break;
 			}
 			VectorN direction = VectorND::subtract(_poly_cell_vertex_positions[cell_vertex_list[i]], base);
-			const double original_length = VectorND::length(direction);
-			if (Math::is_zero_approx(original_length)) {
+			if (VectorND::length(direction) <= tolerance) {
 				continue;
 			}
 			for (int64_t ortho_index = 0; ortho_index < ortho_dirs.size(); ortho_index++) {
 				direction = VectorND::subtract(direction, VectorND::multiply_scalar(ortho_dirs[ortho_index], VectorND::dot(ortho_dirs[ortho_index], direction)));
 			}
 			const double residual_length = VectorND::length(direction);
-			if (residual_length < original_length * (double)CMP_EPSILON) {
+			if (residual_length <= tolerance) {
 				continue;
 			}
 			ortho_dirs.append(VectorND::divide_scalar(direction, residual_length));
@@ -1266,15 +1268,6 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 		}
 		const int32_t base_vertex = member_vertices[0];
 		const VectorN base = _poly_cell_vertex_positions[base_vertex];
-		// Find a vertex of this cell that is not on the shared member, to unfold away from it.
-		int32_t off_member_vertex = -1;
-		for (const int32_t cell_vertex : cell_vertex_list) {
-			if (!member_vertices.has(cell_vertex)) {
-				off_member_vertex = cell_vertex;
-				break;
-			}
-		}
-		ERR_FAIL_COND_V_MSG(off_member_vertex == -1, false, "ArrayPolyMeshND: Cell is degenerate.");
 		// Build the world-space spans: N-2 directions along the shared member, plus one
 		// direction perpendicular to the member within the cell's hyperplane.
 		Vector<VectorN> world_spans;
@@ -1288,15 +1281,27 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 			}
 			member_ortho_dirs.append(VectorND::normalized(span));
 		}
-		const VectorN off_member_offset = VectorND::subtract(_poly_cell_vertex_positions[off_member_vertex], base);
-		VectorN world_perp = off_member_offset;
-		for (int64_t ortho_index = 0; ortho_index < member_ortho_dirs.size(); ortho_index++) {
-			world_perp = VectorND::subtract(world_perp, VectorND::multiply_scalar(member_ortho_dirs[ortho_index], VectorND::dot(member_ortho_dirs[ortho_index], world_perp)));
+		// Unfold away from the vertex of this cell that is farthest from the shared member. If even that one does not
+		// leave it by more than a tiny fraction of the cell's size, the cell is flat, whatever its absolute size. Taking
+		// the farthest one makes this independent of the order of the vertices.
+		VectorN world_perp;
+		double world_perp_length = 0.0;
+		for (const int32_t cell_vertex : cell_vertex_list) {
+			if (member_vertices.has(cell_vertex)) {
+				continue;
+			}
+			VectorN candidate_perp = VectorND::subtract(_poly_cell_vertex_positions[cell_vertex], base);
+			for (int64_t ortho_index = 0; ortho_index < member_ortho_dirs.size(); ortho_index++) {
+				candidate_perp = VectorND::subtract(candidate_perp, VectorND::multiply_scalar(member_ortho_dirs[ortho_index], VectorND::dot(member_ortho_dirs[ortho_index], candidate_perp)));
+			}
+			const double candidate_length = VectorND::length(candidate_perp);
+			if (candidate_length > world_perp_length) {
+				world_perp = candidate_perp;
+				world_perp_length = candidate_length;
+			}
 		}
-		const double world_perp_length = VectorND::length(world_perp);
-		// The off-member vertex has to leave the shared member, else the cell is flat. This is judged relative to that
-		// vertex's own distance, so that a small cell is judged by its shape rather than by its size.
-		ERR_FAIL_COND_V_MSG(world_perp_length <= VectorND::length(off_member_offset) * (double)CMP_EPSILON, false, "ArrayPolyMeshND: Cell is degenerate.");
+		const double cell_extent = _get_max_distance_from_vertex(_poly_cell_vertex_positions, cell_vertex_list, base_vertex);
+		ERR_FAIL_COND_V_MSG(world_perp_length <= cell_extent * (double)CMP_EPSILON, false, "ArrayPolyMeshND: Cell is degenerate.");
 		world_spans.set(rank, world_perp);
 		// Build the texture-space spans from the neighbor's existing texture coordinates.
 		const int64_t base_position_in_mapped = already_mapped_cell_verts.find(base_vertex);
@@ -1319,17 +1324,28 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 			continue;
 		}
 		// The unfold direction is perpendicular to the member's texture spans, isometric in
-		// length, and points away from the already mapped cell.
-		VectorM tex_perp = VectorND::perpendicular(tex_spans);
-		const double tex_perp_length = VectorND::length(tex_perp);
-		// The perpendicular is made of determinants of the N-2 texture spans, so its length is the (N-2)-volume they
-		// span, which scales with the (N-2)th power of the cell size. Judge it relative to the product of the span
-		// lengths, which bounds that volume and scales the same way, or every small cell would read as degenerate.
-		double tex_span_length_product = 1.0;
+		// length, and points away from the already mapped cell. The perpendicular is made of
+		// determinants of the N-2 texture spans, so its length is the (N-2)-volume they span.
+		// Compute it on spans divided by the longest one, so that it can neither underflow nor
+		// overflow in high dimensions, and judge it relative to the product of their lengths,
+		// which bounds that volume, so that only the shape of the spans matters and not their size.
+		double longest_tex_span_length = 0.0;
 		for (const VectorM &tex_span : tex_spans) {
-			tex_span_length_product *= VectorND::length(tex_span);
+			longest_tex_span_length = MAX(longest_tex_span_length, VectorND::length(tex_span));
 		}
-		if (tex_perp_length <= tex_span_length_product * (double)CMP_EPSILON) {
+		if (longest_tex_span_length <= 0.0) {
+			continue; // The neighbor's mapping of the shared member is degenerate.
+		}
+		Vector<VectorM> scaled_tex_spans;
+		double scaled_tex_span_length_product = 1.0;
+		for (const VectorM &tex_span : tex_spans) {
+			const VectorM scaled_tex_span = VectorND::divide_scalar(tex_span, longest_tex_span_length);
+			scaled_tex_spans.append(scaled_tex_span);
+			scaled_tex_span_length_product *= VectorND::length(scaled_tex_span);
+		}
+		VectorM tex_perp = VectorND::perpendicular(scaled_tex_spans);
+		const double tex_perp_length = VectorND::length(tex_perp);
+		if (tex_perp_length <= scaled_tex_span_length_product * (double)CMP_EPSILON) {
 			continue; // The neighbor's mapping of the shared member is degenerate.
 		}
 		tex_perp = VectorND::multiply_scalar(tex_perp, world_perp_length / tex_perp_length);
@@ -1488,10 +1504,16 @@ void ArrayPolyMeshND::_fit_island_texture_map_into_box(const PackedInt32Array &p
 			}
 		}
 	}
+	// An axis along which the island is flat, relative to the island's own size, keeps its scale.
+	double longest_size = 0.0;
+	for (int64_t axis = 0; axis < texture_dimension; axis++) {
+		longest_size = MAX(longest_size, maximum[axis] - minimum[axis]);
+	}
+	const double flat_size = longest_size * (double)CMP_EPSILON2;
 	VectorM scale = VectorND::fill(texture_dimension, 1.0);
 	for (int64_t axis = 0; axis < texture_dimension; axis++) {
 		const double current_size = maximum[axis] - minimum[axis];
-		scale.set(axis, current_size < (double)CMP_EPSILON2 ? 1.0 : p_target_size[axis] / current_size);
+		scale.set(axis, current_size <= flat_size ? 1.0 : p_target_size[axis] / current_size);
 	}
 	if (p_proportional) {
 		double min_scale = scale[0];

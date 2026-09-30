@@ -413,6 +413,98 @@ TEST_CASE("[ArrayPolyMeshND] Unwrap texture map") {
 		}
 	}
 
+	SUBCASE("Cells unwrap the same at any scale") {
+		// The degeneracy checks are judged relative to each cell's own size, so neither tiny nor huge cells may read
+		// as degenerate, and neither may run into underflow or overflow while being judged, in any dimension.
+		for (int dimension = 3; dimension <= 8; dimension++) {
+			CAPTURE(dimension);
+			for (const double scale : { 1e-7, 1.0, 1e7 }) {
+				CAPTURE(scale);
+				for (const ArrayPolyMeshND::UnwrapTextureMapMode mode : { ArrayPolyMeshND::UNWRAP_MODE_TILE_CELLS, ArrayPolyMeshND::UNWRAP_MODE_TILE_ISLANDS }) {
+					CAPTURE(mode);
+					Ref<BoxPolyMeshND> box;
+					box.instantiate();
+					box->set_size(VectorND::fill(dimension, scale));
+					Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
+					mesh->unwrap_texture_map(mode);
+					const Vector<Vector<VectorM>> texture_map = mesh->get_poly_cell_dense_texture_map(Vector2i(dimension - 1, 0));
+					const Vector<PackedInt32Array> cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+					REQUIRE(texture_map.size() == 2 * dimension);
+					for (int64_t cell_index = 0; cell_index < texture_map.size(); cell_index++) {
+						REQUIRE_MESSAGE(texture_map[cell_index].size() == cell_vertices[cell_index].size(), "Every cell of the box must be mapped.");
+						for (const VectorM &texcoord : texture_map[cell_index]) {
+							REQUIRE(texcoord.size() == dimension - 1);
+							for (int64_t axis = 0; axis < dimension - 1; axis++) {
+								CHECK(texcoord[axis] >= -0.001);
+								CHECK(texcoord[axis] <= 1.001);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	SUBCASE("Degenerate cells are not unwrapped at any scale") {
+		// Three ways to flatten some of the cells of a box. Mapping the last axis onto twice the first keeps every
+		// vertex distinct, but flattens the cells that span both of those axes. Scaling what is left of the last axis
+		// by a tiny amount instead makes those cells flat relative to their own size. Scaling the last axis by a tiny
+		// amount without mapping it makes a thin slab, whose cells along that axis have one vertex offset straight
+		// along the thin direction, so the flatness must be judged relative to the cell and not to any one vertex.
+		struct Flattening {
+			double shear;
+			double thickness;
+		};
+		for (const Flattening flattening : { Flattening{ 2.0, 0.0 }, Flattening{ 2.0, 1e-9 }, Flattening{ 0.0, 1e-9 } }) {
+			CAPTURE(flattening.shear);
+			CAPTURE(flattening.thickness);
+			for (int dimension = 3; dimension <= 5; dimension++) {
+				CAPTURE(dimension);
+				for (const double scale : { 1e-7, 1.0, 1e7 }) {
+					CAPTURE(scale);
+					for (const ArrayPolyMeshND::UnwrapTextureMapMode mode : { ArrayPolyMeshND::UNWRAP_MODE_TILE_CELLS, ArrayPolyMeshND::UNWRAP_MODE_TILE_ISLANDS }) {
+						CAPTURE(mode);
+						Ref<BoxPolyMeshND> box;
+						box.instantiate();
+						box->set_size(VectorND::fill(dimension, scale));
+						Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
+						const int64_t last_axis = dimension - 1;
+						// A cell is flattened when its boundary normal is not along the last axis, since it then spans that
+						// axis, and when sheared, also not along the first axis, since only then does it span both.
+						const Vector<VectorN> box_normals = mesh->get_poly_cell_boundary_normals();
+						REQUIRE(box_normals.size() == 2 * dimension);
+						Vector<VectorN> positions = mesh->get_poly_cell_vertex_positions();
+						for (int64_t i = 0; i < positions.size(); i++) {
+							VectorN position = VectorND::with_dimension(positions[i], dimension);
+							position.set(0, position[0] + flattening.shear * position[last_axis]);
+							position.set(last_axis, position[last_axis] * flattening.thickness);
+							positions.set(i, position);
+						}
+						mesh->set_poly_cell_vertex_positions(positions);
+						ERR_PRINT_OFF;
+						mesh->unwrap_texture_map(mode);
+						ERR_PRINT_ON;
+						const Vector<Vector<VectorM>> texture_map = mesh->get_poly_cell_dense_texture_map(Vector2i(dimension - 1, 0));
+						const Vector<PackedInt32Array> cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+						REQUIRE(texture_map.size() == 2 * dimension);
+						for (int64_t cell_index = 0; cell_index < texture_map.size(); cell_index++) {
+							const VectorN normal = VectorND::with_dimension(box_normals[cell_index], dimension);
+							const bool spans_last_axis = Math::is_zero_approx(normal[last_axis]);
+							const bool spans_first_axis = Math::is_zero_approx(normal[0]);
+							const bool flattened = spans_last_axis && (flattening.shear == 0.0 || spans_first_axis);
+							if (flattened) {
+								CHECK_MESSAGE(texture_map[cell_index].is_empty(), "A flattened cell must not be unwrapped.");
+							} else if (mode == ArrayPolyMeshND::UNWRAP_MODE_TILE_CELLS) {
+								// Each cell is its own island here, so the cells that kept their volume are still mapped.
+								CHECK_MESSAGE(texture_map[cell_index].size() == cell_vertices[cell_index].size(), "A cell that kept its volume must still be unwrapped.");
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	SUBCASE("Unwrapping a single island only fills that island") {
 		Ref<BoxPolyMeshND> box = TestPolyMeshND::make_box_poly_mesh(4);
 		Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();

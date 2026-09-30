@@ -88,11 +88,16 @@ protected:
 	Vector<PackedInt32Array> _get_vertex_indices_of_boundary_cells(const Vector<Vector<PackedInt32Array>> &p_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const int64_t p_boundary_dim_index, const bool p_start_with_canonical_span);
 	const Vector<PackedInt32Array> &_get_boundary_cell_vertex_indices_cached(const bool p_start_with_canonical_span);
 	Vector<VectorN> _compute_boundary_normals_based_on_cell_orientation(const Vector<PackedInt32Array> &p_boundary_cell_vertex_indices, const bool p_keep_existing);
+	// The distance from the given vertex to the farthest of the listed vertices. Linear independence is judged in units
+	// of this size, so that a set of vertices is judged by its shape rather than by its size.
+	static double _get_max_distance_from_vertex(const Vector<VectorN> &p_all_vertices, const PackedInt32Array &p_vertex_indices, const int32_t p_origin_vertex);
 	// Solves for the coefficients that express the target vector as a linear combination of the
 	// given linearly independent span vectors, ignoring any component outside of the span.
 	static bool _solve_coordinates_in_span(const Vector<VectorN> &p_span_vectors, const VectorN &p_target, VectorN &r_coordinates);
 	// Picks a linearly independent spanning subset of the given points relative to the first, filling
-	// the indices of the picked points. Returns the amount of independent directions found.
+	// the indices of the picked points. Returns the amount of independent directions found. A direction
+	// counts as independent when it leaves the span of the others by more than a tiny fraction of the
+	// points' extent, so points that are flat compared to their own size span fewer directions.
 	static int64_t _pick_spanning_vertices(const Vector<VectorN> &p_all_vertices, const PackedInt32Array &p_candidate_vertex_indices, const int64_t p_max_directions, PackedInt32Array &r_picked_vertex_indices);
 	// Swaps the first two members of any boundary cell whose orientation-derived normal disagrees with the given normal.
 	static void _orient_cells_to_match_normals(Vector<Vector<PackedInt32Array>> &r_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const Vector<VectorN> &p_vertices, const Vector<VectorN> &p_target_normals, const int64_t p_cell_dim_index);

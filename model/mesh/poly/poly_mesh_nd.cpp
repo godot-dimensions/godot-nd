@@ -444,12 +444,27 @@ PackedInt32Array PolyMeshND::_get_vertex_indices_of_face(const PackedInt32Array 
 	return ret;
 }
 
+double PolyMeshND::_get_max_distance_from_vertex(const Vector<VectorN> &p_all_vertices, const PackedInt32Array &p_vertex_indices, const int32_t p_origin_vertex) {
+	const VectorN &origin = p_all_vertices[p_origin_vertex];
+	double max_distance = 0.0;
+	for (const int32_t vertex_index : p_vertex_indices) {
+		max_distance = MAX(max_distance, VectorND::distance_to(origin, p_all_vertices[vertex_index]));
+	}
+	return max_distance;
+}
+
 bool PolyMeshND::_solve_coordinates_in_span(const Vector<VectorN> &p_span_vectors, const VectorN &p_target, VectorN &r_coordinates) {
 	const int64_t span_count = p_span_vectors.size();
 	r_coordinates = VectorND::fill(span_count, 0.0);
 	if (span_count == 0) {
 		return false;
 	}
+	// Judge linear dependence relative to the longest span, so that it does not depend on the size of the spans.
+	double longest_span_length = 0.0;
+	for (const VectorN &span_vector : p_span_vectors) {
+		longest_span_length = MAX(longest_span_length, VectorND::length(span_vector));
+	}
+	const double dependence_tolerance = longest_span_length * (double)CMP_EPSILON;
 	// Modified Gram-Schmidt with a recorded upper-triangular matrix, so that the coordinates
 	// can be recovered in terms of the original span vectors by back-substitution. Any
 	// component of the target outside of the span is ignored (orthogonal projection).
@@ -468,7 +483,7 @@ bool PolyMeshND::_solve_coordinates_in_span(const Vector<VectorN> &p_span_vector
 			working = VectorND::subtract(working, VectorND::multiply_scalar(ortho_dirs[i], coefficient));
 		}
 		const double norm = VectorND::length(working);
-		if (Math::is_zero_approx(norm)) {
+		if (norm <= dependence_tolerance) {
 			return false; // The span vectors are not linearly independent.
 		}
 		upper_rows.ptrw()[j].set(j, norm);
@@ -495,21 +510,21 @@ int64_t PolyMeshND::_pick_spanning_vertices(const Vector<VectorN> &p_all_vertice
 		return 0;
 	}
 	const VectorN base = p_all_vertices[p_candidate_vertex_indices[0]];
+	const double tolerance = _get_max_distance_from_vertex(p_all_vertices, p_candidate_vertex_indices, p_candidate_vertex_indices[0]) * (double)CMP_EPSILON;
 	Vector<VectorN> ortho_dirs;
 	for (int64_t position = 1; position < p_candidate_vertex_indices.size(); position++) {
 		if (ortho_dirs.size() >= p_max_directions) {
 			break;
 		}
 		VectorN direction = VectorND::subtract(p_all_vertices[p_candidate_vertex_indices[position]], base);
-		const double original_length = VectorND::length(direction);
-		if (Math::is_zero_approx(original_length)) {
-			continue;
+		if (VectorND::length(direction) <= tolerance) {
+			continue; // This vertex coincides with the base, relative to the size of the points.
 		}
 		for (int64_t i = 0; i < ortho_dirs.size(); i++) {
 			direction = VectorND::subtract(direction, VectorND::multiply_scalar(ortho_dirs[i], VectorND::dot(ortho_dirs[i], direction)));
 		}
 		const double residual_length = VectorND::length(direction);
-		if (residual_length < original_length * (double)CMP_EPSILON) {
+		if (residual_length <= tolerance) {
 			continue; // This vertex does not extend the span.
 		}
 		ortho_dirs.append(VectorND::divide_scalar(direction, residual_length));
