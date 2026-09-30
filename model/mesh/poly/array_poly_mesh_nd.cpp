@@ -1288,12 +1288,15 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 			}
 			member_ortho_dirs.append(VectorND::normalized(span));
 		}
-		VectorN world_perp = VectorND::subtract(_poly_cell_vertex_positions[off_member_vertex], base);
+		const VectorN off_member_offset = VectorND::subtract(_poly_cell_vertex_positions[off_member_vertex], base);
+		VectorN world_perp = off_member_offset;
 		for (int64_t ortho_index = 0; ortho_index < member_ortho_dirs.size(); ortho_index++) {
 			world_perp = VectorND::subtract(world_perp, VectorND::multiply_scalar(member_ortho_dirs[ortho_index], VectorND::dot(member_ortho_dirs[ortho_index], world_perp)));
 		}
 		const double world_perp_length = VectorND::length(world_perp);
-		ERR_FAIL_COND_V_MSG(Math::is_zero_approx(world_perp_length), false, "ArrayPolyMeshND: Cell is degenerate.");
+		// The off-member vertex has to leave the shared member, else the cell is flat. This is judged relative to that
+		// vertex's own distance, so that a small cell is judged by its shape rather than by its size.
+		ERR_FAIL_COND_V_MSG(world_perp_length <= VectorND::length(off_member_offset) * (double)CMP_EPSILON, false, "ArrayPolyMeshND: Cell is degenerate.");
 		world_spans.set(rank, world_perp);
 		// Build the texture-space spans from the neighbor's existing texture coordinates.
 		const int64_t base_position_in_mapped = already_mapped_cell_verts.find(base_vertex);
@@ -1319,7 +1322,14 @@ bool ArrayPolyMeshND::_unwrap_texture_map_island_cell(const PackedInt32Array &p_
 		// length, and points away from the already mapped cell.
 		VectorM tex_perp = VectorND::perpendicular(tex_spans);
 		const double tex_perp_length = VectorND::length(tex_perp);
-		if (Math::is_zero_approx(tex_perp_length)) {
+		// The perpendicular is made of determinants of the N-2 texture spans, so its length is the (N-2)-volume they
+		// span, which scales with the (N-2)th power of the cell size. Judge it relative to the product of the span
+		// lengths, which bounds that volume and scales the same way, or every small cell would read as degenerate.
+		double tex_span_length_product = 1.0;
+		for (const VectorM &tex_span : tex_spans) {
+			tex_span_length_product *= VectorND::length(tex_span);
+		}
+		if (tex_perp_length <= tex_span_length_product * (double)CMP_EPSILON) {
 			continue; // The neighbor's mapping of the shared member is degenerate.
 		}
 		tex_perp = VectorND::multiply_scalar(tex_perp, world_perp_length / tex_perp_length);

@@ -386,6 +386,33 @@ TEST_CASE("[ArrayPolyMeshND] Unwrap texture map") {
 		}
 	}
 
+	SUBCASE("Small cells unwrap like large ones") {
+		// Unfolding a cell onto its neighbor compares the (N-2)-volume of the shared member's texture spans against
+		// a tolerance, and that volume scales with the (N-2)th power of the cell size. An absolute tolerance rejected
+		// small cells as degenerate in 4D and higher, and left the rest of their island unmapped.
+		for (int dimension = 3; dimension <= 5; dimension++) {
+			CAPTURE(dimension);
+			Ref<BoxPolyMeshND> box;
+			box.instantiate();
+			box->set_size(VectorND::fill(dimension, 0.001));
+			Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
+			mesh->unwrap_texture_map(ArrayPolyMeshND::UNWRAP_MODE_TILE_ISLANDS);
+			const Vector<Vector<VectorM>> texture_map = mesh->get_poly_cell_dense_texture_map(Vector2i(dimension - 1, 0));
+			const Vector<PackedInt32Array> cell_vertices = mesh->get_all_boundary_cell_vertex_indices(false);
+			REQUIRE(texture_map.size() == 2 * dimension);
+			for (int64_t cell_index = 0; cell_index < texture_map.size(); cell_index++) {
+				REQUIRE_MESSAGE(texture_map[cell_index].size() == cell_vertices[cell_index].size(), "Every cell of the small box must be mapped.");
+				for (const VectorM &texcoord : texture_map[cell_index]) {
+					REQUIRE(texcoord.size() == dimension - 1);
+					for (int64_t axis = 0; axis < dimension - 1; axis++) {
+						CHECK(texcoord[axis] >= -0.001);
+						CHECK(texcoord[axis] <= 1.001);
+					}
+				}
+			}
+		}
+	}
+
 	SUBCASE("Unwrapping a single island only fills that island") {
 		Ref<BoxPolyMeshND> box = TestPolyMeshND::make_box_poly_mesh(4);
 		Ref<ArrayPolyMeshND> mesh = box->to_array_poly_mesh();
