@@ -114,6 +114,15 @@
 				This is useful after merging meshes with [method merge_with], such as when merging two adjacent volumetric meshes that share a boundary cell, so that the shared cell is unified and treated as an invisible internal cell.
 			</description>
 		</method>
+		<method name="delete_normals_below_dimension">
+			<return type="void" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Deletes the normal data bindings on elements whose topological dimension is below [param dimension], keeping the ones on elements of that dimension and above. For example, for a 4-dimensional mesh, [code]3[/code] deletes the normals on vertices, edges, and faces, which leaves the ones on the boundary cells, and [code]4[/code] deletes every normal binding a mesh normally has, since bindings are rarely stored on volumes. In general, for an N-dimensional mesh, [code]N - 1[/code] keeps only the boundary cell normals.
+				A mesh renders from its boundary cell bindings alone, so normals on lower-dimensional elements only matter for further editing. Operations that read them, such as [method PolyMeshBuilderND.extrude_linear], keep them on their output, where they cover only the elements that came from the input, and [method merge_with] warns when it has to fill in such a binding for a mesh that lacks it. This removes them once they are no longer needed. See also [method delete_texture_maps_below_dimension].
+				[b]Note:[/b] The values that the deleted bindings referenced stay in the normal value pool until [method compact_normal_values] is called.
+			</description>
+		</method>
 		<method name="delete_poly_element">
 			<return type="void" />
 			<param index="0" name="dimension" type="int" />
@@ -121,6 +130,15 @@
 			<description>
 				Deletes the element of the given [param dimension] at the given [param index], where dimension 0 means vertices, 1 means edges, 2 means 2D faces, and so on. Deleting an element also deletes everything that references it, cascading up through the hierarchy: deleting a vertex deletes the edges using it, which deletes the faces using those edges, and so on. All remaining indices are shifted to preserve their meaning, including the seams, the boundary pivot overrides, and the data bindings for normals and texture maps.
 				Empty and partial auxiliary bindings are supported.
+			</description>
+		</method>
+		<method name="delete_texture_maps_below_dimension">
+			<return type="void" />
+			<param index="0" name="dimension" type="int" />
+			<description>
+				Deletes the texture map data bindings on elements whose topological dimension is below [param dimension], keeping the ones on elements of that dimension and above. For example, for a 4-dimensional mesh, [code]3[/code] deletes the texture maps on vertices, edges, and faces, which leaves the ones on the boundary cells, and [code]4[/code] deletes every texture map binding a mesh normally has, since bindings are rarely stored on volumes. In general, for an N-dimensional mesh, [code]N - 1[/code] keeps only the boundary cell texture map.
+				A mesh renders from its boundary cell bindings alone, so texture maps on lower-dimensional elements only matter for further editing, and they rarely survive it in a useful form: an operation that changes the topology, such as [method PolyMeshBuilderND.extrude_linear], carries the input's texture map onto the parts of the result that came from the input and nothing else, and the result is usually unwrapped again from scratch. This removes such a texture map before or after the operation. See also [method delete_normals_below_dimension].
+				[b]Note:[/b] The values that the deleted bindings referenced stay in the texture map value pool until [method compact_texture_map_values] is called.
 			</description>
 		</method>
 		<method name="make_double_sided">

@@ -2523,6 +2523,138 @@ TEST_CASE("[ArrayPolyMeshND] Double sided empty boundary levels are unchanged") 
 	}
 }
 
+TEST_CASE("[ArrayPolyMeshND] Delete normals and texture maps below a dimension") {
+	// A box comes with normals and a texture map on its boundary cells. Give it both kinds of binding on faces and
+	// vertices as well, so that every level has something to delete, then check that only the asked-for bindings go
+	// away. This starts at 4D, where the faces are not the boundary cells, so their keys differ from the cells' keys.
+	struct BoundBox {
+		Ref<ArrayPolyMeshND> mesh;
+		HashMap<Vector2i, Vector<PackedInt32Array>> box_normals;
+		HashMap<Vector2i, Vector<PackedInt32Array>> box_texture_maps;
+	};
+	auto make_fully_bound_box = [](const int p_dimension) -> BoundBox {
+		BoundBox ret;
+		ret.mesh = TestPolyMeshND::make_box_poly_mesh(p_dimension)->to_array_poly_mesh();
+		// The box's own bindings are all on its boundary cells.
+		ret.box_normals = ret.mesh->get_all_poly_cell_normal_indices();
+		ret.box_texture_maps = ret.mesh->get_all_poly_cell_texture_map_indices();
+		REQUIRE(!ret.box_normals.is_empty());
+		REQUIRE(!ret.box_texture_maps.is_empty());
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : ret.box_normals) {
+			REQUIRE(kv.key.x == p_dimension - 1);
+		}
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : ret.box_texture_maps) {
+			REQUIRE(kv.key.x == p_dimension - 1);
+		}
+		const Vector<PackedInt32Array> face_corners = ret.mesh->get_all_poly_cell_vertex_indices(2, false);
+		const int64_t vertex_count = ret.mesh->get_poly_cell_vertex_positions().size();
+		Vector<VectorN> face_normals;
+		for (int64_t i = 0; i < face_corners.size(); i++) {
+			face_normals.append(VectorND::value_on_axis_with_dimension(1.0, p_dimension - 1, p_dimension));
+		}
+		ret.mesh->set_poly_cell_dense_normals(Vector2i(2, 2), Vector<Vector<VectorN>>{ face_normals });
+		Vector<VectorN> vertex_normals;
+		for (int64_t i = 0; i < vertex_count; i++) {
+			vertex_normals.append(VectorND::value_on_axis_with_dimension(1.0, 0, p_dimension));
+		}
+		ret.mesh->set_poly_cell_dense_normals(PolyMeshND::PER_VERTEX_KEY, Vector<Vector<VectorN>>{ vertex_normals });
+		Vector<Vector<VectorM>> face_texture_map;
+		for (const PackedInt32Array &corners : face_corners) {
+			Vector<VectorM> texcoords;
+			for (int64_t i = 0; i < corners.size(); i++) {
+				texcoords.append(VectorND::fill(p_dimension - 1, 0.5));
+			}
+			face_texture_map.append(texcoords);
+		}
+		ret.mesh->set_poly_cell_dense_texture_map(Vector2i(2, 0), face_texture_map);
+		Vector<VectorM> vertex_texcoords;
+		for (int64_t i = 0; i < vertex_count; i++) {
+			vertex_texcoords.append(VectorND::fill(p_dimension - 1, 0.25));
+		}
+		ret.mesh->set_poly_cell_dense_texture_map(PolyMeshND::PER_VERTEX_KEY, Vector<Vector<VectorM>>{ vertex_texcoords });
+		REQUIRE(ret.mesh->is_mesh_data_valid());
+		REQUIRE(ret.mesh->get_all_poly_cell_normal_indices().size() == ret.box_normals.size() + 2);
+		REQUIRE(ret.mesh->get_all_poly_cell_texture_map_indices().size() == ret.box_texture_maps.size() + 2);
+		return ret;
+	};
+	auto has_same_keys = [](const HashMap<Vector2i, Vector<PackedInt32Array>> &p_a, const HashMap<Vector2i, Vector<PackedInt32Array>> &p_b) -> bool {
+		if (p_a.size() != p_b.size()) {
+			return false;
+		}
+		for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : p_a) {
+			if (!p_b.has(kv.key)) {
+				return false;
+			}
+		}
+		return true;
+	};
+
+	SUBCASE("Deleting below the boundary cells keeps only the boundary cell texture map and every normal") {
+		for (int dimension = 4; dimension <= 5; dimension++) {
+			CAPTURE(dimension);
+			BoundBox box = make_fully_bound_box(dimension);
+			const int64_t texture_map_value_count = box.mesh->get_poly_cell_texture_map_values().size();
+			box.mesh->delete_texture_maps_below_dimension(dimension - 1);
+			CHECK(has_same_keys(box.mesh->get_all_poly_cell_texture_map_indices(), box.box_texture_maps));
+			CHECK(box.mesh->get_all_poly_cell_normal_indices().size() == box.box_normals.size() + 2);
+			CHECK(box.mesh->is_mesh_data_valid());
+			CHECK_MESSAGE(box.mesh->get_poly_cell_texture_map_values().size() == texture_map_value_count, "The values stay in the pool until compaction.");
+		}
+	}
+
+	SUBCASE("Deleting below the edges removes only the per-vertex texture map") {
+		for (int dimension = 4; dimension <= 5; dimension++) {
+			CAPTURE(dimension);
+			BoundBox box = make_fully_bound_box(dimension);
+			box.mesh->delete_texture_maps_below_dimension(1);
+			const HashMap<Vector2i, Vector<PackedInt32Array>> texture_maps = box.mesh->get_all_poly_cell_texture_map_indices();
+			CHECK(texture_maps.size() == box.box_texture_maps.size() + 1);
+			CHECK(!texture_maps.has(PolyMeshND::PER_VERTEX_KEY));
+			CHECK(texture_maps.has(Vector2i(2, 0)));
+			CHECK(box.mesh->get_all_poly_cell_normal_indices().size() == box.box_normals.size() + 2);
+			CHECK(box.mesh->is_mesh_data_valid());
+		}
+	}
+
+	SUBCASE("Deleting below the volumes removes every texture map") {
+		for (int dimension = 4; dimension <= 5; dimension++) {
+			CAPTURE(dimension);
+			BoundBox box = make_fully_bound_box(dimension);
+			box.mesh->delete_texture_maps_below_dimension(dimension);
+			CHECK(box.mesh->get_all_poly_cell_texture_map_indices().is_empty());
+			CHECK(box.mesh->get_all_poly_cell_normal_indices().size() == box.box_normals.size() + 2);
+			CHECK(box.mesh->is_mesh_data_valid());
+		}
+	}
+
+	SUBCASE("Deleting normals below the boundary cells keeps only the boundary cell normals and every texture map") {
+		for (int dimension = 4; dimension <= 5; dimension++) {
+			CAPTURE(dimension);
+			BoundBox box = make_fully_bound_box(dimension);
+			const int64_t normal_value_count = box.mesh->get_poly_cell_normal_values().size();
+			box.mesh->delete_normals_below_dimension(dimension - 1);
+			CHECK(has_same_keys(box.mesh->get_all_poly_cell_normal_indices(), box.box_normals));
+			CHECK(box.mesh->get_all_poly_cell_texture_map_indices().size() == box.box_texture_maps.size() + 2);
+			CHECK(box.mesh->is_mesh_data_valid());
+			CHECK_MESSAGE(box.mesh->get_poly_cell_normal_values().size() == normal_value_count, "The values stay in the pool until compaction.");
+		}
+	}
+
+	SUBCASE("Deleting normals below the edges removes only the per-vertex normals") {
+		for (int dimension = 4; dimension <= 5; dimension++) {
+			CAPTURE(dimension);
+			BoundBox box = make_fully_bound_box(dimension);
+			box.mesh->delete_normals_below_dimension(1);
+			const HashMap<Vector2i, Vector<PackedInt32Array>> normals = box.mesh->get_all_poly_cell_normal_indices();
+			CHECK(normals.size() == box.box_normals.size() + 1);
+			CHECK(!normals.has(PolyMeshND::PER_VERTEX_KEY));
+			CHECK(normals.has(Vector2i(2, 2)));
+			CHECK(box.mesh->get_all_poly_cell_texture_map_indices().size() == box.box_texture_maps.size() + 2);
+			CHECK(box.mesh->is_mesh_data_valid());
+		}
+	}
+}
+
 TEST_CASE("[ArrayPolyMeshND] Orient cells to boundary normals") {
 	constexpr int dimension = 4;
 	const Vector2i cell_to_vert_key = Vector2i(dimension - 1, 0);

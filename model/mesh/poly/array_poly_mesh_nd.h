@@ -59,6 +59,7 @@ private:
 
 	bool _validate_data_binding_shape_internal(const Vector2i p_key, const Vector<PackedInt32Array> &p_binding, const String &p_binding_name) const;
 	void _delete_data_binding_element_internal(const int32_t p_dimension, const int32_t p_index);
+	static void _delete_bindings_below_dimension_internal(HashMap<Vector2i, Vector<PackedInt32Array>> &r_bindings, const int p_dimension);
 
 	// Internal helpers for the normal and texture map value pools.
 	PackedInt32Array _normal_indices_for_values_internal(const Vector<VectorN> &p_values);
@@ -93,6 +94,7 @@ public:
 	void set_flat_shading_normals(const ComputeNormalsMode p_mode = COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY, const bool p_recalculate_boundary_normals = true);
 	void set_smooth_shading_normals(const ComputeNormalsMode p_mode = COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY, const bool p_recalculate_boundary_normals = true);
 	void make_double_sided(const bool p_idempotent = true);
+	void delete_normals_below_dimension(const int p_dimension);
 	PackedInt32Array make_single_cell_from_all_cells(const int32_t p_cell_dimension) const;
 
 	// Texture map and seam functions.
@@ -103,6 +105,7 @@ public:
 	void unwrap_texture_map_island(const PackedInt32Array &p_cells_in_island, const bool p_keep_existing = false);
 	void unwrap_texture_map(const UnwrapTextureMapMode p_mode, const double p_padding = 0.0, const bool p_proportional = true, const bool p_keep_existing = false);
 	void transform_texture_map(const Ref<TransformND> &p_texture_transform);
+	void delete_texture_maps_below_dimension(const int p_dimension);
 
 	// Misc functions.
 	void deduplicate_all_elements(const int64_t p_max_dimension = 1000000000);

@@ -450,6 +450,19 @@ void ArrayPolyMeshND::_delete_data_binding_element_internal(const int32_t p_dime
 	}
 }
 
+void ArrayPolyMeshND::_delete_bindings_below_dimension_internal(HashMap<Vector2i, Vector<PackedInt32Array>> &r_bindings, const int p_dimension) {
+	// The keys are gathered first, since erasing from a map while iterating over it is not allowed.
+	Vector<Vector2i> keys_to_delete;
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &binding : r_bindings) {
+		if (binding.key.x < p_dimension) {
+			keys_to_delete.push_back(binding.key);
+		}
+	}
+	for (const Vector2i &key : keys_to_delete) {
+		r_bindings.erase(key);
+	}
+}
+
 PackedInt32Array ArrayPolyMeshND::_deletion_remap_table(const int32_t p_element_count, const int32_t p_deleted_index) {
 	PackedInt32Array table;
 	table.resize(p_element_count);
@@ -964,6 +977,11 @@ void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 		_poly_cell_indices.set(boundary_dim_index + 1, volumetric_cell_indices);
 	}
 	_all_poly_cell_normal_indices.insert(per_cell_key, Vector<PackedInt32Array>{ per_cell_normal_indices });
+	poly_mesh_clear_cache();
+}
+
+void ArrayPolyMeshND::delete_normals_below_dimension(const int p_dimension) {
+	_delete_bindings_below_dimension_internal(_all_poly_cell_normal_indices, p_dimension);
 	poly_mesh_clear_cache();
 }
 
@@ -1575,6 +1593,11 @@ void ArrayPolyMeshND::transform_texture_map(const Ref<TransformND> &p_texture_tr
 		poly_cell_texture_map.set(cell_index, cell_texture_map);
 	}
 	_set_poly_cell_texture_map_dense_internal(poly_cell_texture_map);
+	poly_mesh_clear_cache();
+}
+
+void ArrayPolyMeshND::delete_texture_maps_below_dimension(const int p_dimension) {
+	_delete_bindings_below_dimension_internal(_all_poly_cell_texture_map_indices, p_dimension);
 	poly_mesh_clear_cache();
 }
 
@@ -2728,6 +2751,7 @@ void ArrayPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_flat_shading_normals", "normals_mode", "recalculate_boundary_normals"), &ArrayPolyMeshND::set_flat_shading_normals, DEFVAL(COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY), DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("set_smooth_shading_normals", "normals_mode", "recalculate_boundary_normals"), &ArrayPolyMeshND::set_smooth_shading_normals, DEFVAL(COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY), DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("make_double_sided", "idempotent"), &ArrayPolyMeshND::make_double_sided, DEFVAL(true));
+	ClassDB::bind_method(D_METHOD("delete_normals_below_dimension", "dimension"), &ArrayPolyMeshND::delete_normals_below_dimension);
 	ClassDB::bind_method(D_METHOD("make_single_cell_from_all_cells", "cell_dimension"), &ArrayPolyMeshND::make_single_cell_from_all_cells);
 
 	// Texture map and seam functions.
@@ -2737,6 +2761,7 @@ void ArrayPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("unwrap_texture_map_island", "cells_in_island", "keep_existing"), &ArrayPolyMeshND::unwrap_texture_map_island, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("unwrap_texture_map", "mode", "padding", "proportional", "keep_existing"), &ArrayPolyMeshND::unwrap_texture_map, DEFVAL(UNWRAP_MODE_TILE_ISLANDS), DEFVAL(0.0), DEFVAL(true), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("transform_texture_map", "transform"), &ArrayPolyMeshND::transform_texture_map);
+	ClassDB::bind_method(D_METHOD("delete_texture_maps_below_dimension", "dimension"), &ArrayPolyMeshND::delete_texture_maps_below_dimension);
 
 	// Misc functions.
 	ClassDB::bind_method(D_METHOD("deduplicate_all_elements", "max_dimension"), &ArrayPolyMeshND::deduplicate_all_elements, DEFVAL(1000000000));
