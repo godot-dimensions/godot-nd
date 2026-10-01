@@ -22,7 +22,7 @@ protected:
 
 public:
 	int32_t append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
-	PackedInt32Array append_vertices(const Vector<VectorN> &p_vertices, const bool p_deduplicate_vertices = true);
+	PackedInt32Array append_vertices(const Vector<VectorN> &p_vertex_positions, const bool p_deduplicate_vertices = true);
 
 	// Explicit compaction functions for removing unreferenced or duplicate data.
 	void compact_normal_values();
@@ -49,8 +49,8 @@ public:
 	void set_vertex_positions_bind(const TypedArray<VectorN> &p_vertex_positions);
 
 	virtual Vector<VectorN> get_normal_values() override;
-	void set_normal_values(const Vector<VectorN> &p_normals_values);
-	void set_normal_values_bind(const TypedArray<VectorN> &p_normals_values);
+	void set_normal_values(const Vector<VectorN> &p_normal_values);
+	void set_normal_values_bind(const TypedArray<VectorN> &p_normal_values);
 
 	virtual Vector<VectorM> get_texture_map_values() override;
 	void set_texture_map_values(const Vector<VectorM> &p_texture_map_values);

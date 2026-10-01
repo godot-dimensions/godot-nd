@@ -14,7 +14,7 @@ class CellMeshND : public SingleSurfaceMeshND {
 	static int64_t _binomial_coefficient(const int64_t n, const int64_t k);
 	static void _generate_combinations_recursive(const PackedInt32Array &p_items, const int64_t p_count, const int64_t p_choose, const int64_t p_start, const int64_t p_depth, int &r_result_index, PackedInt32Array &r_current, Vector<PackedInt32Array> &r_result);
 	static Vector<PackedInt32Array> _generate_combinations(const PackedInt32Array &p_items, int64_t p_choose);
-	static Vector<PackedInt32Array> _determine_opposing_faces(const Vector<VectorN> &p_vertices, const PackedInt32Array &p_cell_indices_without_pivot, const int p_dimension, const int p_pivot_index, const Vector<VectorN> &p_cell_normals, Vector<VectorN> &r_out_normals);
+	static Vector<PackedInt32Array> _determine_opposing_faces(const Vector<VectorN> &p_vertex_positions, const PackedInt32Array &p_poly_cell_indices_without_pivot, const int p_dimension, const int p_pivot_index, const Vector<VectorN> &p_poly_cell_normals, Vector<VectorN> &r_out_normals);
 
 protected:
 	static void _bind_methods();

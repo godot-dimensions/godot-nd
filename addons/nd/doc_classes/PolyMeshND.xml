@@ -60,7 +60,7 @@
 				Callback method that should return the vertex positions of the polyhedral cells. Do not call this method. This can be overridden by derived classes when creating a custom mesh type in GDScript or another scripting language. See [method get_poly_cell_vertex_positions] for details of the returned data.
 			</description>
 		</method>
-		<method name="get_all_cell_vertex_indices">
+		<method name="get_all_boundary_cell_vertex_indices">
 			<return type="PackedInt32Array[]" />
 			<param index="0" name="start_with_canonical_span" type="bool" />
 			<description>
@@ -129,7 +129,7 @@
 		<method name="get_poly_cell_normal_indices">
 			<return type="PackedInt32Array[]" />
 			<description>
-				Returns the normal indices for the vertex instances of each polyhedral boundary cell. Each [PackedInt32Array] contains indices into [method get_poly_cell_normal_values], in the vertex order returned by [method get_all_cell_vertex_indices] with [code]start_with_canonical_span = false[/code]. The outer array must have one item per boundary cell, or be empty for no normals. Each inner array must have one index per vertex instance in that cell, or be empty for a cell without data. Every index must be non-negative and less than the size of the value pool.
+				Returns the normal indices for the vertex instances of each polyhedral boundary cell. Each [PackedInt32Array] contains indices into [method get_poly_cell_normal_values], in the vertex order returned by [method get_all_boundary_cell_vertex_indices] with [code]start_with_canonical_span = false[/code]. The outer array must have one item per boundary cell, or be empty for no normals. Each inner array must have one index per vertex instance in that cell, or be empty for a cell without data. Every index must be non-negative and less than the size of the value pool.
 			</description>
 		</method>
 		<method name="get_poly_cell_normal_values">
@@ -141,7 +141,7 @@
 		<method name="get_poly_cell_texture_map_indices">
 			<return type="PackedInt32Array[]" />
 			<description>
-				Returns the texture map indices for the vertex instances of each polyhedral boundary cell. Each [PackedInt32Array] contains indices into [method get_poly_cell_texture_map_values], in the vertex order returned by [method get_all_cell_vertex_indices] with [code]start_with_canonical_span = false[/code]. The outer array must have one item per boundary cell, or be empty for no texture mapping. Each inner array must have one index per vertex instance in that cell, or be empty for a cell without data. Every index must be non-negative and less than the size of the value pool.
+				Returns the texture map indices for the vertex instances of each polyhedral boundary cell. Each [PackedInt32Array] contains indices into [method get_poly_cell_texture_map_values], in the vertex order returned by [method get_all_boundary_cell_vertex_indices] with [code]start_with_canonical_span = false[/code]. The outer array must have one item per boundary cell, or be empty for no texture mapping. Each inner array must have one index per vertex instance in that cell, or be empty for a cell without data. Every index must be non-negative and less than the size of the value pool.
 			</description>
 		</method>
 		<method name="get_poly_cell_texture_map_values">

@@ -25,7 +25,7 @@ class OFFDocumentND : public Resource {
 	int _edge_count = 0;
 	bool _has_any_cell_colors = false;
 
-	static String _vector_n_to_off_nd(const VectorN &p_vertex);
+	static String _vector_n_to_off_nd(const VectorN &p_vector);
 	static String _color_to_off_string_nd(const Color &p_color);
 	static String _cell_to_off_string_nd(const PackedInt32Array &p_face);
 	static String _cell_dimension_index_to_off_comment(const int p_dimension);

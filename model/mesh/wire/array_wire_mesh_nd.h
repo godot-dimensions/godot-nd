@@ -22,7 +22,7 @@ public:
 
 	void deduplicate_all_elements();
 	void transform_mesh(const Ref<TransformND> &p_transform);
-	void merge_with(const Ref<ArrayWireMeshND> &p_array_wire_mesh_nd, const Ref<TransformND> &p_transform);
+	void merge_with(const Ref<ArrayWireMeshND> &p_other, const Ref<TransformND> &p_transform);
 
 	virtual PackedInt32Array get_edge_indices() override;
 	void set_edge_indices(const PackedInt32Array &p_edge_indices);

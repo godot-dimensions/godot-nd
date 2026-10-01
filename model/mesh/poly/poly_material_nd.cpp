@@ -41,7 +41,7 @@ void PolyMaterialND::populate_albedo_color_array_for_poly_mesh(const Ref<CellMes
 
 // For a PolyMaterialND, the merged items are the polyhedral boundary cells colored by `poly_albedo_color_array`,
 // so callers must pass the boundary cell counts of the meshes rather than their vertex counts.
-void PolyMaterialND::merge_with(const Ref<MaterialND> &p_material, const int p_first_item_count, const int p_second_item_count) {
+void PolyMaterialND::merge_with(const Ref<MaterialND> &p_material, const int p_first_cell_count, const int p_second_cell_count) {
 	ERR_FAIL_COND_MSG(p_material.is_null(), "PolyMaterialND.merge_with: Cannot merge with a null material.");
 	// MaterialND::merge_with merges `_albedo_color_array`, but for PolyMaterialND that array is only a
 	// per-simplex cache derived from `_poly_albedo_color_array`, which holds the real per-cell colors.
@@ -69,7 +69,7 @@ void PolyMaterialND::merge_with(const Ref<MaterialND> &p_material, const int p_f
 	other_per_cell_material->set_albedo_color_array(other_cell_colors);
 	// Let the base classes merge the per-cell arrays and update the albedo source, then move the result back.
 	_albedo_color_array = _poly_albedo_color_array;
-	CellMaterialND::merge_with(other_per_cell_material, p_first_item_count, p_second_item_count);
+	CellMaterialND::merge_with(other_per_cell_material, p_first_cell_count, p_second_cell_count);
 	_poly_albedo_color_array = _albedo_color_array;
 	_albedo_color_array.clear();
 	// The base class only knows that a color array is now used, not which items it colors, so it enables every

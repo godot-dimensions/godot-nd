@@ -563,18 +563,18 @@ TypedArray<VectorN> CellMeshND::get_simplex_cell_positions_bind() {
 // 3. For each face, recursively call this function with the face as the new cell.
 // 4. Each of the returned simplexes will have the pivot index prepended to it.
 // This function has atrocious time complexity, so avoid using it on large cells or at runtime.
-Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertex_positions, const PackedInt32Array &p_poly_cell_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_poly_cell_normals) {
+Vector<PackedInt32Array> CellMeshND::decompose_polytope_cell_into_simplexes(const Vector<VectorN> &p_vertex_positions, const PackedInt32Array &p_poly_cell_vertex_indices, const int p_dimension, const int p_last_pivot, const Vector<VectorN> &p_poly_cell_normals) {
 	Vector<PackedInt32Array> simplexes;
-	if (p_poly_cell_indices.size() < 2) {
+	if (p_poly_cell_vertex_indices.size() < 2) {
 		return simplexes; // No simplexes can be formed.
 	}
-	PackedInt32Array cell_ind_without_pivot = p_poly_cell_indices;
+	PackedInt32Array cell_ind_without_pivot = p_poly_cell_vertex_indices;
 	int pivot_item;
-	if (p_poly_cell_indices[0] == p_last_pivot) {
-		pivot_item = p_poly_cell_indices[1];
+	if (p_poly_cell_vertex_indices[0] == p_last_pivot) {
+		pivot_item = p_poly_cell_vertex_indices[1];
 		cell_ind_without_pivot.remove_at(1);
 	} else {
-		pivot_item = p_poly_cell_indices[0];
+		pivot_item = p_poly_cell_vertex_indices[0];
 		cell_ind_without_pivot.remove_at(0);
 	}
 	Vector<VectorN> out_normals;

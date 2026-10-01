@@ -79,7 +79,7 @@ private:
 	void _regenerate_gizmo_meshes();
 
 	// Misc internal functions.
-	bool _gizmo_mouse_raycast(const Ref<InputEventMouse> &p_mouse_event, const CameraND *p_camera, const VectorN &p_ray_origin, const VectorN &p_ray_direction);
+	bool _gizmo_mouse_raycast(const Ref<InputEventMouse> &p_mouse_event, const CameraND *p_camera, const VectorN &p_local_ray_origin, const VectorN &p_local_ray_direction);
 	void _on_rendering_server_pre_render(CameraND *p_camera, Viewport *p_viewport, RenderingEngineND *p_rendering_engine);
 	void _on_editor_inspector_property_edited(const String &p_prop);
 	void _on_undo_redo_version_changed();

@@ -540,15 +540,15 @@ void ArrayPolyMeshND::_delete_vertex_internal(const int32_t p_index) {
 	_edge_vertex_indices = MathND::remap_int32_array(_edge_vertex_indices, vertex_remap);
 }
 
-void ArrayPolyMeshND::_delete_poly_cell_element_internal(const int32_t p_poly_cell_index, const int32_t p_index) {
-	ERR_FAIL_COND_MSG(p_poly_cell_index < 0 || p_poly_cell_index >= _poly_cell_indices.size(), "ArrayPolyMeshND: Dimension is out of range.");
-	ERR_FAIL_COND_MSG(p_index < 0 || p_index >= _poly_cell_indices[p_poly_cell_index].size(), "ArrayPolyMeshND: Index is out of range.");
+void ArrayPolyMeshND::_delete_poly_cell_element_internal(const int32_t p_poly_dim_index, const int32_t p_index) {
+	ERR_FAIL_COND_MSG(p_poly_dim_index < 0 || p_poly_dim_index >= _poly_cell_indices.size(), "ArrayPolyMeshND: Dimension is out of range.");
+	ERR_FAIL_COND_MSG(p_index < 0 || p_index >= _poly_cell_indices[p_poly_dim_index].size(), "ArrayPolyMeshND: Index is out of range.");
 	// Before deleting this poly cell element, we need to delete anything in higher dimensions that reference it.
-	const int32_t next_dim_poly_index = p_poly_cell_index + 1;
-	if (next_dim_poly_index < _poly_cell_indices.size()) {
-		// Collect indices in next_dim_poly_index whose elements reference p_index.
+	const int32_t next_poly_dim_index = p_poly_dim_index + 1;
+	if (next_poly_dim_index < _poly_cell_indices.size()) {
+		// Collect indices in next_poly_dim_index whose elements reference p_index.
 		PackedInt32Array to_delete;
-		const Vector<PackedInt32Array> &next_level = _poly_cell_indices[next_dim_poly_index];
+		const Vector<PackedInt32Array> &next_level = _poly_cell_indices[next_poly_dim_index];
 		for (int32_t j = 0; j < next_level.size(); j++) {
 			const PackedInt32Array &refs = next_level[j];
 			for (int32_t k = 0; k < refs.size(); k++) {
@@ -560,26 +560,26 @@ void ArrayPolyMeshND::_delete_poly_cell_element_internal(const int32_t p_poly_ce
 		}
 		// Delete in reverse order so that earlier indices are not shifted by later removals.
 		for (int32_t i = to_delete.size() - 1; i >= 0; i--) {
-			_delete_poly_cell_element_internal(next_dim_poly_index, to_delete[i]);
+			_delete_poly_cell_element_internal(next_poly_dim_index, to_delete[i]);
 		}
 	}
 	// Delete any corresponding elements in the associated arrays for this poly cell dimension.
-	const PackedInt32Array element_remap = _deletion_remap_table(_poly_cell_indices[p_poly_cell_index].size(), p_index);
-	if (p_poly_cell_index == _get_boundary_poly_dim_index() - 1 && !_seam_indices.is_empty()) {
+	const PackedInt32Array element_remap = _deletion_remap_table(_poly_cell_indices[p_poly_dim_index].size(), p_index);
+	if (p_poly_dim_index == _get_boundary_poly_dim_index() - 1 && !_seam_indices.is_empty()) {
 		// For the members of boundary cells, delete from the seams.
 		_seam_indices = MathND::remap_int32_set(_seam_indices, element_remap);
 	}
-	const int geom_dim = p_poly_cell_index + 2;
+	const int geom_dim = p_poly_dim_index + 2;
 	_delete_data_binding_element_internal(geom_dim, p_index);
 	// Delete from the boundary pivot overrides.
-	if (p_poly_cell_index == _get_boundary_poly_dim_index() && p_index < _poly_cell_boundary_pivot_overrides.size()) {
+	if (p_poly_dim_index == _get_boundary_poly_dim_index() && p_index < _poly_cell_boundary_pivot_overrides.size()) {
 		_poly_cell_boundary_pivot_overrides.remove_at(p_index);
 	}
-	// Remove the element at p_index from _poly_cell_indices[p_poly_cell_index].
-	_poly_cell_indices.ptrw()[p_poly_cell_index].remove_at(p_index);
-	// Fix up references in next_dim_poly_index by decrementing any index greater than p_index.
-	if (next_dim_poly_index < _poly_cell_indices.size()) {
-		MathND::remap_int32_arrays(_poly_cell_indices.write[next_dim_poly_index], element_remap, false);
+	// Remove the element at p_index from _poly_cell_indices[p_poly_dim_index].
+	_poly_cell_indices.ptrw()[p_poly_dim_index].remove_at(p_index);
+	// Fix up references in next_poly_dim_index by decrementing any index greater than p_index.
+	if (next_poly_dim_index < _poly_cell_indices.size()) {
+		MathND::remap_int32_arrays(_poly_cell_indices.write[next_poly_dim_index], element_remap, false);
 	}
 	// Keep dimensions normalized by trimming from the first empty dimension onward.
 	// In a valid poly mesh, once a dimension is empty, all higher dimensions must also be empty.
@@ -599,11 +599,11 @@ void ArrayPolyMeshND::delete_poly_element(const int32_t p_dimension, const int32
 	} else if (p_dimension == 1) {
 		_delete_edge_internal(p_index);
 	} else {
-		const int64_t poly_cell_index = p_dimension - 2;
-		if (poly_cell_index >= _poly_cell_indices.size()) {
+		const int64_t poly_dim_index = p_dimension - 2;
+		if (poly_dim_index >= _poly_cell_indices.size()) {
 			ERR_FAIL_MSG("ArrayPolyMeshND: Cannot delete from dimension higher than the highest poly cell dimension.");
 		}
-		_delete_poly_cell_element_internal(poly_cell_index, p_index);
+		_delete_poly_cell_element_internal(poly_dim_index, p_index);
 	}
 	poly_mesh_clear_cache();
 }

@@ -48,7 +48,7 @@ private:
 	static PackedInt32Array _deletion_remap_table(const int32_t p_element_count, const int32_t p_deleted_index);
 	void _delete_edge_internal(const int32_t p_index);
 	void _delete_vertex_internal(const int32_t p_index);
-	void _delete_poly_cell_element_internal(const int32_t p_dimension, const int32_t p_index);
+	void _delete_poly_cell_element_internal(const int32_t p_poly_dim_index, const int32_t p_index);
 	bool _unwrap_texture_map_island_cell(const PackedInt32Array &p_cells_in_island, const int64_t p_current_cell_index_index, const Vector<PackedInt32Array> &p_cell_vert, Vector<Vector<VectorM>> &r_poly_cell_texture_map);
 	void _unwrap_texture_map_island_internal(const PackedInt32Array &p_cells_in_island, const bool p_keep_existing, Vector<Vector<VectorM>> &r_poly_cell_texture_map);
 	void _fit_island_texture_map_into_box(const PackedInt32Array &p_cells_in_island, const VectorM &p_target_position, const VectorM &p_target_size, const bool p_proportional, Vector<Vector<VectorM>> &r_poly_cell_texture_map);
