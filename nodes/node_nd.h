@@ -16,6 +16,11 @@ class NodeND : public Node {
 	GDCLASS(NodeND, Node);
 
 public:
+	enum {
+		// Matches Node3D::NOTIFICATION_LOCAL_TRANSFORM_CHANGED.
+		NOTIFICATION_LOCAL_TRANSFORM_CHANGED = 44,
+	};
+
 	enum DimensionMode {
 		DIMENSION_MODE_SQUARE,
 		DIMENSION_MODE_NON_SQUARE,
@@ -25,6 +30,7 @@ private:
 	Ref<EulerND> _rotation_euler;
 	Ref<TransformND> _transform;
 	DimensionMode _dimension_mode = DIMENSION_MODE_SQUARE;
+	bool _should_notify_local_transform = false;
 	bool _is_visible = true;
 
 	void _update_transform_from_euler();
@@ -37,7 +43,11 @@ protected:
 	void _validate_property(PropertyInfo &p_property) const;
 
 public:
-	// Transform getters and setters.
+	// Local transform notification.
+	bool get_should_notify_local_transform() const { return _should_notify_local_transform; }
+	void set_should_notify_local_transform(const bool p_should_notify_local_transform);
+
+	// Local transform getters and setters.
 	Ref<TransformND> get_transform() const;
 	void set_transform(const Ref<TransformND> &p_transform);
 	Ref<BasisND> get_basis() const;

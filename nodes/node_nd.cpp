@@ -1,6 +1,10 @@
 #include "node_nd.h"
 
-// Transform getters and setters.
+// Local transform getters and setters.
+
+void NodeND::set_should_notify_local_transform(const bool p_should_notify_local_transform) {
+	_should_notify_local_transform = p_should_notify_local_transform;
+}
 
 Ref<TransformND> NodeND::get_transform() const {
 	return _transform;
@@ -9,8 +13,11 @@ Ref<TransformND> NodeND::get_transform() const {
 void NodeND::set_transform(const Ref<TransformND> &p_transform) {
 	_transform = p_transform;
 	if (_rotation_euler.is_valid()) {
+		// Sends the local transform notification via _update_transform_from_euler.
 		_rotation_euler->set_from_decomposed_simple_rotations_from_transform(_transform);
 		notify_property_list_changed();
+	} else if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
 	}
 }
 
@@ -21,8 +28,11 @@ Ref<BasisND> NodeND::get_basis() const {
 void NodeND::set_basis(const Ref<BasisND> &p_basis) {
 	_transform->set_basis(p_basis);
 	if (_rotation_euler.is_valid()) {
+		// Sends the local transform notification via _update_transform_from_euler.
 		_rotation_euler->set_from_decomposed_simple_rotations_from_basis(p_basis);
 		notify_property_list_changed();
+	} else if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
 	}
 }
 
@@ -33,8 +43,11 @@ Vector<VectorN> NodeND::get_all_basis_columns() const {
 void NodeND::set_all_basis_columns(const Vector<VectorN> &p_columns) {
 	_transform->set_all_basis_columns(p_columns);
 	if (_rotation_euler.is_valid()) {
+		// Sends the local transform notification via _update_transform_from_euler.
 		_rotation_euler->set_from_decomposed_simple_rotations(p_columns);
 		notify_property_list_changed();
+	} else if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
 	}
 }
 
@@ -45,8 +58,11 @@ TypedArray<VectorN> NodeND::get_all_basis_columns_bind() const {
 void NodeND::set_all_basis_columns_bind(const TypedArray<VectorN> &p_columns) {
 	_transform->set_all_basis_columns_bind(p_columns);
 	if (_rotation_euler.is_valid()) {
+		// Sends the local transform notification via _update_transform_from_euler.
 		_rotation_euler->set_from_decomposed_simple_rotations(_transform->get_all_basis_columns());
 		notify_property_list_changed();
+	} else if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
 	}
 }
 
@@ -57,8 +73,11 @@ VectorN NodeND::get_basis_flat_array() const {
 void NodeND::set_basis_flat_array(const VectorN &p_array) {
 	_transform->set_basis_flat_array(p_array);
 	if (_rotation_euler.is_valid()) {
+		// Sends the local transform notification via _update_transform_from_euler.
 		_rotation_euler->set_from_decomposed_simple_rotations(_transform->get_all_basis_columns());
 		notify_property_list_changed();
+	} else if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
 	}
 }
 
@@ -68,6 +87,9 @@ VectorN NodeND::get_position() const {
 
 void NodeND::set_position(const VectorN &p_position) {
 	_transform->set_origin(p_position);
+	if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
+	}
 }
 
 VectorN NodeND::get_scale_abs() const {
@@ -76,6 +98,9 @@ VectorN NodeND::get_scale_abs() const {
 
 void NodeND::set_scale_abs(const VectorN &p_scale) {
 	_transform->set_scale_abs(p_scale);
+	if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
+	}
 }
 
 int NodeND::get_euler_rotation_count() const {
@@ -123,8 +148,17 @@ Ref<EulerND> NodeND::get_rotation_euler() const {
 }
 
 void NodeND::set_rotation_euler(const Ref<EulerND> &p_euler) {
+	if (_rotation_euler.is_valid()) {
+		_rotation_euler->disconnect("rotation_changed", callable_mp(this, &NodeND::_update_transform_from_euler));
+	}
 	_rotation_euler = p_euler;
-	_rotation_euler->set_rotation_of_transform(_transform);
+	if (_rotation_euler.is_valid()) {
+		_rotation_euler->connect("rotation_changed", callable_mp(this, &NodeND::_update_transform_from_euler));
+		_rotation_euler->set_rotation_of_transform(_transform);
+		if (_should_notify_local_transform) {
+			notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
+		}
+	}
 	notify_property_list_changed();
 }
 
@@ -132,10 +166,14 @@ void NodeND::_update_transform_from_euler() {
 	if (_rotation_euler.is_null()) {
 		return;
 	}
-	if (_rotation_euler->get_rotation_count() == 0) {
-		return;
+	if (_rotation_euler->get_rotation_count() > 0) {
+		_rotation_euler->set_rotation_of_transform(_transform);
 	}
-	_rotation_euler->set_rotation_of_transform(_transform);
+	// Also notify when there are no rotations, since the transform setters
+	// rely on this function to notify after decomposing into the Euler.
+	if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
+	}
 }
 
 // Global transform getters and setters.
@@ -232,6 +270,9 @@ void NodeND::set_dimension(const int p_dimension) {
 	ERR_FAIL_COND_MSG(p_dimension < 0, "NodeND: Dimension cannot be negative.");
 	_transform->set_dimension(p_dimension);
 	emit_signal("dimension_changed");
+	if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
+	}
 }
 
 int NodeND::get_input_dimension() const {
@@ -241,6 +282,9 @@ int NodeND::get_input_dimension() const {
 void NodeND::set_input_dimension(const int p_input_dimension) {
 	_transform->set_basis_column_count(p_input_dimension);
 	emit_signal("dimension_changed");
+	if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
+	}
 }
 
 int NodeND::get_output_dimension() const {
@@ -250,6 +294,9 @@ int NodeND::get_output_dimension() const {
 void NodeND::set_output_dimension(const int p_output_dimension) {
 	_transform->set_origin_dimension(p_output_dimension);
 	emit_signal("dimension_changed");
+	if (_should_notify_local_transform) {
+		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
+	}
 }
 
 // Visibility.
@@ -297,6 +344,9 @@ Ref<RectND> NodeND::get_rect_bounds_recursive(const Ref<TransformND> &p_to_targe
 }
 
 void NodeND::_bind_methods() {
+	// Local transform notification.
+	ClassDB::bind_method(D_METHOD("get_should_notify_local_transform"), &NodeND::get_should_notify_local_transform);
+	ClassDB::bind_method(D_METHOD("set_should_notify_local_transform", "should_notify_local_transform"), &NodeND::set_should_notify_local_transform);
 	// Transform getters and setters.
 	ClassDB::bind_method(D_METHOD("get_transform"), &NodeND::get_transform);
 	ClassDB::bind_method(D_METHOD("set_transform", "transform"), &NodeND::set_transform);
@@ -319,6 +369,8 @@ void NodeND::_bind_methods() {
 	// Global transform getters and setters.
 	ClassDB::bind_method(D_METHOD("get_global_transform"), &NodeND::get_global_transform);
 	ClassDB::bind_method(D_METHOD("set_global_transform", "global_transform"), &NodeND::set_global_transform);
+	ClassDB::bind_method(D_METHOD("get_global_basis"), &NodeND::get_global_basis);
+	ClassDB::bind_method(D_METHOD("set_global_basis", "global_basis"), &NodeND::set_global_basis);
 	ClassDB::bind_method(D_METHOD("get_global_transform_expand"), &NodeND::get_global_transform_expand);
 	ClassDB::bind_method(D_METHOD("get_global_transform_shrink"), &NodeND::get_global_transform_shrink);
 	ClassDB::bind_method(D_METHOD("get_global_position"), &NodeND::get_global_position);
@@ -350,10 +402,13 @@ void NodeND::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "euler_rotation_count", PROPERTY_HINT_RANGE, "0,100,1", PROPERTY_USAGE_EDITOR), "set_euler_rotation_count", "get_euler_rotation_count");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "euler_rotation_data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_euler_rotation_data", "get_euler_rotation_data");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "rotation_euler", PROPERTY_HINT_RESOURCE_TYPE, "EulerND", PROPERTY_USAGE_NONE), "set_rotation_euler", "get_rotation_euler");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "should_notify_local_transform"), "set_should_notify_local_transform", "get_should_notify_local_transform");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "global_transform", PROPERTY_HINT_RESOURCE_TYPE, "TransformND", PROPERTY_USAGE_NONE), "set_global_transform", "get_global_transform");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "global_basis", PROPERTY_HINT_RESOURCE_TYPE, "BasisND", PROPERTY_USAGE_NONE), "set_global_basis", "get_global_basis");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT64_ARRAY, "global_position", PROPERTY_HINT_NONE, "suffix:m", PROPERTY_USAGE_NONE), "set_global_position", "get_global_position");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "visible"), "set_visible", "is_visible");
 
+	BIND_CONSTANT(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
 	BIND_ENUM_CONSTANT(DIMENSION_MODE_SQUARE);
 	BIND_ENUM_CONSTANT(DIMENSION_MODE_NON_SQUARE);
 

@@ -62,6 +62,9 @@
 		<member name="euler_rotation_data" type="PackedFloat64Array" setter="set_euler_rotation_data" getter="get_euler_rotation_data">
 			The local rotation data of the node's [EulerND] rotation, stored as a flat [PackedFloat64Array]. Each rotation is stored as three consecutive values: the "from" axis index, the "to" axis index, and the angle in radians. The size of this array is always [code]euler_rotation_count * 3[/code]. This is a low-level property used for serialization, consider using [member rotation_euler] for high-level access with helper functions.
 		</member>
+		<member name="global_basis" type="BasisND" setter="set_global_basis" getter="get_global_basis">
+			The global basis of the node, packed into a [BasisND] resource containing VectorN (PackedFloat64Array) column vectors. This is the result of multiplying all ancestor bases together. Changes to the resource after this call will not affect the node's transform, so you need to modify a copy and set it back, like with [member basis].
+		</member>
 		<member name="global_position" type="PackedFloat64Array" setter="set_global_position" getter="get_global_position">
 			The global position of the node. The size of this array depends on the output dimension after multiplying all ancestor transforms.
 		</member>
@@ -86,6 +89,9 @@
 		<member name="scale_abs" type="PackedFloat64Array" setter="set_scale_abs" getter="get_scale_abs" default="PackedFloat64Array()">
 			The local absolute scale of the node. This is the length of each basis vector. The size of this array is the same as [member input_dimension] which is the same as the number of columns in [member basis_columns].
 		</member>
+		<member name="should_notify_local_transform" type="bool" setter="set_should_notify_local_transform" getter="get_should_notify_local_transform" default="false">
+			If [code]true[/code], this node will receive [constant NOTIFICATION_LOCAL_TRANSFORM_CHANGED] whenever [member transform] changes. This is the ND equivalent of [method Node3D.set_notify_local_transform], but exposed as a property.
+		</member>
 		<member name="transform" type="TransformND" setter="set_transform" getter="get_transform">
 			The local transformation matrix of the node as a [TransformND].
 		</member>
@@ -101,6 +107,10 @@
 		</signal>
 	</signals>
 	<constants>
+		<constant name="NOTIFICATION_LOCAL_TRANSFORM_CHANGED" value="44">
+			Notification received when this node's [member transform] changes, if [member should_notify_local_transform] is [code]true[/code]. This is not received when a parent [NodeND]'s transform changes. This is the ND equivalent of [constant Node3D.NOTIFICATION_LOCAL_TRANSFORM_CHANGED].
+			[b]Note:[/b] This is only received when the transform is changed through the methods and properties of [NodeND], including its [member rotation_euler]. Modifying the [TransformND] returned by [member transform] in-place does not send this notification.
+		</constant>
 		<constant name="DIMENSION_MODE_SQUARE" value="0" enum="DimensionMode">
 			The transform will have a dimension of [member dimension], with a square basis matrix. This is when you want a node to exist entirely in a single dimension (1D, 2D, 3D, 4D, 5D, etc).
 		</constant>
