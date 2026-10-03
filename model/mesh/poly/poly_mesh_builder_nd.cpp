@@ -200,7 +200,7 @@ void PolyMeshBuilderND::_rematch_extruded_corner_values(Vector<Vector<PackedFloa
 Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND> &p_input_mesh, const VectorN &p_extrusion_vector) {
 	Ref<ArrayPolyMeshND> ret;
 	ret.instantiate();
-	ERR_FAIL_COND_V_MSG(p_input_mesh.is_null() || !p_input_mesh->is_mesh_data_valid(), ret, "Input mesh is not valid, so extrusion cannot be performed.");
+	ERR_FAIL_COND_V_MSG(p_input_mesh.is_null() || !p_input_mesh->is_poly_mesh_data_valid(), ret, "Input mesh is not valid, so extrusion cannot be performed.");
 	const int input_dimension = p_input_mesh->get_dimension();
 	VectorN extrusion_vector = p_extrusion_vector;
 	if (extrusion_vector.is_empty()) {
@@ -327,7 +327,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 		if (output_boundary_dim_index >= 0) {
 			ret->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
 		}
-		CRASH_COND(!ret->is_mesh_data_valid());
+		CRASH_COND(!ret->is_poly_mesh_data_valid());
 		// Data binding keys relative to the input and output dimensions. When the extrusion adds
 		// a dimension, the input's boundary data becomes auxiliary data one level below the
 		// output's boundary, like how face normals relate to a 4D mesh's cell normals.
@@ -529,7 +529,7 @@ Ref<ArrayPolyMeshND> PolyMeshBuilderND::extrude_linear(const Ref<ArrayPolyMeshND
 	if (output_boundary_dim_index >= 0 && ret->get_poly_cell_indices().size() > output_boundary_dim_index) {
 		ret->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
 	}
-	CRASH_COND(!ret->is_mesh_data_valid());
+	CRASH_COND(!ret->is_poly_mesh_data_valid());
 	return ret;
 }
 
@@ -751,7 +751,7 @@ Vector<PackedInt32Array> PolyMeshBuilderND::_remap_binding_after_face_merge(cons
 }
 
 int64_t PolyMeshBuilderND::merge_coplanar_faces(const Ref<ArrayPolyMeshND> &p_mesh_nd, const double p_angle_tolerance_radians) {
-	ERR_FAIL_COND_V_MSG(p_mesh_nd.is_null() || !p_mesh_nd->is_mesh_data_valid(), 0, "PolyMeshBuilderND: Cannot merge the coplanar faces of an invalid mesh.");
+	ERR_FAIL_COND_V_MSG(p_mesh_nd.is_null() || !p_mesh_nd->is_poly_mesh_data_valid(), 0, "PolyMeshBuilderND: Cannot merge the coplanar faces of an invalid mesh.");
 	Vector<Vector<PackedInt32Array>> poly_cell_indices = p_mesh_nd->get_poly_cell_indices();
 	if (poly_cell_indices.is_empty()) {
 		return 0;
@@ -949,7 +949,7 @@ int64_t PolyMeshBuilderND::merge_coplanar_faces(const Ref<ArrayPolyMeshND> &p_me
 		}
 		p_mesh_nd->set_poly_cell_boundary_pivot_overrides(new_pivot_overrides);
 	}
-	ERR_FAIL_COND_V_MSG(!p_mesh_nd->is_mesh_data_valid(), merge_count, "PolyMeshBuilderND: Merging coplanar faces left the mesh invalid.");
+	ERR_FAIL_COND_V_MSG(!p_mesh_nd->is_poly_mesh_data_valid(), merge_count, "PolyMeshBuilderND: Merging coplanar faces left the mesh invalid.");
 	// Merging or reordering may have flipped the orientation of the boundary cells. Restore it before reading the new
 	// sub-element orders, so that the bindings are rebuilt against the final topology. For 3D meshes, each merged face
 	// takes the boundary normal of its first source, which all of its sources share.
@@ -990,12 +990,12 @@ int64_t PolyMeshBuilderND::merge_coplanar_faces(const Ref<ArrayPolyMeshND> &p_me
 	} else if (boundary_dim_index == 1) {
 		p_mesh_nd->set_seam_indices(MathND::remap_int32_set(old_seams, old_to_new_face));
 	}
-	ERR_FAIL_COND_V_MSG(!p_mesh_nd->is_mesh_data_valid(), merge_count, "PolyMeshBuilderND: Merging coplanar faces left the mesh's data bindings invalid.");
+	ERR_FAIL_COND_V_MSG(!p_mesh_nd->is_poly_mesh_data_valid(), merge_count, "PolyMeshBuilderND: Merging coplanar faces left the mesh's data bindings invalid.");
 	return merge_count;
 }
 
 int64_t PolyMeshBuilderND::delete_interior(const Ref<ArrayPolyMeshND> &p_mesh_nd) {
-	ERR_FAIL_COND_V_MSG(p_mesh_nd.is_null() || !p_mesh_nd->is_mesh_data_valid(), 0, "PolyMeshBuilderND: Cannot delete the volumes of an invalid mesh.");
+	ERR_FAIL_COND_V_MSG(p_mesh_nd.is_null() || !p_mesh_nd->is_poly_mesh_data_valid(), 0, "PolyMeshBuilderND: Cannot delete the volumes of an invalid mesh.");
 	Vector<Vector<PackedInt32Array>> poly_cell_indices = p_mesh_nd->get_poly_cell_indices();
 	// The volumes are the N-dimensional cells of an N-dimensional mesh, and their members are the boundary cells.
 	// If the mesh has no volumes, there is nothing to delete. No boundary cells could be interior without volumes.
@@ -1059,7 +1059,7 @@ void PolyMeshBuilderND::make_boundary_normals_topologically_consistent(const Ref
 	const Vector<VectorN> original_boundary_normals = p_mesh_nd->get_poly_cell_boundary_normals();
 	p_mesh_nd->set_poly_cell_boundary_normals(Vector<VectorN>());
 	p_mesh_nd->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
-	CRASH_COND(!p_mesh_nd->is_mesh_data_valid());
+	CRASH_COND(!p_mesh_nd->is_poly_mesh_data_valid());
 	Vector<VectorN> boundary_normals = p_mesh_nd->get_poly_cell_boundary_normals();
 	for (int64_t auth_index = 0; auth_index < p_authoritative.size(); auth_index++) {
 		const int64_t boundary_cell_index = p_authoritative[auth_index];
@@ -1757,7 +1757,7 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 	// unselected elements above them are conformed by referencing the pieces of their subdivided
 	// members, which keeps everything crack-free, even under deformation.
 	PackedInt32Array ret;
-	ERR_FAIL_COND_V_MSG(p_input_mesh.is_null() || !p_input_mesh->is_mesh_data_valid(), ret, "Input mesh is not valid, so subdivision cannot be performed.");
+	ERR_FAIL_COND_V_MSG(p_input_mesh.is_null() || !p_input_mesh->is_poly_mesh_data_valid(), ret, "Input mesh is not valid, so subdivision cannot be performed.");
 	const int64_t dimension = p_input_mesh->get_dimension();
 	ERR_FAIL_COND_V_MSG(p_dimension < 1 || p_dimension > dimension, ret, "Cannot subdivide elements of dimension " + itos(p_dimension) + " in a mesh of dimension " + itos(dimension) + ".");
 	SubdivisionContext ctx;
@@ -2067,7 +2067,7 @@ PackedInt32Array PolyMeshBuilderND::subdivide_elements(const Ref<ArrayPolyMeshND
 			WARN_PRINT("PolyMeshBuilderND: Discarding texture map data for binding key " + String(Variant(kv.key)) + " during subdivision.");
 		}
 	}
-	CRASH_COND(!p_input_mesh->is_mesh_data_valid());
+	CRASH_COND(!p_input_mesh->is_poly_mesh_data_valid());
 	// Return the indices of the new elements created from the selected ones, so that callers
 	// can keep track of the inputs. For example, in a Blender-like app, the user might select
 	// a set of faces, subdivide them, and update the selection to the new subdivided faces.

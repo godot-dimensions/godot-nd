@@ -420,13 +420,13 @@ void ArrayPolyMeshND::_compact_texture_map_values_internal() {
 // to run a sequence of editing operations first and only compact once at the end, if desired.
 
 void ArrayPolyMeshND::compact_normal_values() {
-	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot compact normal values of an invalid mesh.");
+	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot compact normal values of an invalid mesh.");
 	_compact_normal_values_internal();
 	poly_mesh_clear_cache(true, true);
 }
 
 void ArrayPolyMeshND::compact_texture_map_values() {
-	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot compact texture map values of an invalid mesh.");
+	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot compact texture map values of an invalid mesh.");
 	_compact_texture_map_values_internal();
 	poly_mesh_clear_cache();
 }
@@ -768,7 +768,7 @@ void ArrayPolyMeshND::set_flat_shading_normals(const ComputeNormalsMode p_mode, 
 	_all_poly_cell_normal_indices.erase(cell_to_vert_key);
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	ERR_FAIL_COND_MSG(boundary_dim_index < 0 || _poly_cell_indices.size() <= boundary_dim_index, "ArrayPolyMeshND: Cannot calculate boundary normals because there are no boundary cells.");
-	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot calculate boundary normals for an invalid mesh.");
+	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot calculate boundary normals for an invalid mesh.");
 	if (p_recalculate_boundary_normals || !_all_poly_cell_normal_indices.has(per_cell_key) || _all_poly_cell_normal_indices[per_cell_key].is_empty() || _all_poly_cell_normal_indices[per_cell_key][0].size() != _poly_cell_indices[boundary_dim_index].size()) {
 		calculate_boundary_normals(p_mode);
 	}
@@ -800,7 +800,7 @@ void ArrayPolyMeshND::set_smooth_shading_normals(const ComputeNormalsMode p_mode
 	_all_poly_cell_normal_indices.erase(cell_to_vert_key);
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	ERR_FAIL_COND_MSG(boundary_dim_index < 0 || _poly_cell_indices.size() <= boundary_dim_index, "ArrayPolyMeshND: Cannot calculate boundary normals because there are no boundary cells.");
-	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot calculate boundary normals for an invalid mesh.");
+	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot calculate boundary normals for an invalid mesh.");
 	// Step 1: Prepare the data arrays which will be used by this function.
 	if (p_recalculate_boundary_normals || !_all_poly_cell_normal_indices.has(per_cell_key) || _all_poly_cell_normal_indices[per_cell_key].is_empty() || _all_poly_cell_normal_indices[per_cell_key][0].size() != _poly_cell_indices[boundary_dim_index].size()) {
 		calculate_boundary_normals(p_mode);
@@ -859,7 +859,7 @@ void ArrayPolyMeshND::set_smooth_shading_normals(const ComputeNormalsMode p_mode
 void ArrayPolyMeshND::make_double_sided(const bool p_idempotent) {
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	ERR_FAIL_COND_MSG(boundary_dim_index < 0 || _poly_cell_indices.size() <= boundary_dim_index, "ArrayPolyMeshND: Cannot make double sided because there are no boundary cells.");
-	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot make double sided for an invalid mesh.");
+	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot make double sided for an invalid mesh.");
 	if (_poly_cell_indices[boundary_dim_index].is_empty()) {
 		return;
 	}
@@ -1009,7 +1009,7 @@ PackedInt32Array ArrayPolyMeshND::make_single_cell_from_all_cells(const int32_t 
 void ArrayPolyMeshND::calculate_seams(const double p_angle_threshold_radians, const bool p_discard_seams_within_islands) {
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	ERR_FAIL_COND_MSG(boundary_dim_index < 0 || _poly_cell_indices.size() <= boundary_dim_index, "ArrayPolyMeshND: Cannot calculate seams because there are no boundary cells.");
-	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot calculate seams for an invalid mesh.");
+	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot calculate seams for an invalid mesh.");
 	const Vector2i per_cell_key = _get_per_cell_key();
 	if (!_all_poly_cell_normal_indices.has(per_cell_key) || _all_poly_cell_normal_indices[per_cell_key].is_empty() || _all_poly_cell_normal_indices[per_cell_key][0].size() != _poly_cell_indices[boundary_dim_index].size()) {
 		calculate_boundary_normals(COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY, false);
@@ -1604,7 +1604,7 @@ void ArrayPolyMeshND::delete_texture_maps_below_dimension(const int p_dimension)
 // Misc functions.
 
 void ArrayPolyMeshND::deduplicate_all_elements(const int64_t p_max_dimension) {
-	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: Cannot deduplicate elements of an invalid mesh.");
+	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot deduplicate elements of an invalid mesh.");
 	ERR_FAIL_COND_MSG(p_max_dimension < 0, "ArrayPolyMeshND: Maximum dimension to deduplicate must be at least 0.");
 	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
 	const Vector2i per_cell_key = _get_per_cell_key();
@@ -1922,8 +1922,8 @@ void ArrayPolyMeshND::transform_mesh(const Ref<TransformND> &p_transform) {
 }
 
 void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<TransformND> &p_transform) {
-	ERR_FAIL_COND_MSG(!is_mesh_data_valid(), "ArrayPolyMeshND: This mesh is invalid, cannot merge another mesh into it.");
-	ERR_FAIL_COND_MSG(p_other.is_null() || !p_other->is_mesh_data_valid(), "ArrayPolyMeshND: Cannot merge an invalid PolyMeshND into this mesh.");
+	ERR_FAIL_COND_MSG(!is_poly_mesh_data_valid(), "ArrayPolyMeshND: This mesh is invalid, cannot merge another mesh into it.");
+	ERR_FAIL_COND_MSG(p_other.is_null() || !p_other->is_poly_mesh_data_valid(), "ArrayPolyMeshND: Cannot merge an invalid PolyMeshND into this mesh.");
 	if (p_other.ptr() == this) {
 		const Ref<ArrayPolyMeshND> source = duplicate();
 		merge_with(source, p_transform);

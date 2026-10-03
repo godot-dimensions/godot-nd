@@ -461,7 +461,7 @@ Ref<ArrayPolyMeshND> OFFDocumentND::import_generate_array_poly_mesh_nd() {
 		poly_material->populate_albedo_color_array_for_poly_mesh(poly_mesh);
 		poly_mesh->set_material(poly_material);
 	}
-	ERR_FAIL_COND_V_MSG(!poly_mesh->is_mesh_data_valid(), poly_mesh, "OFFDocumentND: Failed to import OFF as poly mesh, mesh data is not valid.");
+	ERR_FAIL_COND_V_MSG(!poly_mesh->is_poly_mesh_data_valid(), poly_mesh, "OFFDocumentND: Failed to import OFF as poly mesh, mesh data is not valid.");
 	return poly_mesh;
 }
 

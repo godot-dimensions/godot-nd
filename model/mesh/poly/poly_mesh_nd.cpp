@@ -26,11 +26,12 @@ void PolyMeshND::reset_poly_mesh_data_validation() {
 }
 
 bool PolyMeshND::validate_mesh_data() {
-	if (_validate_poly_mesh_data_only()) {
-		_is_poly_mesh_data_valid = true;
-	} else {
-		_is_poly_mesh_data_valid = false;
-		return false;
+	// Validate poly mesh data first. Don't call `is_poly_mesh_data_valid` to avoid duplicate error messages.
+	if (unlikely(!_is_poly_mesh_data_valid)) {
+		_is_poly_mesh_data_valid = _validate_poly_mesh_data_only();
+		if (!_is_poly_mesh_data_valid) {
+			return false;
+		}
 	}
 	// Also check that the result of converting the poly data into simplex cell data is valid.
 	// This function is used to validate if a mesh is good for rendering, so we need to check this.
@@ -1046,7 +1047,7 @@ PolyMeshND::PolyDataDictionary PolyMeshND::get_all_poly_cell_texture_map_indices
 }
 
 Vector<PackedInt32Array> PolyMeshND::get_all_face_vertex_indices() {
-	ERR_FAIL_COND_V(!is_mesh_data_valid(), Vector<PackedInt32Array>());
+	ERR_FAIL_COND_V(!is_poly_mesh_data_valid(), Vector<PackedInt32Array>());
 	const Vector<Vector<PackedInt32Array>> poly_cell_indices = get_poly_cell_indices();
 	ERR_FAIL_COND_V(poly_cell_indices.is_empty(), Vector<PackedInt32Array>());
 	const Vector<PackedInt32Array> face_edge_indices = poly_cell_indices[0];
@@ -1071,7 +1072,7 @@ TypedArray<PackedInt32Array> PolyMeshND::get_all_face_vertex_indices_bind() {
 }
 
 Vector<PackedInt32Array> PolyMeshND::get_all_boundary_cell_vertex_indices(const bool p_start_with_canonical_span) {
-	ERR_FAIL_COND_V(!is_mesh_data_valid(), Vector<PackedInt32Array>());
+	ERR_FAIL_COND_V(!is_poly_mesh_data_valid(), Vector<PackedInt32Array>());
 	// Returns a copy of the cache (cheap, copy-on-write), so callers may keep it across later edits to the mesh.
 	return _get_boundary_cell_vertex_indices_cached(p_start_with_canonical_span);
 }
@@ -1088,7 +1089,7 @@ TypedArray<PackedInt32Array> PolyMeshND::get_all_boundary_cell_vertex_indices_bi
 
 Vector<PackedInt32Array> PolyMeshND::get_all_poly_cell_vertex_indices(const int p_cell_dimension, const bool p_start_with_canonical_span) {
 	Vector<PackedInt32Array> ret;
-	ERR_FAIL_COND_V(!is_mesh_data_valid(), ret);
+	ERR_FAIL_COND_V(!is_poly_mesh_data_valid(), ret);
 	const Vector<Vector<PackedInt32Array>> &poly_cell_indices = get_poly_cell_indices();
 	ERR_FAIL_COND_V(p_cell_dimension >= poly_cell_indices.size() + 2, ret);
 	if (p_cell_dimension == 0) {
@@ -1134,7 +1135,7 @@ TypedArray<PackedInt32Array> PolyMeshND::get_all_poly_cell_vertex_indices_bind(c
 
 Vector<PackedInt32Array> PolyMeshND::get_all_poly_cell_poly_indices(const int p_cell_dimension, const int p_decomposition_dimension) {
 	Vector<PackedInt32Array> ret;
-	ERR_FAIL_COND_V(!is_mesh_data_valid(), ret);
+	ERR_FAIL_COND_V(!is_poly_mesh_data_valid(), ret);
 	ERR_FAIL_COND_V(p_decomposition_dimension > p_cell_dimension || p_decomposition_dimension < 0, ret);
 	const Vector<Vector<PackedInt32Array>> &poly_cell_indices = get_poly_cell_indices();
 	ERR_FAIL_INDEX_V(p_cell_dimension, poly_cell_indices.size() + 2, ret);
