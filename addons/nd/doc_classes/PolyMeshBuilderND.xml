@@ -51,6 +51,16 @@
 				[b]Note:[/b] This function only works correctly if the input mesh has star-shaped polytope boundary cells, and if it can locate a point within the star-shaped region of that cell. For non-convex cells, you may need to set [member ArrayPolyMeshND.poly_cell_boundary_pivot_overrides] to specify where the pivot point is located in the cells.
 			</description>
 		</method>
+		<method name="make_coplanar" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="mesh_nd" type="ArrayPolyMeshND" />
+			<param index="1" name="angle_tolerance_radians" type="float" default="0.001" />
+			<description>
+				Splits every element whose vertices do not lie in a flat space of its own dimension, such as a 2D plane for a 2D face, or a 3D hyperplane for a 3D cell. The resulting elements will be flat in the space. This is an in-place operation which modifies the given mesh. Returns how many splits were made.
+				An element is flat when its vertices stay within [param angle_tolerance_radians] of such a flat, relative to its size. A split cuts off one vertex: the element's boundary is divided into the parts that have the vertex and the parts that do not, and a new element of the dimension below closes both sides, a diagonal edge for a face, a face through the surrounding edges for a 3D cell, and so on, so a face loses a triangle and a cell loses a pyramid. The vertex cut off is the one whose removal leaves the rest closest to flat, then the one standing farthest out of the flat through the rest, then the one with the smallest cut, so a box face with one corner raised is cut along its level diagonal into a flat triangle and a leaning one, and a polygon with one raised corner loses only that corner's triangle. Faces are split before cells, and a cut that is not flat itself is split in turn, so every dimension is flat once this returns. The pieces, the elements above them, and the bindings follow [method ArrayPolyMeshND.split_poly_element], which does the bookkeeping.
+				The cross-sections that an N-dimensional mesh renders are only flat when its (N-1)-dimensional boundary cells are, and [method extrude_linear] gives flat cells only from flat input cells, which is what this is for.
+			</description>
+		</method>
 		<method name="merge_coplanar_faces" qualifiers="static">
 			<return type="int" />
 			<param index="0" name="mesh_nd" type="ArrayPolyMeshND" />

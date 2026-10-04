@@ -194,6 +194,15 @@
 				If [param recalculate_boundary_normals] is [code]true[/code], the method will first recalculate the boundary normals using [method calculate_boundary_normals] before setting the vertex instance normals.
 			</description>
 		</method>
+		<method name="split_poly_element">
+			<return type="PackedInt32Array" />
+			<param index="0" name="dimension" type="int" />
+			<param index="1" name="index" type="int" />
+			<param index="2" name="pieces" type="PackedInt32Array[]" />
+			<description>
+				Splits the element at [param index] in [param dimension], which must be 2 or more, into [param pieces], each given as the elements of the dimension below that bound it, and returns the indices of the pieces: the first piece takes the element's index and the rest are appended. The pieces may use elements appended for the split, such as a diagonal edge across a face or a face cutting through a cell. Every element of the dimension above that contained the element contains all of the pieces instead. Elements keep their first two members sharing an element of the dimension below. The boundary cells of an N-dimensional mesh, which are (N-1)-dimensional, keep their orientation, the pieces of a split boundary cell are oriented like it and get boundary normals of their own, the seams of a split (N-2)-dimensional element carry to its pieces, and a new boundary cell piece has no pivot override. The bindings follow: the pieces take the element's per-element values and, for each of their vertices and other sub-elements, the value the element had for it; elements above have their values moved to where their sub-elements are now; and an element of the dimension below that the pieces introduced gets zero values in the bindings of its dimension, so that complete bindings stay complete. This is the bookkeeping behind [method PolyMeshBuilderND.make_coplanar], which decides where to cut.
+			</description>
+		</method>
 		<method name="transform_mesh">
 			<return type="void" />
 			<param index="0" name="transform" type="TransformND" />

@@ -110,6 +110,10 @@ public:
 	// whole edge loop to keep it in a connected loop order, while higher-dimensional cells
 	// are flipped by swapping the first two members, since the rest of their order is free.
 	static void flip_poly_cell_orientation(PackedInt32Array &r_cell_members, const int64_t p_cell_dim_index);
+	// Reorders the members of a cell of dimension 3 or more so that its first two share an element of the dimension
+	// below, which its canonical span and orientation rely on. `p_sub_elements` are the members of the cell's members.
+	// Returns false when no two of its members share an element.
+	static bool start_cell_with_adjacent_members(const Vector<PackedInt32Array> &p_sub_elements, PackedInt32Array &r_cell_members);
 
 	bool is_poly_mesh_data_valid();
 	void reset_poly_mesh_data_validation();

@@ -61,6 +61,10 @@ private:
 	void _delete_data_binding_element_internal(const int32_t p_dimension, const int32_t p_index);
 	static void _delete_bindings_below_dimension_internal(HashMap<Vector2i, Vector<PackedInt32Array>> &r_bindings, const int p_dimension);
 
+	// Helpers for `split_poly_element`.
+	static void _resample_dense_binding_after_split(const Vector2i &p_key, const int32_t p_dimension, const int32_t p_index, const PackedInt32Array &p_piece_indices, const Vector<PackedInt32Array> *p_pre_traversal, const Vector<PackedInt32Array> &p_post_traversal, Vector<Vector<PackedFloat64Array>> &r_dense);
+	static int _induced_facet_orientation_sign(const PackedInt32Array &p_facet_vertices, const Vector<VectorN> &p_positions, const VectorN &p_cell_centroid, const VectorN &p_cell_normal, const int64_t p_dimension);
+
 	// Internal helpers for the normal and texture map value pools.
 	PackedInt32Array _normal_indices_for_values_internal(const Vector<VectorN> &p_values);
 	Vector<VectorN> _sample_normal_values_internal(const PackedInt32Array &p_indices) const;
@@ -82,6 +86,8 @@ public:
 	int32_t append_vertex(const VectorN &p_vertex, const bool p_deduplicate_vertices = true);
 	PackedInt32Array append_vertices(const TypedArray<VectorN> &p_vertices, const bool p_deduplicate_vertices = true);
 	void delete_poly_element(const int32_t p_dimension, const int32_t p_index);
+	PackedInt32Array split_poly_element(const int32_t p_dimension, const int32_t p_index, const Vector<PackedInt32Array> &p_pieces);
+	PackedInt32Array split_poly_element_bind(const int32_t p_dimension, const int32_t p_index, const TypedArray<PackedInt32Array> &p_pieces);
 
 	// Explicit compaction functions for removing unreferenced or duplicate data.
 	void compact_normal_values();

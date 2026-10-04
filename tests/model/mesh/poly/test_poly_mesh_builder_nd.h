@@ -3,6 +3,7 @@
 #include "../../../../math/math_nd.h"
 #include "../../../../model/mesh/poly/box_poly_mesh_nd.h"
 #include "../../../../model/mesh/poly/poly_mesh_builder_nd.h"
+#include "test_poly_mesh_nd.h"
 
 #include "scene/resources/3d/primitive_meshes.h"
 #include "tests/test_macros.h"
@@ -892,6 +893,174 @@ inline Ref<ArrayPolyMeshND> make_face_loops_mesh(const Vector<VectorN> &p_positi
 		mesh->append_poly_cell(2, face);
 	}
 	return mesh;
+}
+
+TEST_CASE("[PolyMeshBuilderND] Make coplanar") {
+	// Whether every element of the dimension fits in a flat of its own dimension.
+	auto elements_are_flat = [](const Ref<ArrayPolyMeshND> &p_mesh, const int p_dimension) -> bool {
+		const Vector<VectorN> positions = p_mesh->get_poly_cell_vertex_positions();
+		for (const PackedInt32Array &vertices : p_mesh->get_all_poly_cell_vertex_indices(p_dimension, false)) {
+			Vector<VectorN> basis;
+			for (const int32_t vertex_index : vertices) {
+				VectorN rejection = VectorND::subtract(positions[vertex_index], positions[vertices[0]]);
+				for (const VectorN &direction : basis) {
+					rejection = VectorND::slide(rejection, direction);
+				}
+				if (VectorND::length(rejection) > 1e-6) {
+					if (basis.size() == p_dimension) {
+						return false;
+					}
+					basis.push_back(VectorND::normalized(rejection));
+				}
+			}
+		}
+		return true;
+	};
+	auto has_edge = [](const Ref<ArrayPolyMeshND> &p_mesh, const int32_t p_a, const int32_t p_b) -> bool {
+		const PackedInt32Array edges = p_mesh->get_edge_indices();
+		for (int64_t i = 0; i < edges.size() / 2; i++) {
+			if ((edges[i * 2] == p_a && edges[i * 2 + 1] == p_b) || (edges[i * 2] == p_b && edges[i * 2 + 1] == p_a)) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	SUBCASE("Warped faces of a 4D mesh are split along their level diagonal") {
+		// A box face with one corner raised is cut off at that corner, which is the vertex whose removal leaves the
+		// others flat, into a flat triangle and a leaning one along the level diagonal between its neighbors.
+		Ref<ArrayPolyMeshND> quad = make_face_loops_mesh({ VectorN{ 0, 0, 0, 0 }, VectorN{ 10, 0, 0, 0 }, VectorN{ 10, 10, 1, 0 }, VectorN{ 0, 10, 0, 0 } }, { { 0, 1, 2, 3 } });
+		CHECK(PolyMeshBuilderND::make_coplanar(quad) == 1);
+		REQUIRE(quad->is_mesh_data_valid());
+		CHECK(quad->get_poly_cell_indices()[0].size() == 2);
+		CHECK(quad->get_edge_indices().size() == 5 * 2);
+		CHECK_MESSAGE(has_edge(quad, 1, 3), "The diagonal joins the raised corner's neighbors.");
+		CHECK(elements_are_flat(quad, 2));
+		// A flat mesh is left alone, and so is a warp within the tolerance.
+		Ref<ArrayPolyMeshND> box = TestPolyMeshND::make_box_poly_mesh(4)->to_array_poly_mesh();
+		CHECK(PolyMeshBuilderND::make_coplanar(box) == 0);
+		CHECK(box->get_poly_cell_indices()[0].size() == 24);
+		Ref<ArrayPolyMeshND> nearly_flat = make_face_loops_mesh({ VectorN{ 0, 0, 0, 0 }, VectorN{ 10, 0, 0, 0 }, VectorN{ 10, 10, 0.001, 0 }, VectorN{ 0, 10, 0, 0 } }, { { 0, 1, 2, 3 } });
+		CHECK(PolyMeshBuilderND::make_coplanar(nearly_flat) == 0);
+		CHECK(PolyMeshBuilderND::make_coplanar(nearly_flat, 0.00001) == 1);
+		// An octagon with one raised vertex loses only that vertex's triangle, and the rest stays one flat face.
+		Vector<VectorN> ring;
+		for (int i = 0; i < 8; i++) {
+			const double angle = Math::TAU * i / 8.0;
+			ring.append(VectorN{ 5.0 * Math::cos(angle), 5.0 * Math::sin(angle), i == 0 ? 1.0 : 0.0, 0 });
+		}
+		Ref<ArrayPolyMeshND> octagon = make_face_loops_mesh(ring, { { 0, 1, 2, 3, 4, 5, 6, 7 } });
+		CHECK(PolyMeshBuilderND::make_coplanar(octagon) == 1);
+		REQUIRE(octagon->is_mesh_data_valid());
+		REQUIRE(octagon->get_poly_cell_indices()[0].size() == 2);
+		CHECK(octagon->get_poly_cell_indices()[0][0].size() == 3);
+		CHECK(octagon->get_poly_cell_indices()[0][1].size() == 7);
+		CHECK(has_edge(octagon, 1, 7));
+		CHECK(elements_are_flat(octagon, 2));
+	}
+
+	SUBCASE("A warped cube cell of a 4D mesh is cut into flat pieces that keep its bindings") {
+		// A cube cell with one corner pushed into W: the three faces at the corner are warped and get split, then the
+		// cell, whose vertices span all four directions, is cut into the corner's tetrahedron and the rest, each flat.
+		// Its bindings stay complete: the pieces take the cell's values, and the cut face gets zero values.
+		Vector<VectorN> cube_corners;
+		for (int i = 0; i < 8; i++) {
+			cube_corners.append(VectorN{ double(i & 1), double((i >> 1) & 1), double((i >> 2) & 1), i == 7 ? 0.5 : 0.0 });
+		}
+		Ref<ArrayPolyMeshND> cube = make_face_loops_mesh(cube_corners, { { 0, 1, 3, 2 }, { 4, 6, 7, 5 }, { 0, 4, 5, 1 }, { 2, 3, 7, 6 }, { 0, 2, 6, 4 }, { 1, 5, 7, 3 } });
+		cube->append_poly_cell(3, PackedInt32Array{ 0, 2, 1, 3, 4, 5 });
+		REQUIRE(cube->is_poly_mesh_data_valid());
+		Vector<VectorN> cube_face_values;
+		for (int i = 0; i < 6; i++) {
+			cube_face_values.append(VectorN{ double(i + 1), 0, 0, 0 });
+		}
+		cube->set_poly_cell_dense_normals(Vector2i(2, 2), Vector<Vector<VectorN>>{ cube_face_values });
+		cube->set_poly_cell_dense_normals(Vector2i(3, 3), Vector<Vector<VectorN>>{ Vector<VectorN>{ VectorN{ 0, 0, 0, 1 } } });
+		Vector<VectorM> cube_corner_values;
+		for (const int32_t vertex_index : cube->get_all_poly_cell_vertex_indices(3, false)[0]) {
+			cube_corner_values.append(VectorM{ double(vertex_index), 0, 0 });
+		}
+		cube->set_poly_cell_dense_texture_map(Vector2i(3, 0), Vector<Vector<VectorM>>{ cube_corner_values });
+		CHECK(PolyMeshBuilderND::make_coplanar(cube) == 4);
+		REQUIRE(cube->is_mesh_data_valid());
+		CHECK(cube->get_edge_indices().size() == 15 * 2);
+		CHECK(cube->get_poly_cell_indices()[0].size() == 10);
+		REQUIRE(cube->get_poly_cell_indices()[1].size() == 2);
+		CHECK(elements_are_flat(cube, 2));
+		CHECK(elements_are_flat(cube, 3));
+		const Vector<PackedInt32Array> cube_cell_vertices = cube->get_all_poly_cell_vertex_indices(3, false);
+		CHECK((cube_cell_vertices[0].size() == 4) != (cube_cell_vertices[1].size() == 4));
+		const Vector<Vector<VectorN>> cube_face_normals = cube->get_poly_cell_dense_normals(Vector2i(2, 2));
+		REQUIRE(cube_face_normals.size() == 1);
+		REQUIRE(cube_face_normals[0].size() == 10);
+		CHECK_MESSAGE(VectorND::is_zero_approx(cube_face_normals[0][9]), "The cut face has no value of its own.");
+		CHECK(VectorND::get_component(cube_face_normals[0][6], 0) >= 1.0);
+		const Vector<Vector<VectorN>> cube_cell_normals = cube->get_poly_cell_dense_normals(Vector2i(3, 3));
+		REQUIRE(cube_cell_normals.size() == 1);
+		CHECK(cube_cell_normals[0].size() == 2);
+		const Vector<Vector<VectorM>> cube_texture_map = cube->get_poly_cell_dense_texture_map(Vector2i(3, 0));
+		REQUIRE(cube_texture_map.size() == 2);
+		for (int64_t cell_index = 0; cell_index < 2; cell_index++) {
+			REQUIRE(cube_texture_map[cell_index].size() == cube_cell_vertices[cell_index].size());
+			for (int64_t i = 0; i < cube_cell_vertices[cell_index].size(); i++) {
+				CHECK(cube_texture_map[cell_index][i] == VectorM{ double(cube_cell_vertices[cell_index][i]), 0, 0 });
+			}
+		}
+	}
+
+	SUBCASE("A warped boundary face of a 3D mesh is split into pieces facing the way it did") {
+		// In a 3D mesh, the faces are the boundary cells, so the pieces need an orientation and a normal.
+		Ref<ArrayPolyMeshND> quad = make_face_loops_mesh({ VectorN{ 0, 0, 0 }, VectorN{ 10, 0, 0 }, VectorN{ 10, 10, 1 }, VectorN{ 0, 10, 0 } }, { { 0, 1, 2, 3 } });
+		quad->calculate_boundary_normals();
+		const VectorN original_normal = quad->get_poly_cell_boundary_normals()[0];
+		CHECK(PolyMeshBuilderND::make_coplanar(quad) == 1);
+		REQUIRE(quad->is_mesh_data_valid());
+		CHECK(quad->get_poly_cell_indices()[0].size() == 2);
+		CHECK(has_edge(quad, 1, 3));
+		CHECK(elements_are_flat(quad, 2));
+		const Vector<VectorN> stored_normals = quad->get_poly_cell_boundary_normals();
+		quad->calculate_boundary_normals();
+		const Vector<VectorN> normals = quad->get_poly_cell_boundary_normals();
+		REQUIRE(stored_normals.size() == 2);
+		REQUIRE(normals.size() == 2);
+		for (int64_t face_index = 0; face_index < 2; face_index++) {
+			CHECK_MESSAGE(VectorND::dot(normals[face_index], original_normal) > 0.9, "Each piece faces the way the warped face did.");
+			CHECK(VectorND::is_equal_approx(stored_normals[face_index], normals[face_index]));
+		}
+	}
+
+	SUBCASE("A 5D box with one corner pushed out is made flat in every dimension") {
+		// Pushing a corner out along the diagonal warps the faces, 3D cells, and 4D boundary cells around it, so cuts
+		// of every dimension up to 3D are needed, and the boundary cells keep facing outward.
+		Ref<ArrayPolyMeshND> box = TestPolyMeshND::make_box_poly_mesh(5)->to_array_poly_mesh();
+		const Vector<VectorN> original_normals = box->get_poly_cell_boundary_normals();
+		Vector<VectorN> positions = box->get_poly_cell_vertex_positions();
+		int64_t pushed = 0;
+		for (int64_t i = 1; i < positions.size(); i++) {
+			if (VectorND::length_squared(VectorND::subtract(positions[i], VectorND::fill(5, 1.0))) < VectorND::length_squared(VectorND::subtract(positions[pushed], VectorND::fill(5, 1.0)))) {
+				pushed = i;
+			}
+		}
+		positions.set(pushed, VectorND::add(positions[pushed], VectorND::fill(5, 0.1)));
+		box->set_poly_cell_vertex_positions(positions);
+		REQUIRE(box->is_mesh_data_valid());
+		CHECK(PolyMeshBuilderND::make_coplanar(box) > 0);
+		REQUIRE(box->is_mesh_data_valid());
+		CHECK(elements_are_flat(box, 2));
+		CHECK(elements_are_flat(box, 3));
+		CHECK(elements_are_flat(box, 4));
+		// Every boundary cell piece still faces the way its original cell did, since the pushed corner is small.
+		box->calculate_boundary_normals();
+		const Vector<VectorN> normals = box->get_poly_cell_boundary_normals();
+		REQUIRE(normals.size() > original_normals.size());
+		for (int64_t cell_index = 0; cell_index < normals.size(); cell_index++) {
+			double best_alignment = -1.0;
+			for (const VectorN &original_normal : original_normals) {
+				best_alignment = MAX(best_alignment, VectorND::dot(normals[cell_index], original_normal));
+			}
+			CHECK(best_alignment > 0.9);
+		}
+	}
 }
 
 TEST_CASE("[SceneTree][PolyMeshBuilderND] Merge coplanar faces of a 3D mesh") {

@@ -98,6 +98,12 @@ class PolyMeshBuilderND : public Object {
 	static void _subdivide_refine_face(SubdivisionContext &r_ctx, const int32_t p_face_index);
 	static void _subdivide_refine_cell(SubdivisionContext &r_ctx, const int64_t p_level, const int32_t p_index);
 	static PackedInt32Array _subdivide_conform_face(SubdivisionContext &r_ctx, const int32_t p_face_index);
+	// These are for `make_coplanar`.
+	static PackedInt32Array _gather_element_vertices(const Vector<Vector<PackedInt32Array>> &p_levels, const PackedInt32Array &p_edge_vertex_indices, const int p_dimension, const int32_t p_index);
+	static double _grow_flat_basis(const Vector<VectorN> &p_positions, const PackedInt32Array &p_vertices, const VectorN &p_origin, const int p_flat_dimension, Vector<VectorN> &r_basis);
+	static double _flatness_deviation(const Vector<VectorN> &p_positions, const PackedInt32Array &p_vertices, const int p_flat_dimension);
+	static bool _order_edges_into_loop(const PackedInt32Array &p_edges, const PackedInt32Array &p_edge_vertex_indices, PackedInt32Array &r_loop);
+	static int64_t _make_element_coplanar(const Ref<ArrayPolyMeshND> &p_mesh_nd, const int p_dimension, const int32_t p_index, const double p_sin_tolerance, PackedInt32Array &r_pieces);
 	// Coplanar face merging helpers. These intentionally only operate on 2D faces, such as the triangles of a 3D mesh.
 	static PackedInt32Array _get_loop_face_vertices(const PackedInt32Array &p_face_edges, const PackedInt32Array &p_edge_vertex_indices);
 	static bool _rotate_out_shared_edges(const PackedInt32Array &p_face_edges, const PackedInt32Array &p_other_face_edges, PackedInt32Array &r_remainder);
@@ -118,6 +124,7 @@ public:
 	// In-place adjustments to the given mesh.
 	static int64_t delete_interior(const Ref<ArrayPolyMeshND> &p_mesh_nd);
 	static void make_boundary_normals_topologically_consistent(const Ref<ArrayPolyMeshND> &p_mesh_nd, const PackedInt32Array &p_authoritative);
+	static int64_t make_coplanar(const Ref<ArrayPolyMeshND> &p_mesh_nd, const double p_angle_tolerance_radians = 0.001);
 	static int64_t merge_coplanar_faces(const Ref<ArrayPolyMeshND> &p_mesh_nd, const double p_angle_tolerance_radians = 0.001);
 	static PackedInt32Array subdivide_elements(const Ref<ArrayPolyMeshND> &p_input_mesh, const int p_dimension, const PackedInt32Array &p_elements = PackedInt32Array());
 

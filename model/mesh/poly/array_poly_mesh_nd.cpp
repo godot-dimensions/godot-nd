@@ -591,6 +591,398 @@ void ArrayPolyMeshND::_delete_poly_cell_element_internal(const int32_t p_poly_di
 	}
 }
 
+// Resamples one dense binding after `split_poly_element` changed the mesh. `p_pre_traversal` is the binding's
+// per-element traversal of its sub-elements before the split, or null for a per-element binding, and
+// `p_post_traversal` is the same after the split, which also tells how many elements there are now.
+// Normals and texture maps are both stored as `PackedFloat64Array` values, so this serves both, and an empty
+// value is a zero value.
+void ArrayPolyMeshND::_resample_dense_binding_after_split(const Vector2i &p_key, const int32_t p_dimension, const int32_t p_index, const PackedInt32Array &p_piece_indices, const Vector<PackedInt32Array> *p_pre_traversal, const Vector<PackedInt32Array> &p_post_traversal, Vector<Vector<PackedFloat64Array>> &r_dense) {
+	const int64_t element_count = p_post_traversal.size();
+	if (p_key.x == p_dimension - 1) {
+		// The dimension below: the pieces may use new elements, such as a cut face, which get zero values so that a
+		// complete binding stays complete.
+		if (p_key.y == p_key.x) {
+			if (!r_dense.is_empty() && r_dense[0].size() < element_count) {
+				r_dense.write[0].resize(element_count);
+			}
+		} else {
+			while (r_dense.size() < element_count) {
+				Vector<PackedFloat64Array> zeros;
+				zeros.resize(p_post_traversal[r_dense.size()].size());
+				r_dense.push_back(zeros);
+			}
+		}
+		return;
+	}
+	if (p_key.x == p_dimension) {
+		// The split dimension: the pieces take the element's values, the per-element value as it is, and for each of
+		// their sub-elements the value the element had for it, with zero for a sub-element the element did not have.
+		if (p_key.y == p_key.x) {
+			if (r_dense.is_empty() || p_index >= r_dense[0].size()) {
+				return; // The element had no value, so neither do its pieces.
+			}
+			const PackedFloat64Array value = r_dense[0][p_index];
+			if (r_dense[0].size() < element_count) {
+				r_dense.write[0].resize(element_count);
+			}
+			for (const int32_t piece_index : p_piece_indices) {
+				r_dense.write[0].set(piece_index, value);
+			}
+			return;
+		}
+		if (p_pre_traversal == nullptr || p_index >= r_dense.size() || p_index >= p_pre_traversal->size()) {
+			return;
+		}
+		const PackedInt32Array element_sub_elements = (*p_pre_traversal)[p_index];
+		const Vector<PackedFloat64Array> element_values = r_dense[p_index];
+		if (element_values.size() != element_sub_elements.size()) {
+			return; // Malformed, so leave it for validation to report.
+		}
+		while (r_dense.size() < element_count) {
+			r_dense.push_back(Vector<PackedFloat64Array>());
+		}
+		for (const int32_t piece_index : p_piece_indices) {
+			const PackedInt32Array &piece_sub_elements = p_post_traversal[piece_index];
+			Vector<PackedFloat64Array> piece_values;
+			piece_values.resize(piece_sub_elements.size());
+			for (int64_t i = 0; i < piece_sub_elements.size(); i++) {
+				const int64_t found = element_sub_elements.find(piece_sub_elements[i]);
+				piece_values.set(i, found >= 0 ? element_values[found] : PackedFloat64Array());
+			}
+			r_dense.write[piece_index] = piece_values;
+		}
+		return;
+	}
+	// Above the split dimension: an element that contains the pieces traverses its sub-elements in a new order, so
+	// its values move to where their sub-elements are now, and a new sub-element gets zero.
+	if (p_pre_traversal == nullptr) {
+		return;
+	}
+	for (int64_t element_index = 0; element_index < r_dense.size() && element_index < p_pre_traversal->size() && element_index < element_count; element_index++) {
+		const PackedInt32Array &pre = (*p_pre_traversal)[element_index];
+		const PackedInt32Array &post = p_post_traversal[element_index];
+		const Vector<PackedFloat64Array> &values = r_dense[element_index];
+		if (values.is_empty() || pre == post || values.size() != pre.size()) {
+			continue;
+		}
+		Vector<PackedFloat64Array> remapped;
+		remapped.resize(post.size());
+		for (int64_t i = 0; i < post.size(); i++) {
+			const int64_t found = pre.find(post[i]);
+			remapped.set(i, found >= 0 ? values[found] : PackedFloat64Array());
+		}
+		r_dense.write[element_index] = remapped;
+	}
+}
+
+// The sign of the orientation a boundary cell induces on one of its facets: that of the frame made of the
+// directions along the facet, the direction from the facet into the cell, and the cell's normal. The facet's
+// directions depend only on the facet, so the sign means something compared to another cell's sign for the same
+// facet: a cell and a piece cut from it induce the same sign on a facet they share, and two cells that share a
+// facet and are oriented consistently induce opposite signs on it. Zero means the facet or the frame is degenerate.
+int ArrayPolyMeshND::_induced_facet_orientation_sign(const PackedInt32Array &p_facet_vertices, const Vector<VectorN> &p_positions, const VectorN &p_cell_centroid, const VectorN &p_cell_normal, const int64_t p_dimension) {
+	// The boundary cells of an N-dimensional mesh are (N-1)-dimensional, so their facets are (N-2)-dimensional.
+	const int64_t facet_dimension = p_dimension - 2;
+	if (facet_dimension < 1 || p_facet_vertices.size() < facet_dimension + 1) {
+		return 0;
+	}
+	const VectorN origin = p_positions[p_facet_vertices[0]];
+	// Along the facet, each direction towards the vertex farthest out of the directions before it.
+	Vector<VectorN> frame;
+	while (frame.size() < facet_dimension) {
+		VectorN largest_rejection;
+		double largest_rejection_length_squared = 0.0;
+		for (int64_t i = 1; i < p_facet_vertices.size(); i++) {
+			VectorN rejection = VectorND::subtract(p_positions[p_facet_vertices[i]], origin);
+			for (const VectorN &direction : frame) {
+				rejection = VectorND::slide(rejection, direction);
+			}
+			const double rejection_length_squared = VectorND::length_squared(rejection);
+			if (rejection_length_squared > largest_rejection_length_squared) {
+				largest_rejection_length_squared = rejection_length_squared;
+				largest_rejection = rejection;
+			}
+		}
+		if (largest_rejection_length_squared <= 0.0) {
+			return 0;
+		}
+		frame.push_back(VectorND::normalized(largest_rejection));
+	}
+	VectorN inward = VectorND::subtract(p_cell_centroid, origin);
+	for (const VectorN &direction : frame) {
+		inward = VectorND::slide(inward, direction);
+	}
+	frame.push_back(inward);
+	const double determinant = VectorND::dot(VectorND::perpendicular(frame), p_cell_normal);
+	return determinant > 0.0 ? 1 : (determinant < 0.0 ? -1 : 0);
+}
+
+PackedInt32Array ArrayPolyMeshND::split_poly_element(const int32_t p_dimension, const int32_t p_index, const Vector<PackedInt32Array> &p_pieces) {
+	PackedInt32Array ret;
+	ERR_FAIL_COND_V_MSG(p_dimension < 2, ret, "ArrayPolyMeshND: Only elements of dimension 2 and up can be split into pieces. An edge is split by inserting a vertex instead.");
+	const int64_t poly_dim_index = p_dimension - 2;
+	ERR_FAIL_COND_V_MSG(poly_dim_index >= _poly_cell_indices.size(), ret, "ArrayPolyMeshND: Cannot split an element of dimension " + itos(p_dimension) + " because the mesh has no elements of that dimension.");
+	ERR_FAIL_INDEX_V_MSG(p_index, _poly_cell_indices[poly_dim_index].size(), ret, "ArrayPolyMeshND: Cannot split element " + itos(p_index) + " of dimension " + itos(p_dimension) + " because there is no such element.");
+	ERR_FAIL_COND_V_MSG(p_pieces.size() < 2, ret, "ArrayPolyMeshND: Splitting an element takes at least 2 pieces.");
+	ERR_FAIL_COND_V_MSG(!is_poly_mesh_data_valid(), ret, "ArrayPolyMeshND: Cannot split an element of a mesh whose poly mesh data is invalid.");
+	const int64_t sub_element_count = poly_dim_index == 0 ? _edge_vertex_indices.size() / 2 : _poly_cell_indices[poly_dim_index - 1].size();
+	Vector<PackedInt32Array> pieces = p_pieces;
+	for (int64_t i = 0; i < pieces.size(); i++) {
+		ERR_FAIL_COND_V_MSG(pieces[i].size() <= p_dimension, ret, "ArrayPolyMeshND: Every piece of a split element of dimension " + itos(p_dimension) + " needs at least " + itos(p_dimension + 1) + " elements of the dimension below.");
+		for (const int32_t sub_element : pieces[i]) {
+			ERR_FAIL_INDEX_V_MSG(sub_element, sub_element_count, ret, "ArrayPolyMeshND: A piece of the split element refers to element " + itos(sub_element) + " of dimension " + itos(p_dimension - 1) + ", which does not exist.");
+		}
+		if (poly_dim_index >= 1) {
+			ERR_FAIL_COND_V_MSG(!start_cell_with_adjacent_members(_poly_cell_indices[poly_dim_index - 1], pieces.write[i]), ret, "ArrayPolyMeshND: No two members of a piece of the split element share an element of the dimension below, so the piece cannot be oriented.");
+		}
+	}
+	// What the split changes besides the elements themselves: the traversal of every element from this dimension up,
+	// which positions the decomposed bindings, the dense data of every binding from the dimension below up, and the
+	// orientation normals of the boundary cells, which define their outward sides.
+	HashMap<Vector2i, Vector<Vector<VectorN>>> dense_normals;
+	HashMap<Vector2i, Vector<Vector<VectorM>>> dense_texture_maps;
+	HashMap<Vector2i, Vector<PackedInt32Array>> pre_traversals;
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : _all_poly_cell_normal_indices) {
+		if (kv.key.x >= p_dimension - 1) {
+			dense_normals.insert(kv.key, get_poly_cell_dense_normals(kv.key));
+		}
+	}
+	for (const KeyValue<Vector2i, Vector<PackedInt32Array>> &kv : _all_poly_cell_texture_map_indices) {
+		if (kv.key.x >= p_dimension - 1) {
+			dense_texture_maps.insert(kv.key, get_poly_cell_dense_texture_map(kv.key));
+		}
+	}
+	for (const KeyValue<Vector2i, Vector<Vector<VectorN>>> &kv : dense_normals) {
+		if (kv.key.x >= p_dimension && kv.key.y < kv.key.x && !pre_traversals.has(kv.key)) {
+			pre_traversals.insert(kv.key, get_all_poly_cell_poly_indices(kv.key.x, kv.key.y));
+		}
+	}
+	for (const KeyValue<Vector2i, Vector<Vector<VectorM>>> &kv : dense_texture_maps) {
+		if (kv.key.x >= p_dimension && kv.key.y < kv.key.x && !pre_traversals.has(kv.key)) {
+			pre_traversals.insert(kv.key, get_all_poly_cell_poly_indices(kv.key.x, kv.key.y));
+		}
+	}
+	// The boundary cells of an N-dimensional mesh are (N-1)-dimensional. Their orientation can change when they or
+	// any element below them is split, and splitting one of them gives pieces that need an orientation.
+	const int64_t dimension = get_dimension();
+	const int64_t boundary_dim_index = _get_boundary_poly_dim_index();
+	const bool orients_cells = boundary_dim_index >= 0 && boundary_dim_index < _poly_cell_indices.size() && poly_dim_index <= boundary_dim_index;
+	const bool splits_boundary_cell = poly_dim_index == boundary_dim_index;
+	Vector<VectorN> pre_cell_normals;
+	if (orients_cells) {
+		pre_cell_normals = _compute_boundary_normals_based_on_cell_orientation(_get_boundary_cell_vertex_indices_cached(true), false);
+	}
+	const PackedInt32Array element_sub_elements = _poly_cell_indices[poly_dim_index][p_index];
+	VectorN element_centroid;
+	if (orients_cells && splits_boundary_cell) {
+		const PackedInt32Array element_vertices = get_all_poly_cell_vertex_indices(p_dimension, false)[p_index];
+		element_centroid = VectorND::zero(dimension);
+		for (const int32_t vertex_index : element_vertices) {
+			element_centroid = VectorND::add(element_centroid, _poly_cell_vertex_positions[vertex_index]);
+		}
+		element_centroid = VectorND::divide_scalar(element_centroid, (double)MAX(element_vertices.size(), 1));
+	}
+	// The bindings are taken out while the structure changes, since the pieces would not match the element's entries
+	// in the meantime, which validation would refuse, and they are put back resampled at the end.
+	for (const KeyValue<Vector2i, Vector<Vector<VectorN>>> &kv : dense_normals) {
+		_all_poly_cell_normal_indices.erase(kv.key);
+	}
+	for (const KeyValue<Vector2i, Vector<Vector<VectorM>>> &kv : dense_texture_maps) {
+		_all_poly_cell_texture_map_indices.erase(kv.key);
+	}
+	// The first piece takes the element's place and the rest are appended.
+	const int64_t old_count = _poly_cell_indices[poly_dim_index].size();
+	ret.append(p_index);
+	_poly_cell_indices.write[poly_dim_index].write[p_index] = pieces[0];
+	for (int64_t i = 1; i < pieces.size(); i++) {
+		ret.append((int32_t)_poly_cell_indices[poly_dim_index].size());
+		_poly_cell_indices.write[poly_dim_index].push_back(pieces[i]);
+	}
+	// Every element of the dimension above that contained the element contains all of the pieces instead. The first
+	// two members of an element must share an element of the dimension below, so when the split element is one of
+	// them, the piece that takes its place is one sharing an element with the other, and the rest go to the end.
+	if (poly_dim_index + 1 < _poly_cell_indices.size()) {
+		for (int64_t parent_index = 0; parent_index < _poly_cell_indices[poly_dim_index + 1].size(); parent_index++) {
+			PackedInt32Array parent = _poly_cell_indices[poly_dim_index + 1][parent_index];
+			const int64_t position = parent.find(p_index);
+			if (position < 0) {
+				continue;
+			}
+			int64_t piece_in_place = 0;
+			if (position < 2 && parent.size() >= 2) {
+				const PackedInt32Array &partner = _poly_cell_indices[poly_dim_index][parent[1 - position]];
+				for (int64_t i = 0; i < pieces.size(); i++) {
+					if (MathND::has_common_int32(pieces[i], partner)) {
+						piece_in_place = i;
+						break;
+					}
+				}
+			}
+			parent.set(position, ret[piece_in_place]);
+			for (int64_t i = 0; i < pieces.size(); i++) {
+				if (i != piece_in_place) {
+					parent.append(ret[i]);
+				}
+			}
+			_poly_cell_indices.write[poly_dim_index + 1].write[parent_index] = parent;
+		}
+	}
+	// Seams are the (N-2)-dimensional members of the boundary cells.
+	if (poly_dim_index == boundary_dim_index - 1 && _seam_indices.has(p_index)) {
+		for (int64_t i = 1; i < ret.size(); i++) {
+			_seam_indices.insert(ret[i]);
+		}
+	}
+	if (splits_boundary_cell && _poly_cell_boundary_pivot_overrides.size() == old_count) {
+		for (int64_t i = 1; i < ret.size(); i++) {
+			_poly_cell_boundary_pivot_overrides.append(-1);
+		}
+	}
+	poly_mesh_clear_cache();
+	// The orientation and binding code below traverses the new structure, which must be valid for that.
+	ERR_FAIL_COND_V_MSG(!is_poly_mesh_data_valid(), ret, "ArrayPolyMeshND: Splitting element " + itos(p_index) + " of dimension " + itos(p_dimension) + " into the given pieces made the poly mesh data invalid, so the bindings it affects were dropped.");
+	// Orientation. The boundary cells above a split element keep theirs: one whose normal flipped with its new
+	// members gets flipped back. The pieces of a split boundary cell are oriented like the cell: a piece induces the
+	// same orientation as the cell on a facet they share, and two pieces sharing a facet induce opposite orientations
+	// on it, see `_induced_facet_orientation_sign`. The pieces then get boundary normals of their own, which follow
+	// their orientation the way the cell's did.
+	const Vector2i per_cell_key = _get_per_cell_key();
+	Vector<VectorN> piece_boundary_normals;
+	if (orients_cells) {
+		Vector<VectorN> post_cell_normals = _compute_boundary_normals_based_on_cell_orientation(_get_boundary_cell_vertex_indices_cached(true), false);
+		Vector<int64_t> cells_to_flip;
+		if (!splits_boundary_cell) {
+			for (int64_t cell_index = 0; cell_index < post_cell_normals.size() && cell_index < pre_cell_normals.size(); cell_index++) {
+				if (VectorND::dot(pre_cell_normals[cell_index], post_cell_normals[cell_index]) < 0.0) {
+					cells_to_flip.push_back(cell_index);
+				}
+			}
+		} else {
+			const Vector<PackedInt32Array> facet_vertices = get_all_poly_cell_vertex_indices(p_dimension - 1, false);
+			const Vector<PackedInt32Array> cell_vertices = get_all_poly_cell_vertex_indices(p_dimension, false);
+			Vector<VectorN> piece_centroids;
+			for (const int32_t piece_index : ret) {
+				VectorN centroid = VectorND::zero(dimension);
+				for (const int32_t vertex_index : cell_vertices[piece_index]) {
+					centroid = VectorND::add(centroid, _poly_cell_vertex_positions[vertex_index]);
+				}
+				piece_centroids.push_back(VectorND::divide_scalar(centroid, (double)MAX(cell_vertices[piece_index].size(), 1)));
+			}
+			auto element_sign = [&](const int32_t p_facet) {
+				return _induced_facet_orientation_sign(facet_vertices[p_facet], _poly_cell_vertex_positions, element_centroid, pre_cell_normals[p_index], dimension);
+			};
+			auto piece_sign = [&](const int64_t p_piece, const int32_t p_facet, const bool p_flipped) {
+				const VectorN &normal = post_cell_normals[ret[p_piece]];
+				return _induced_facet_orientation_sign(facet_vertices[p_facet], _poly_cell_vertex_positions, piece_centroids[p_piece], p_flipped ? VectorND::multiply_scalar(normal, -1.0) : normal, dimension);
+			};
+			// Pieces with the element's first facet are decided against the element there, where the element's normal
+			// is exact even when the element is warped. Then pieces sharing a facet with a decided piece are decided
+			// against it, and any piece still left is decided against the element on a facet they share.
+			Vector<int> piece_flips; // 1 to keep, -1 to flip, 0 while undecided.
+			piece_flips.resize(pieces.size());
+			piece_flips.fill(0);
+			const int32_t first_facet = element_sub_elements[0];
+			for (int64_t i = 0; i < pieces.size(); i++) {
+				if (pieces[i].has(first_facet)) {
+					const int expected = element_sign(first_facet);
+					const int actual = piece_sign(i, first_facet, false);
+					piece_flips.write[i] = (expected != 0 && actual != 0 && expected != actual) ? -1 : 1;
+				}
+			}
+			for (bool progressed = true; progressed;) {
+				progressed = false;
+				for (int64_t i = 0; i < pieces.size(); i++) {
+					for (int64_t j = 0; j < pieces.size() && piece_flips[i] == 0; j++) {
+						if (piece_flips[j] == 0) {
+							continue;
+						}
+						for (const int32_t facet_index : pieces[i]) {
+							if (!pieces[j].has(facet_index)) {
+								continue;
+							}
+							const int sign_j = piece_sign(j, facet_index, piece_flips[j] < 0);
+							const int sign_i = piece_sign(i, facet_index, false);
+							piece_flips.write[i] = (sign_i != 0 && sign_j != 0 && sign_i == sign_j) ? -1 : 1;
+							progressed = true;
+							break;
+						}
+					}
+				}
+			}
+			for (int64_t i = 0; i < pieces.size(); i++) {
+				if (piece_flips[i] != 0) {
+					continue;
+				}
+				piece_flips.write[i] = 1;
+				for (const int32_t facet_index : pieces[i]) {
+					if (element_sub_elements.has(facet_index)) {
+						const int expected = element_sign(facet_index);
+						const int actual = piece_sign(i, facet_index, false);
+						piece_flips.write[i] = (expected != 0 && actual != 0 && expected != actual) ? -1 : 1;
+						break;
+					}
+				}
+			}
+			for (int64_t i = 0; i < pieces.size(); i++) {
+				if (piece_flips[i] < 0) {
+					cells_to_flip.push_back(ret[i]);
+				}
+			}
+		}
+		for (const int64_t cell_index : cells_to_flip) {
+			PackedInt32Array cell = _poly_cell_indices[boundary_dim_index][cell_index];
+			flip_poly_cell_orientation(cell, boundary_dim_index);
+			_poly_cell_indices.write[boundary_dim_index].write[cell_index] = cell;
+		}
+		if (!cells_to_flip.is_empty()) {
+			poly_mesh_clear_cache();
+			post_cell_normals = _compute_boundary_normals_based_on_cell_orientation(_get_boundary_cell_vertex_indices_cached(true), false);
+		}
+		if (splits_boundary_cell && dense_normals.has(per_cell_key) && !dense_normals[per_cell_key].is_empty() && p_index < dense_normals[per_cell_key][0].size()) {
+			const VectorN stored = dense_normals[per_cell_key][0][p_index];
+			const double sign = VectorND::is_zero_approx(stored) ? 0.0 : (VectorND::dot(stored, pre_cell_normals[p_index]) < 0.0 ? -1.0 : 1.0);
+			for (const int32_t piece_index : ret) {
+				piece_boundary_normals.push_back(VectorND::multiply_scalar(post_cell_normals[piece_index], sign));
+			}
+		}
+	}
+	// The bindings follow, see `_resample_dense_binding_after_split`.
+	HashMap<Vector2i, Vector<PackedInt32Array>> post_traversals;
+	auto post_traversal_of = [&](const Vector2i &p_key) -> const Vector<PackedInt32Array> & {
+		if (!post_traversals.has(p_key)) {
+			post_traversals.insert(p_key, get_all_poly_cell_poly_indices(p_key.x, p_key.y));
+		}
+		return post_traversals[p_key];
+	};
+	for (KeyValue<Vector2i, Vector<Vector<VectorN>>> &kv : dense_normals) {
+		const Vector<PackedInt32Array> *pre = pre_traversals.has(kv.key) ? &pre_traversals[kv.key] : nullptr;
+		_resample_dense_binding_after_split(kv.key, p_dimension, p_index, ret, pre, post_traversal_of(kv.key), kv.value);
+		if (kv.key == per_cell_key && !piece_boundary_normals.is_empty() && !kv.value.is_empty()) {
+			for (int64_t i = 0; i < ret.size() && i < piece_boundary_normals.size(); i++) {
+				if (ret[i] < kv.value[0].size()) {
+					kv.value.write[0].set(ret[i], piece_boundary_normals[i]);
+				}
+			}
+		}
+		set_poly_cell_dense_normals(kv.key, kv.value);
+	}
+	for (KeyValue<Vector2i, Vector<Vector<VectorM>>> &kv : dense_texture_maps) {
+		const Vector<PackedInt32Array> *pre = pre_traversals.has(kv.key) ? &pre_traversals[kv.key] : nullptr;
+		_resample_dense_binding_after_split(kv.key, p_dimension, p_index, ret, pre, post_traversal_of(kv.key), kv.value);
+		set_poly_cell_dense_texture_map(kv.key, kv.value);
+	}
+	poly_mesh_clear_cache();
+	return ret;
+}
+
+PackedInt32Array ArrayPolyMeshND::split_poly_element_bind(const int32_t p_dimension, const int32_t p_index, const TypedArray<PackedInt32Array> &p_pieces) {
+	Vector<PackedInt32Array> pieces;
+	for (int64_t i = 0; i < p_pieces.size(); i++) {
+		pieces.push_back(p_pieces[i]);
+	}
+	return split_poly_element(p_dimension, p_index, pieces);
+}
+
 void ArrayPolyMeshND::delete_poly_element(const int32_t p_dimension, const int32_t p_index) {
 	if (p_dimension < 0) {
 		ERR_FAIL_MSG("ArrayPolyMeshND: Cannot delete from negative dimension.");
@@ -2741,6 +3133,7 @@ void ArrayPolyMeshND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("append_vertex", "vertex", "deduplicate_vertices"), &ArrayPolyMeshND::append_vertex, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("append_vertices", "vertices", "deduplicate_vertices"), &ArrayPolyMeshND::append_vertices, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("delete_poly_element", "dimension", "index"), &ArrayPolyMeshND::delete_poly_element);
+	ClassDB::bind_method(D_METHOD("split_poly_element", "dimension", "index", "pieces"), &ArrayPolyMeshND::split_poly_element_bind);
 
 	ClassDB::bind_method(D_METHOD("compact_normal_values"), &ArrayPolyMeshND::compact_normal_values);
 	ClassDB::bind_method(D_METHOD("compact_texture_map_values"), &ArrayPolyMeshND::compact_texture_map_values);

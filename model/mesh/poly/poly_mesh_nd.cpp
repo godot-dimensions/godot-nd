@@ -548,6 +548,24 @@ void PolyMeshND::flip_poly_cell_orientation(PackedInt32Array &r_cell_members, co
 	}
 }
 
+bool PolyMeshND::start_cell_with_adjacent_members(const Vector<PackedInt32Array> &p_sub_elements, PackedInt32Array &r_cell_members) {
+	for (int64_t i = 0; i < r_cell_members.size(); i++) {
+		for (int64_t j = i + 1; j < r_cell_members.size(); j++) {
+			if (!MathND::has_common_int32(p_sub_elements[r_cell_members[i]], p_sub_elements[r_cell_members[j]])) {
+				continue;
+			}
+			const int32_t first = r_cell_members[i];
+			const int32_t second = r_cell_members[j];
+			r_cell_members.remove_at(j);
+			r_cell_members.remove_at(i);
+			r_cell_members.insert(0, second);
+			r_cell_members.insert(0, first);
+			return true;
+		}
+	}
+	return false;
+}
+
 void PolyMeshND::_orient_cells_to_match_normals(Vector<Vector<PackedInt32Array>> &r_poly_cell_indices, const PackedInt32Array &p_all_edge_indices, const Vector<VectorN> &p_vertices, const Vector<VectorN> &p_target_normals, const int64_t p_cell_dim_index) {
 	Vector<PackedInt32Array> cells = r_poly_cell_indices[p_cell_dim_index];
 	ERR_FAIL_COND(cells.size() != p_target_normals.size());
