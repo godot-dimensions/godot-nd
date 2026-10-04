@@ -200,7 +200,7 @@ const VectorN VectorND::CARDINAL_DEORTH = VectorN{ 0, 0, 0, 0, -1 };
 
 // Cosmetic functions.
 
-float _get_axis_color_hue_nd(int64_t p_index) {
+float VectorND::_get_axis_color_hue(const int64_t p_index) {
 	// Main hue.
 	int group = (p_index / 3) % 4;
 	int parity = p_index % 3;
@@ -235,14 +235,14 @@ float _get_axis_color_hue_nd(int64_t p_index) {
 	return hue;
 }
 
-Color VectorND::axis_color(int64_t p_axis) {
-	float hue = _get_axis_color_hue_nd(p_axis);
+Color VectorND::axis_color(const int64_t p_axis) {
+	float hue = _get_axis_color_hue(p_axis);
 	float value = ((p_axis / 12) % 2) == 0 ? 1.0f : 0.5f;
 	float sat = ((p_axis / 24) % 2) == 0 ? 0.8f : 0.4f;
 	return Color::from_hsv(hue, sat, value);
 }
 
-int _get_axis_unicode_number_nd(int64_t p_axis) {
+int VectorND::_get_axis_unicode_number(const int64_t p_axis) {
 	if (p_axis < 3) {
 		return p_axis + 88;
 	} else if (p_axis < 26) {
@@ -288,11 +288,11 @@ int _get_axis_unicode_number_nd(int64_t p_axis) {
 	}
 }
 
-String VectorND::axis_letter(int64_t p_axis) {
+String VectorND::axis_letter(const int64_t p_axis) {
 	if (p_axis < 0) {
 		return String("*");
 	}
-	return String::chr(_get_axis_unicode_number_nd(p_axis));
+	return String::chr(_get_axis_unicode_number(p_axis));
 }
 
 // VectorN operations.

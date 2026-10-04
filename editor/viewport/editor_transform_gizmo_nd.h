@@ -74,11 +74,20 @@ private:
 	bool _is_use_local_rotation = false;
 
 	// Setup functions.
+	static Ref<WireMaterialND> _make_single_color_wire_material_nd(const Color &p_color);
+	static Ref<WireMaterialND> _make_plane_material_nd(const Color &p_first_color, const Color &p_second_color);
+	static Ref<WireMaterialND> _make_rotation_ring_material_nd(const Color &p_first_color, const Color &p_second_color);
+	static Ref<ArrayWireMeshND> _make_move_arrow_wire_mesh_nd();
+	static Ref<ArrayWireMeshND> _make_rotation_ring_wire_mesh_nd();
+	static Ref<ArrayWireMeshND> _make_plane_wire_mesh_nd();
 	MeshInstanceND *_make_mesh_instance(const StringName &p_name, const Ref<ArrayWireMeshND> &p_mesh, const Ref<WireMaterialND> &p_material, NodeND *p_parent);
 	void _generate_gizmo_meshes();
 	void _regenerate_gizmo_meshes();
 
 	// Misc internal functions.
+	static Ref<TransformND> _realign_xy_to_axes(const int p_x, const int p_y);
+	static int _triangular_number(const int p_n);
+	static int _plane_index_in_triangular_number(const int p_i, const int p_j, const int p_dimension);
 	bool _gizmo_mouse_raycast(const Ref<InputEventMouse> &p_mouse_event, const CameraND *p_camera, const VectorN &p_local_ray_origin, const VectorN &p_local_ray_direction);
 	void _on_rendering_server_pre_render(CameraND *p_camera, Viewport *p_viewport, RenderingEngineND *p_rendering_engine);
 	void _on_editor_inspector_property_edited(const String &p_prop);

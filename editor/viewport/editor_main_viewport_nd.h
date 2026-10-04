@@ -48,7 +48,9 @@ private:
 	bool _camera_uses_free_rotation = false;
 
 	Vector2 _get_warped_mouse_motion(const Ref<InputEvent> &p_input_event) const;
+	static Ref<TransformND> _ground_basis_rotation(const int p_dimension, const Vector2 &p_rotation_radians);
 	Ref<TransformND> _ground_rotation_input(const Ref<InputEvent> &p_input_event, const Vector2 &p_rotation_radians) const;
+	static String _format_number(const double p_number);
 	void _project_settings_changed();
 	void _update_theme();
 

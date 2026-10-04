@@ -34,7 +34,7 @@ static_assert(MOVE_ARROW_SUBDIVISIONS_ND > 1);
 static_assert(ROTATION_RING_SEGMENTS_ND % 8 == 0);
 static_assert(SCALE_BOX_SUBDIVISIONS_ND > 1);
 
-Ref<WireMaterialND> _make_single_color_wire_material_nd(const Color &p_color) {
+Ref<WireMaterialND> EditorTransformGizmoND::_make_single_color_wire_material_nd(const Color &p_color) {
 	Ref<WireMaterialND> mat;
 	mat.instantiate();
 	mat->set_line_thickness(LINE_THICKNESS_ND);
@@ -43,7 +43,7 @@ Ref<WireMaterialND> _make_single_color_wire_material_nd(const Color &p_color) {
 	return mat;
 }
 
-Ref<WireMaterialND> _make_plane_material_nd(const Color &p_first_color, const Color &p_second_color) {
+Ref<WireMaterialND> EditorTransformGizmoND::_make_plane_material_nd(const Color &p_first_color, const Color &p_second_color) {
 	Ref<WireMaterialND> mat;
 	mat.instantiate();
 	mat->set_line_thickness(LINE_THICKNESS_ND);
@@ -60,7 +60,7 @@ Ref<WireMaterialND> _make_plane_material_nd(const Color &p_first_color, const Co
 	return mat;
 }
 
-Ref<WireMaterialND> _make_rotation_ring_material_nd(const Color &p_first_color, const Color &p_second_color) {
+Ref<WireMaterialND> EditorTransformGizmoND::_make_rotation_ring_material_nd(const Color &p_first_color, const Color &p_second_color) {
 	Ref<WireMaterialND> mat;
 	mat.instantiate();
 	mat->set_line_thickness(LINE_THICKNESS_ND);
@@ -83,7 +83,7 @@ Ref<WireMaterialND> _make_rotation_ring_material_nd(const Color &p_first_color, 
 	return mat;
 }
 
-Ref<ArrayWireMeshND> _make_move_arrow_wire_mesh_nd() {
+Ref<ArrayWireMeshND> EditorTransformGizmoND::_make_move_arrow_wire_mesh_nd() {
 	Ref<ArrayWireMeshND> mesh;
 	mesh.instantiate();
 	Vector<VectorN> vertices = { VectorN{ 0.0 }, VectorN{ 1.0 } };
@@ -93,7 +93,7 @@ Ref<ArrayWireMeshND> _make_move_arrow_wire_mesh_nd() {
 	return mesh;
 }
 
-Ref<ArrayWireMeshND> _make_rotation_ring_wire_mesh_nd() {
+Ref<ArrayWireMeshND> EditorTransformGizmoND::_make_rotation_ring_wire_mesh_nd() {
 	Vector<VectorN> vertices;
 	PackedInt32Array edge_indices;
 	vertices.resize(ROTATION_RING_SEGMENTS_ND);
@@ -116,7 +116,7 @@ Ref<ArrayWireMeshND> _make_rotation_ring_wire_mesh_nd() {
 	return mesh;
 }
 
-Ref<ArrayWireMeshND> _make_plane_wire_mesh_nd() {
+Ref<ArrayWireMeshND> EditorTransformGizmoND::_make_plane_wire_mesh_nd() {
 	// Must match `constexpr int PLANE_EDGES_ND`.
 	Vector<VectorN> vertices = {
 		VectorN{ -PLANE_RADIUS_ND * 0.9, -PLANE_RADIUS_ND }, // First triangle lower left.
@@ -144,7 +144,7 @@ MeshInstanceND *EditorTransformGizmoND::_make_mesh_instance(const StringName &p_
 	return mesh_instance;
 }
 
-Ref<TransformND> _realign_xy_to_axes(const int p_x, const int p_y) {
+Ref<TransformND> EditorTransformGizmoND::_realign_xy_to_axes(const int p_x, const int p_y) {
 	if (p_x == 0) {
 		if (p_y == 1) {
 			return TransformND::identity_basis(2);
@@ -157,11 +157,11 @@ Ref<TransformND> _realign_xy_to_axes(const int p_x, const int p_y) {
 	return TransformND::from_swap_rotation(0, p_x)->compose_square(TransformND::from_swap_rotation(1, p_y));
 }
 
-int _triangular_number(const int p_n) {
+int EditorTransformGizmoND::_triangular_number(const int p_n) {
 	return p_n * (p_n + 1) / 2;
 }
 
-int _plane_index_in_triangular_number(const int p_i, const int p_j, const int p_dimension) {
+int EditorTransformGizmoND::_plane_index_in_triangular_number(const int p_i, const int p_j, const int p_dimension) {
 	return p_i * (2 * p_dimension - p_i - 1) / 2 + (p_j - p_i - 1);
 }
 

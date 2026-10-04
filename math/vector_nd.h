@@ -6,6 +6,9 @@
 class VectorND : public Object {
 	GDCLASS(VectorND, Object);
 
+	static float _get_axis_color_hue(const int64_t p_index);
+	static int _get_axis_unicode_number(const int64_t p_axis);
+
 protected:
 	static VectorND *singleton;
 	static void _bind_methods();
@@ -120,8 +123,8 @@ public:
 #endif
 
 	// Cosmetic functions.
-	static Color axis_color(int64_t p_axis);
-	static String axis_letter(int64_t p_axis);
+	static Color axis_color(const int64_t p_axis);
+	static String axis_letter(const int64_t p_axis);
 
 	// VectorN operations.
 	static VectorN abs(const VectorN &p_vector);

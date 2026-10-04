@@ -35,7 +35,7 @@ Vector2 EditorMainViewportND::_get_warped_mouse_motion(const Ref<InputEvent> &p_
 	ERR_FAIL_V_MSG(Vector2(), "Expected InputEventMouseMotion or InputEventScreenDrag.");
 }
 
-Ref<TransformND> _ground_basis_rotation(const int p_dimension, const Vector2 &p_rotation_radians) {
+Ref<TransformND> EditorMainViewportND::_ground_basis_rotation(const int p_dimension, const Vector2 &p_rotation_radians) {
 	Ref<TransformND> ground_rot_dx = TransformND::from_rotation(p_dimension, 0, p_rotation_radians.x);
 	Ref<TransformND> ground_rot_zd = TransformND::from_rotation(2, p_dimension, p_rotation_radians.y);
 	return ground_rot_dx->compose_square(ground_rot_zd);
@@ -178,7 +178,7 @@ void EditorMainViewportND::navigation_pan(const Ref<InputEvent> &p_input_event) 
 	_editor_camera_nd->pan_camera(pan);
 }
 
-String _viewport_nd_format_number(const double p_number) {
+String EditorMainViewportND::_format_number(const double p_number) {
 	const int decimals = MAX(0, 3 - log10(p_number));
 	String number_text = String::num(p_number, decimals);
 	if (number_text.length() < 3 && !number_text.contains(".")) {
@@ -189,12 +189,12 @@ String _viewport_nd_format_number(const double p_number) {
 
 void EditorMainViewportND::navigation_change_speed(const double p_speed_change) {
 	const double speed_and_zoom = _editor_camera_nd->change_speed_and_zoom(p_speed_change);
-	set_information_text("Speed: " + _viewport_nd_format_number(speed_and_zoom) + "m/s");
+	set_information_text("Speed: " + _format_number(speed_and_zoom) + "m/s");
 }
 
 void EditorMainViewportND::navigation_change_zoom(const double p_zoom_change) {
 	const double speed_and_zoom = _editor_camera_nd->change_speed_and_zoom(p_zoom_change);
-	set_information_text("Zoom: " + _viewport_nd_format_number(speed_and_zoom) + "m");
+	set_information_text("Zoom: " + _format_number(speed_and_zoom) + "m");
 }
 
 void EditorMainViewportND::viewport_mouse_input(const Ref<InputEventMouse> &p_mouse_event) {
