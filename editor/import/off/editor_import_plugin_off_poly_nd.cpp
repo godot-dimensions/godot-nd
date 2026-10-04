@@ -64,11 +64,11 @@ void EditorImportPluginOFFPolyND::get_import_options(const String &p_path, List<
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "single_convex_volume"), false));
 }
 
-#if VERSION_HEX < 0x040400
+#if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 4
 Error EditorImportPluginOFFPolyND::import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata)
 #else
 Error EditorImportPluginOFFPolyND::import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata)
-#endif // VERSION_HEX
+#endif // GODOT_VERSION
 #endif // GDExtension or module.
 {
 	Ref<OFFDocumentND> off_doc = OFFDocumentND::import_read_from_file(p_source_file);
