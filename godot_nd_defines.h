@@ -17,6 +17,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/version.hpp>
 #include <godot_cpp/variant/string.hpp>
+#define ABS Math::abs
 #define CoreBind godot
 #define GDEXTMOD_GUI_INPUT _gui_input
 #define GET_NODE_TYPE(m_parent, m_type, m_path) m_parent->get_node<m_type>(NodePath(m_path))
@@ -30,13 +31,15 @@
 #define VariantUtilityFunctions UtilityFunctions
 // Note: This MUST NOT be set for module builds, only GDExtension builds, due to namespace pollution issues.
 #define USE_FUNCTIONS_FOR_VECTORS 1
+
+#if GODOT_VERSION_MAJOR > 4 || (GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR >= 5)
+// godot-cpp's TypedDictionary works when targeting Godot 4.4, but module builds need
+// Godot 4.5 for it, so require Godot 4.5 here too, to keep the two builds' APIs the same.
+#define GODOT_HAS_TYPED_DICTIONARY 1
+#endif
+
 // Including the namespace helps make GDExtension code more similar to module code.
 using namespace godot;
-
-#if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR > 4
-// In Godot 4.5 and later, ABS was replaced with Math::abs.
-#define ABS Math::abs
-#endif
 
 #elif GODOT_MODULE
 #include "core/object/class_db.h"
@@ -124,6 +127,30 @@ using namespace godot;
 #ifndef Math_NAN
 #define Math_NAN std::numeric_limits<double>::quiet_NaN()
 #endif // Math_INF
+
+#ifndef ABS
+#define ABS Math::abs
+#endif // ABS
+
+#ifndef Math_E
+#define Math_E Math::E
+#endif // Math_E
+
+#ifndef Math_PI
+#define Math_PI Math::PI
+#endif // Math_PI
+
+#ifndef Math_SQRT12
+#define Math_SQRT12 Math::SQRT12
+#endif // Math_SQRT12
+
+#ifndef Math_SQRT2
+#define Math_SQRT2 Math::SQRT2
+#endif // Math_SQRT2
+
+#ifndef Math_TAU
+#define Math_TAU Math::TAU
+#endif // Math_TAU
 
 #ifndef _NO_DISCARD_
 #define _NO_DISCARD_ [[nodiscard]]

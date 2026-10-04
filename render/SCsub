@@ -3,9 +3,9 @@
 Import("env")
 Import("env_modules")
 
-env_4d = env_modules.Clone()
+env_nd = env_modules.Clone()
 
-env_4d.add_source_files(env.modules_sources, "*.cpp")
-env_4d.add_source_files(env.modules_sources, "environment/*.cpp")
-env_4d.add_source_files(env.modules_sources, "environment/sky/*.cpp")
-env_4d.add_source_files(env.modules_sources, "wireframe_canvas/*.cpp")
+env_nd.add_source_files(env.modules_sources, "*.cpp")
+env_nd.add_source_files(env.modules_sources, "environment/*.cpp")
+env_nd.add_source_files(env.modules_sources, "environment/sky/*.cpp")
+env_nd.add_source_files(env.modules_sources, "wireframe_canvas/*.cpp")
