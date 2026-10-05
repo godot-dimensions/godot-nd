@@ -21,10 +21,24 @@
 				Gets the global transform of this node, allowing cross-dimension transforms to shrink the dimension of the transform. For example, if a parent basis is a 2x3 matrix and a child basis is a 3x4 matrix, the output basis would be 2x4.
 			</description>
 		</method>
+		<method name="global_to_local" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="global" type="PackedFloat64Array" />
+			<description>
+				Converts a global position relative to the world, to a local position relative to this [NodeND].
+			</description>
+		</method>
 		<method name="is_visible_in_tree" qualifiers="const">
 			<return type="bool" />
 			<description>
 				Returns [code]true[/code] if the [NodeND] is visible in the scene tree (this node and all parent [NodeND]s are visible).
+			</description>
+		</method>
+		<method name="local_to_global" qualifiers="const">
+			<return type="PackedFloat64Array" />
+			<param index="0" name="local" type="PackedFloat64Array" />
+			<description>
+				Converts a local position relative to this [NodeND], to a global position relative to the world.
 			</description>
 		</method>
 	</methods>

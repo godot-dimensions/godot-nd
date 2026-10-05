@@ -248,6 +248,16 @@ void NodeND::set_global_position(const VectorN &p_global_position) {
 	set_global_transform(global_xform);
 }
 
+// Transform conversion.
+
+VectorN NodeND::global_to_local(const VectorN &p_global) const {
+	return get_global_transform()->inverse()->xform(p_global);
+}
+
+VectorN NodeND::local_to_global(const VectorN &p_local) const {
+	return get_global_transform()->xform(p_local);
+}
+
 // Dimension functions.
 
 NodeND::DimensionMode NodeND::get_dimension_mode() const {
@@ -375,6 +385,9 @@ void NodeND::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_global_transform_shrink"), &NodeND::get_global_transform_shrink);
 	ClassDB::bind_method(D_METHOD("get_global_position"), &NodeND::get_global_position);
 	ClassDB::bind_method(D_METHOD("set_global_position", "global_position"), &NodeND::set_global_position);
+	// Transform conversion.
+	ClassDB::bind_method(D_METHOD("global_to_local", "global"), &NodeND::global_to_local);
+	ClassDB::bind_method(D_METHOD("local_to_global", "local"), &NodeND::local_to_global);
 	// Dimension functions.
 	ClassDB::bind_method(D_METHOD("get_dimension_mode"), &NodeND::get_dimension_mode);
 	ClassDB::bind_method(D_METHOD("set_dimension_mode", "dimension_mode"), &NodeND::set_dimension_mode);

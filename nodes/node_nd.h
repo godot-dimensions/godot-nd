@@ -83,6 +83,10 @@ public:
 	VectorN get_global_position() const;
 	void set_global_position(const VectorN &p_global_position);
 
+	// Transform conversion.
+	VectorN global_to_local(const VectorN &p_global) const;
+	VectorN local_to_global(const VectorN &p_local) const;
+
 	// Dimension functions.
 	DimensionMode get_dimension_mode() const;
 	void set_dimension_mode(const DimensionMode p_dimension_mode);
