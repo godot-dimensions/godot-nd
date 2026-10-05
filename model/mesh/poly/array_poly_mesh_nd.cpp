@@ -259,6 +259,31 @@ bool ArrayPolyMeshND::_validate_poly_mesh_data_only() {
 
 // Internal helpers for the normal and texture map value pools.
 
+PackedInt32Array ArrayPolyMeshND::_append_values_to_pool_deduplicated(Vector<PackedFloat64Array> &r_pool, const Vector<PackedFloat64Array> &p_values) {
+	HashMap<PackedFloat64Array, int32_t, PoolValueHasher, PoolValueComparator> pool_indices; // The first index of each distinct value in the pool.
+	for (int64_t i = 0; i < r_pool.size(); i++) {
+		const PackedFloat64Array &existing_value = r_pool[i];
+		if (!pool_indices.has(existing_value)) {
+			pool_indices.insert(existing_value, (int32_t)i);
+		}
+	}
+	PackedInt32Array value_remap;
+	value_remap.resize(p_values.size());
+	for (int64_t i = 0; i < p_values.size(); i++) {
+		const PackedFloat64Array &value = p_values[i];
+		const int32_t *existing_index = pool_indices.getptr(value);
+		if (existing_index != nullptr) {
+			value_remap.set(i, *existing_index);
+		} else {
+			const int32_t new_index = (int32_t)r_pool.size();
+			r_pool.append(value);
+			pool_indices.insert(value, new_index);
+			value_remap.set(i, new_index);
+		}
+	}
+	return value_remap;
+}
+
 PackedInt32Array ArrayPolyMeshND::_normal_indices_for_values_internal(const Vector<VectorN> &p_values) {
 	PackedInt32Array indices;
 	indices.resize(p_values.size());
@@ -2445,23 +2470,18 @@ void ArrayPolyMeshND::merge_with(const Ref<PolyMeshND> &p_other, const Ref<Trans
 		other_array_mesh = p_other->to_array_poly_mesh();
 	}
 	// Merge the value pools first, remembering how the other mesh's value indices map into this
-	// mesh's pools. The other mesh's normal values need to be transformed with the inverse-transpose
-	// of the merge basis to support non-uniform scaling (inverse_basis_transposed only transposes).
-	const Ref<TransformND> inverse_transpose = has_transform ? p_transform->inverse_basis()->inverse_basis_transposed() : Ref<TransformND>();
-	const Vector<VectorN> &other_normal_values = other_array_mesh->_poly_cell_normal_values;
-	PackedInt32Array other_normal_value_remap;
-	other_normal_value_remap.resize(other_normal_values.size());
-	for (int64_t i = 0; i < other_normal_values.size(); i++) {
-		const VectorN other_normal = has_transform ? inverse_transpose->xform_basis(other_normal_values[i]) : other_normal_values[i];
-		other_normal_value_remap.set(i, (int32_t)VectorND::array_append_deduplicate(_poly_cell_normal_values, other_normal));
+	// mesh's pools, see `_append_values_to_pool_deduplicated`. The other mesh's normal values need to be
+	// transformed with the inverse-transpose of the merge basis to support non-uniform scaling
+	// (inverse_basis_transposed only transposes).
+	Vector<VectorN> other_normal_values = other_array_mesh->_poly_cell_normal_values;
+	if (has_transform) {
+		const Ref<TransformND> inverse_transpose = p_transform->inverse_basis()->inverse_basis_transposed();
+		for (int64_t i = 0; i < other_normal_values.size(); i++) {
+			other_normal_values.set(i, inverse_transpose->xform_basis(other_normal_values[i]));
+		}
 	}
-	const Vector<VectorM> &other_texture_map_values = other_array_mesh->_poly_cell_texture_map_values;
-	PackedInt32Array other_texture_map_value_remap;
-	other_texture_map_value_remap.resize(other_texture_map_values.size());
-	for (int64_t i = 0; i < other_texture_map_values.size(); i++) {
-		const int64_t texture_map_index = VectorND::array_append_deduplicate(_poly_cell_texture_map_values, other_texture_map_values[i]);
-		other_texture_map_value_remap.set(i, (int32_t)texture_map_index);
-	}
+	const PackedInt32Array other_normal_value_remap = _append_values_to_pool_deduplicated(_poly_cell_normal_values, other_normal_values);
+	const PackedInt32Array other_texture_map_value_remap = _append_values_to_pool_deduplicated(_poly_cell_texture_map_values, other_array_mesh->_poly_cell_texture_map_values);
 	const HashMap<Vector2i, Vector<PackedInt32Array>> other_poly_cell_normal_indices = other_array_mesh->get_all_poly_cell_normal_indices();
 	Vector<VectorN> boundary_normals_cache;
 	// Merge all normals.

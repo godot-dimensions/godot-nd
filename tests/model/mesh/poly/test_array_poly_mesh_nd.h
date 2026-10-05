@@ -820,6 +820,32 @@ TEST_CASE("[ArrayPolyMeshND] Merge meshes") {
 		CHECK(mesh->is_poly_mesh_data_valid());
 	}
 
+	SUBCASE("Merging reuses the values the pools already hold, matching them like single appends do") {
+		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_box_poly_mesh(4)->to_array_poly_mesh();
+		const int64_t normal_value_count = mesh->get_poly_cell_normal_values().size();
+		const int64_t texture_map_value_count = mesh->get_poly_cell_texture_map_values().size();
+		REQUIRE(normal_value_count > 0);
+		REQUIRE(texture_map_value_count > 0);
+		// A translation leaves the normals as they are, and the texture map is untouched.
+		mesh->merge_with(TestPolyMeshND::make_box_poly_mesh(4)->to_array_poly_mesh(), TransformND::from_position(VectorN{ 10.0, 0.0, 0.0, 0.0 }));
+		CHECK(mesh->get_poly_cell_normal_values().size() == normal_value_count);
+		CHECK(mesh->get_poly_cell_texture_map_values().size() == texture_map_value_count);
+		CHECK(mesh->is_mesh_data_valid());
+		// Negative zero matches zero, but a value with a different explicit size stays distinct.
+		Ref<ArrayPolyMeshND> pools;
+		pools.instantiate();
+		pools->append_vertex(VectorN{ 0.0, 0.0, 0.0, 0.0 });
+		pools->set_poly_cell_normal_values(Vector<VectorN>{ VectorN{ 0.0, 1.0, 0.0, 0.0 } });
+		Ref<ArrayPolyMeshND> other;
+		other.instantiate();
+		other->append_vertex(VectorN{ 0.0, 0.0, 0.0, 0.0 });
+		other->set_poly_cell_normal_values(Vector<VectorN>{ VectorN{ -0.0, 1.0, 0.0, 0.0 }, VectorN{ 0.0, 1.0, 0.0 }, VectorN{ 0.0, 1.0, 0.0 } });
+		pools->merge_with(other);
+		const Vector<VectorN> merged_normal_values = pools->get_poly_cell_normal_values();
+		REQUIRE(merged_normal_values.size() == 2);
+		CHECK(merged_normal_values[1].size() == 3);
+	}
+
 	SUBCASE("Merging two tetrahedra with an offset adjusts all indices") {
 		Ref<ArrayPolyMeshND> mesh = TestPolyMeshND::make_tetrahedron_cell_mesh();
 		Ref<ArrayPolyMeshND> other = TestPolyMeshND::make_tetrahedron_cell_mesh();

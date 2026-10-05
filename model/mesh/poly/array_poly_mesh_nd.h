@@ -67,6 +67,35 @@ private:
 
 	// Internal helpers for the normal and texture map value pools.
 	PackedInt32Array _normal_indices_for_values_internal(const Vector<VectorN> &p_values);
+	// Hashes and compares pool values the way `VectorND::array_append_deduplicate` matches them: size-strict, and
+	// elementwise, so that -0.0 and 0.0 are the same value.
+	struct PoolValueHasher {
+		static uint32_t hash(const PackedFloat64Array &p_value) {
+			uint32_t h = hash_murmur3_one_32(uint32_t(p_value.size()));
+			for (int64_t i = 0; i < p_value.size(); i++) {
+				h = hash_murmur3_one_double(p_value[i], h);
+			}
+			return hash_fmix32(h);
+		}
+	};
+	struct PoolValueComparator {
+		static bool compare(const PackedFloat64Array &p_a, const PackedFloat64Array &p_b) {
+			if (p_a.size() != p_b.size()) {
+				return false;
+			}
+			for (int64_t i = 0; i < p_a.size(); i++) {
+				if (p_a[i] != p_b[i]) {
+					return false;
+				}
+			}
+			return true;
+		}
+	};
+	// Appends values to one of this mesh's value pools, deduplicated against what the pool already holds, and returns
+	// where each value landed. The pool's existing values are indexed through a hash map first, so that merging a large
+	// mesh costs the sizes of the pools rather than their product, which a linear scan of the pool per value would.
+	// Normals and texture maps are both stored as `PackedFloat64Array` values, so this serves both pools.
+	static PackedInt32Array _append_values_to_pool_deduplicated(Vector<PackedFloat64Array> &r_pool, const Vector<PackedFloat64Array> &p_values);
 	Vector<VectorN> _sample_normal_values_internal(const PackedInt32Array &p_indices) const;
 	Vector<Vector<VectorM>> _get_poly_cell_texture_map_dense_internal() const;
 	void _set_poly_cell_texture_map_dense_internal(const Vector<Vector<VectorM>> &p_poly_cell_texture_map);
