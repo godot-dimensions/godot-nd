@@ -422,9 +422,10 @@ TEST_CASE("[PolyMeshBuilderND] Subdivide box boundary cells") {
 		// Every face must have its edges in a connected loop order, including internal walls.
 		const PackedInt32Array all_edges = mesh->get_edge_indices();
 		for (const PackedInt32Array &face : poly_cell_indices[0]) {
-			for (int64_t i = 0; i < face.size(); i++) {
+			const int64_t edge_count = face.size();
+			for (int64_t i = 0; i < edge_count; i++) {
 				const int32_t edge_a = face[i];
-				const int32_t edge_b = face[(i + 1) % face.size()];
+				const int32_t edge_b = face[(i + 1) % edge_count];
 				const bool connected = all_edges[edge_a * 2] == all_edges[edge_b * 2] || all_edges[edge_a * 2] == all_edges[edge_b * 2 + 1] || all_edges[edge_a * 2 + 1] == all_edges[edge_b * 2] || all_edges[edge_a * 2 + 1] == all_edges[edge_b * 2 + 1];
 				CHECK_MESSAGE(connected, "Every face of the subdivided box must have its edges in a connected loop order.");
 			}
@@ -887,8 +888,9 @@ inline Ref<ArrayPolyMeshND> make_face_loops_mesh(const Vector<VectorN> &p_positi
 	}
 	for (const PackedInt32Array &loop : p_face_vertex_loops) {
 		PackedInt32Array face;
-		for (int64_t i = 0; i < loop.size(); i++) {
-			face.append((int32_t)mesh->append_edge_indices(loop[i], loop[(i + 1) % loop.size()]));
+		const int64_t vertex_count = loop.size();
+		for (int64_t i = 0; i < vertex_count; i++) {
+			face.append((int32_t)mesh->append_edge_indices(loop[i], loop[(i + 1) % vertex_count]));
 		}
 		mesh->append_poly_cell(2, face);
 	}
@@ -946,7 +948,7 @@ TEST_CASE("[PolyMeshBuilderND] Make coplanar") {
 		// An octagon with one raised vertex loses only that vertex's triangle, and the rest stays one flat face.
 		Vector<VectorN> ring;
 		for (int i = 0; i < 8; i++) {
-			const double angle = Math::TAU * i / 8.0;
+			const double angle = Math_TAU * i / 8.0;
 			ring.append(VectorN{ 5.0 * Math::cos(angle), 5.0 * Math::sin(angle), i == 0 ? 1.0 : 0.0, 0 });
 		}
 		Ref<ArrayPolyMeshND> octagon = make_face_loops_mesh(ring, { { 0, 1, 2, 3, 4, 5, 6, 7 } });

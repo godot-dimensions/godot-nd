@@ -181,8 +181,9 @@ void EditorTransformGizmoND::_generate_gizmo_meshes() {
 	// Create the axis colors wire materials.
 	Vector<Ref<WireMaterialND>> axis_materials;
 	axis_materials.resize(dimension);
+	const int64_t axis_color_count = _axis_colors.size();
 	for (int i = 0; i < dimension; i++) {
-		Color axis_color = _axis_colors[i % _axis_colors.size()];
+		Color axis_color = _axis_colors[i % axis_color_count];
 		axis_materials.set(i, _make_single_color_wire_material_nd(axis_color));
 	}
 	// Create the move arrow meshes.

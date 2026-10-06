@@ -854,9 +854,10 @@ TEST_CASE("[PolyMeshND] Faces with unordered edges are read in walk order") {
 	const PackedInt32Array &sequence = face_vertex_indices[0];
 	REQUIRE(sequence.size() == 5);
 	const PackedInt32Array all_edges = mesh->get_edge_indices();
-	for (int64_t i = 0; i < sequence.size(); i++) {
+	const int64_t vertex_count = sequence.size();
+	for (int64_t i = 0; i < vertex_count; i++) {
 		const int32_t vertex_a = sequence[i];
-		const int32_t vertex_b = sequence[(i + 1) % sequence.size()];
+		const int32_t vertex_b = sequence[(i + 1) % vertex_count];
 		bool edge_exists = false;
 		for (int64_t edge = 0; edge < all_edges.size(); edge += 2) {
 			if ((all_edges[edge] == vertex_a && all_edges[edge + 1] == vertex_b) || (all_edges[edge] == vertex_b && all_edges[edge + 1] == vertex_a)) {

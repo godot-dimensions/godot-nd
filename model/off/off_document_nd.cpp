@@ -27,8 +27,9 @@ void OFFDocumentND::_count_unique_edges_from_faces() {
 	Vector<PackedInt32Array> face_cell_indices = _cell_face_indices[0];
 	for (int face_number = 0; face_number < face_cell_indices.size(); face_number++) {
 		PackedInt32Array face_vertex_indices = face_cell_indices[face_number];
-		for (int face_index = 0; face_index < face_vertex_indices.size(); face_index++) {
-			const int second_index = (face_index + 1) % face_vertex_indices.size();
+		const int64_t vertex_count = face_vertex_indices.size();
+		for (int face_index = 0; face_index < vertex_count; face_index++) {
+			const int second_index = (face_index + 1) % vertex_count;
 			Vector2i edge_indices = Vector2i(face_vertex_indices[face_index], face_vertex_indices[second_index]);
 			if (edge_indices.x > edge_indices.y) {
 				SWAP(edge_indices.x, edge_indices.y);

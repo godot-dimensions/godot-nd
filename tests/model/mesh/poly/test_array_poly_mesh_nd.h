@@ -108,9 +108,10 @@ TEST_CASE("[ArrayPolyMeshND] Split poly elements") {
 		const PackedInt32Array edges = p_mesh->get_edge_indices();
 		const PackedInt32Array face_edges = p_mesh->get_poly_cell_indices()[0][p_face];
 		PackedInt32Array loop;
-		for (int64_t i = 0; i < face_edges.size(); i++) {
+		const int64_t edge_count = face_edges.size();
+		for (int64_t i = 0; i < edge_count; i++) {
 			const int32_t edge_index = face_edges[i];
-			const int32_t next_edge_index = face_edges[(i + 1) % face_edges.size()];
+			const int32_t next_edge_index = face_edges[(i + 1) % edge_count];
 			const int32_t a = edges[edge_index * 2];
 			loop.append(a == edges[next_edge_index * 2] || a == edges[next_edge_index * 2 + 1] ? a : edges[edge_index * 2 + 1]);
 		}
@@ -156,7 +157,9 @@ TEST_CASE("[ArrayPolyMeshND] Split poly elements") {
 		}
 		mesh->set_poly_cell_dense_normals(per_face_key, Vector<Vector<VectorN>>{ per_face });
 		mesh->set_poly_cell_dense_texture_map(face_to_vert_key, face_corners);
-		mesh->set_seam_indices(HashSet<int32_t>{ 0 });
+		HashSet<int32_t> seams;
+		seams.insert(0);
+		mesh->set_seam_indices(seams);
 		const Vector<VectorN> original_normals = mesh->get_poly_cell_boundary_normals();
 		const Vector<PackedInt32Array> original_cell_vertices = mesh->get_all_poly_cell_vertex_indices(3, false);
 		const Vector<Vector<VectorM>> original_cell_texture_map = mesh->get_poly_cell_dense_texture_map(cell_to_vert_key);
@@ -2560,11 +2563,12 @@ TEST_CASE("[ArrayPolyMeshND] Fitting existing compact texture coordinates includ
 			CAPTURE(first_pattern);
 			Ref<ArrayPolyMeshND> mesh = make_binding_test_mesh(dimension);
 			const Vector<VectorM> patterns = { VectorM(), VectorM{ 2.0 }, VectorM{ 2.0, 2.0 }, VectorM{ 0.0, 2.0 } };
+			const int64_t pattern_count = patterns.size();
 			Vector<Vector<VectorM>> texture_map;
 			for (const PackedInt32Array &cell_vertices : mesh->get_all_boundary_cell_vertex_indices(false)) {
 				Vector<VectorM> cell_map;
 				for (int64_t i = 0; i < cell_vertices.size(); i++) {
-					cell_map.append(patterns[(i + first_pattern) % patterns.size()]);
+					cell_map.append(patterns[(i + first_pattern) % pattern_count]);
 				}
 				if (first_pattern == 2) {
 					cell_map.set(0, VectorND::with_dimension(cell_map[0], dimension - 1));
