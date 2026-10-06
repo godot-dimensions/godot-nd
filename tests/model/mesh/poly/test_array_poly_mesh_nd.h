@@ -172,15 +172,16 @@ TEST_CASE("[ArrayPolyMeshND] Split poly elements") {
 		const PackedInt32Array pieces = split_face_at_first_vertex(mesh, 0);
 		REQUIRE((pieces == PackedInt32Array{ 0, 24 }));
 		CHECK(mesh->is_mesh_data_valid());
-		CHECK(mesh->get_poly_cell_indices()[0].size() == 25);
-		CHECK(mesh->get_poly_cell_indices()[1].size() == 8);
-		CHECK(mesh->get_poly_cell_indices()[2].size() == 1);
+		const Vector<Vector<PackedInt32Array>> poly_cell_indices = mesh->get_poly_cell_indices();
+		CHECK(poly_cell_indices[0].size() == 25);
+		CHECK(poly_cell_indices[1].size() == 8);
+		CHECK(poly_cell_indices[2].size() == 1);
 		for (int64_t cell_index = 0; cell_index < 8; cell_index++) {
-			const PackedInt32Array &cell = mesh->get_poly_cell_indices()[1][cell_index];
+			const PackedInt32Array &cell = poly_cell_indices[1][cell_index];
 			CHECK(cell.has(0) == parents.has((int32_t)cell_index));
 			CHECK_MESSAGE(cell.has(24) == parents.has((int32_t)cell_index), "Both cells that used the face use both pieces.");
 			// The first two faces of every cell share an edge.
-			CHECK(MathND::has_common_int32(mesh->get_poly_cell_indices()[0][cell[0]], mesh->get_poly_cell_indices()[0][cell[1]]));
+			CHECK(MathND::has_common_int32(poly_cell_indices[0][cell[0]], poly_cell_indices[0][cell[1]]));
 		}
 		// The cells keep their orientation, which their recomputed normals show.
 		mesh->calculate_boundary_normals(ArrayPolyMeshND::COMPUTE_NORMALS_MODE_CELL_ORIENTATION_ONLY);
@@ -228,7 +229,8 @@ TEST_CASE("[ArrayPolyMeshND] Split poly elements") {
 		// that vertex, then cut the cell along the triangle of the three diagonals.
 		const int32_t corner = original_cell_vertices[0][0];
 		PackedInt32Array corner_faces;
-		for (const int32_t face_index : mesh->get_poly_cell_indices()[1][0]) {
+		const PackedInt32Array original_cell_faces = mesh->get_poly_cell_indices()[1][0];
+		for (const int32_t face_index : original_cell_faces) {
 			if (mesh->get_all_poly_cell_vertex_indices(2, false)[face_index].has(corner)) {
 				corner_faces.append(face_index);
 			}
@@ -256,7 +258,8 @@ TEST_CASE("[ArrayPolyMeshND] Split poly elements") {
 		PackedInt32Array star = { cut_face };
 		PackedInt32Array rest = { cut_face };
 		const Vector<PackedInt32Array> face_vertices = mesh->get_all_poly_cell_vertex_indices(2, false);
-		for (const int32_t face_index : mesh->get_poly_cell_indices()[1][0]) {
+		const PackedInt32Array cell_faces = mesh->get_poly_cell_indices()[1][0];
+		for (const int32_t face_index : cell_faces) {
 			if (face_vertices[face_index].has(corner)) {
 				star.append(face_index);
 			} else {
