@@ -722,6 +722,7 @@ void EditorTransformGizmoND::selected_nodes_changed(const TypedArray<Node> &p_to
 }
 
 void EditorTransformGizmoND::set_axis_colors(const PackedColorArray &p_axis_colors) {
+	CRASH_COND(p_axis_colors.size() < 4); // The array will be way bigger, but there's no reason to ever permit such small amounts.
 	_axis_colors = p_axis_colors;
 }
 
