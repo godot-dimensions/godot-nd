@@ -80,19 +80,19 @@
 		<method name="get_simplex_cell_normal_indices">
 			<return type="PackedInt32Array" />
 			<description>
-				Gets the normal indices of the simplex cells. Each integer is an index to the [method MeshND.get_normal_values] array, with one normal index per vertex instance in a simplex cell, meaning N per cell for an N-dimensional mesh. This array must either have the same length as [method get_simplex_cell_vertex_indices], or be empty for no normals, or else the mesh is invalid. Every index must be non-negative and less than the size of [method MeshND.get_normal_values].
+				Gets the normal indices of the simplex cells. Each integer is an index to the [method SingleSurfaceMeshND.get_normal_values] array, with one normal index per vertex instance in a simplex cell, meaning N per cell for an N-dimensional mesh. This array must either have the same length as [method get_simplex_cell_vertex_indices], or be empty for no normals, or else the mesh is invalid. Every index must be non-negative and less than the size of [method SingleSurfaceMeshND.get_normal_values].
 			</description>
 		</method>
 		<method name="get_simplex_cell_texture_map_indices">
 			<return type="PackedInt32Array" />
 			<description>
-				Gets the texture map indices of the simplex cells. Each integer is an index to the [method MeshND.get_texture_map_values] array, with one texture map index per vertex instance in a simplex cell, meaning N per cell for an N-dimensional mesh. This array must either have the same length as [method get_simplex_cell_vertex_indices], or be empty for no texture mapping, or else the mesh is invalid. Every index must be non-negative and less than the size of [method MeshND.get_texture_map_values].
+				Gets the texture map indices of the simplex cells. Each integer is an index to the [method SingleSurfaceMeshND.get_texture_map_values] array, with one texture map index per vertex instance in a simplex cell, meaning N per cell for an N-dimensional mesh. This array must either have the same length as [method get_simplex_cell_vertex_indices], or be empty for no texture mapping, or else the mesh is invalid. Every index must be non-negative and less than the size of [method SingleSurfaceMeshND.get_texture_map_values].
 			</description>
 		</method>
 		<method name="get_simplex_cell_vertex_indices">
 			<return type="PackedInt32Array" />
 			<description>
-				Gets the vertex indices of the simplex cells. Each set of [method get_indices_per_simplex_cell] integers represents the indices of the vertices that make up a cell, for a total of [method get_simplex_cell_count] cells. The vertices can be obtained using [method MeshND.get_vertex_positions]. Integers in this array should not exceed the length of the vertices array.
+				Gets the vertex indices of the simplex cells. Each set of [method get_indices_per_simplex_cell] integers represents the indices of the vertices that make up a cell, for a total of [method get_simplex_cell_count] cells. The vertices can be obtained using [method SingleSurfaceMeshND.get_vertex_positions]. Integers in this array should not exceed the length of the vertices array.
 			</description>
 		</method>
 		<method name="populate_inverse_metric_cache">
