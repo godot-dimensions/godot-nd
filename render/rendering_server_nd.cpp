@@ -426,15 +426,9 @@ Ref<RenderingEngineND> RenderingServerND::get_rendering_engine_from_name(const S
 }
 
 String RenderingServerND::_get_current_godot_rendering_method() const {
-#if GODOT_VERSION_MAJOR > 4 || (GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR >= 4)
 	RenderingServer *rendering_server = RenderingServer::get_singleton();
 	ERR_FAIL_NULL_V(rendering_server, String());
 	return rendering_server->get_current_rendering_method();
-#else
-	ProjectSettings *project_settings = ProjectSettings::get_singleton();
-	ERR_FAIL_NULL_V(project_settings, String());
-	return project_settings->get_setting("rendering/renderer/rendering_method");
-#endif
 }
 
 Ref<RenderingEngineND> RenderingServerND::_select_rendering_engine(const String &p_friendly_name, const String &p_godot_rendering_method) const {

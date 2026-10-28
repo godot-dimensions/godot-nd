@@ -29,10 +29,6 @@
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/control.h"
 
-#if GODOT_VERSION_MAJOR == 4 && GODOT_VERSION_MINOR < 4
-#define set_button_icon set_icon
-#endif
-
 #define KEY_A Key::A
 #define KEY_B Key::B
 #define KEY_C Key::C
