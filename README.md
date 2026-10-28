@@ -67,6 +67,17 @@ in Godot to test the GDExtension, and copy the `addons/nd` to your own project.
 - `render/`: All rendering-related classes including server and engines.
 - `addons/nd/`: Contains documentation, icons, and files for GDExtension.
 
+## Versions
+
+This repo can be compiled either as an engine module or a GDExtension.
+Most editor features only work as a module, so the module is highly recommended.
+The GDExtension version is provided on a best-effort basis, and supports
+all runtime features but limited editor functionality.
+
+This repo only supports Godot 4.4 and later. Godot ND formerly supported
+[Godot 4.3](https://github.com/godot-dimensions/godot-nd/releases/tag/last-4.3-commit),
+but this was discontinued due to critical features in Godot 4.4 and later.
+
 ## License
 
 This repo is free and open source software licensed under The Unlicense.
